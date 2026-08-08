@@ -8,13 +8,13 @@
 /// Nothing here may depend on either one being present, and no state that follows from their
 /// absence is an error: an app nobody has paired yet is working correctly.
 ///
-/// # Skeleton
-///
-/// This is the shell — enough to boot, be tested and be built by CI, and no more. The first
-/// screen a user actually meets is its own piece of work.
+/// Until a route exists, what it shows is [PairingGuideScreen] — the setup instructions, because
+/// a fresh install has nothing else it could truthfully show.
 library;
 
 import 'package:flutter/material.dart';
+
+import 'pairing_guide.dart';
 
 void main() {
   runApp(const AmenboViewerApp());
@@ -39,32 +39,7 @@ class AmenboViewerApp extends StatelessWidget {
         colorSchemeSeed: Colors.teal,
         brightness: Brightness.dark,
       ),
-      home: const NotBuiltYetScreen(),
-    );
-  }
-}
-
-/// What stands in until the first real screen is written.
-///
-/// It says what it is rather than showing a plausible empty backlog: a screen that looked
-/// finished would make "no tasks" and "nothing implemented" the same picture, and the whole
-/// point of the first screen is to tell a user which of those they are looking at.
-class NotBuiltYetScreen extends StatelessWidget {
-  const NotBuiltYetScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text(AmenboViewerApp.title)),
-      body: const Center(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Text(
-            'Nothing is built here yet.',
-            textAlign: TextAlign.center,
-          ),
-        ),
-      ),
+      home: const PairingGuideScreen(appName: title),
     );
   }
 }
