@@ -1,3 +1,47 @@
+# 部品ごとにツールチェーンが違うので、生成物も部品ごとに分けて書く。
+# どの部品のどのツールが作るものかが読めるようにしておく。
+
+# --- 手元の持ち物（リポジトリの物ではない）
 .amenbo
 AGENTS.md
 CLAUDE.md
+/.claude/
+/.prompt/
+
+# --- OS / エディタ
+.DS_Store
+Thumbs.db
+*.swp
+
+# --- プラグイン（Go）
+/plugin/viewer
+/plugin/viewer.exe
+/plugin/dist/
+*.test
+
+# --- Worker（Node / wrangler）
+node_modules/
+/worker/dist/
+/worker/.wrangler/
+/worker/.dev.vars
+/worker/.dev.vars.*
+!/worker/.dev.vars.example
+# wrangler.jsonc から生成される。1万行を超えるうえ導出できるので追跡しない
+/worker/worker-configuration.d.ts
+npm-debug.log*
+yarn-error.log*
+
+# --- アプリ（Flutter / iOS / Android）
+#
+# ここには書かない。Flutter が `app/.gitignore` `app/ios/.gitignore`
+# `app/android/.gitignore` を生成し、そちらが最新の生成物を知っている。
+# 同じことを2か所に書くと、片方だけが `flutter create` の更新に追いつかない。
+#
+# ただし `app/pubspec.lock` は**追跡する**（ライブラリではなくアプリなので）。
+
+# --- 署名・秘密（誤って乗せない）
+*.p12
+*.mobileprovision
+*.cer
+.env
+.env.*

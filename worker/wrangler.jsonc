@@ -1,0 +1,29 @@
+{
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"name": "amenbo-viewer",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-08-01",
+
+	// The snapshot lives under ONE key that is overwritten every time. KV caches absence as
+	// well as presence, so a fresh key name would show the phone a 404 for up to a minute
+	// after every send; overwriting shows it the previous snapshot instead. Nothing here is
+	// ever listed or iterated, so one namespace with one key is the whole storage design.
+	//
+	// No `id`: this Worker is deployed into the USER's account, not ours, and the namespace is
+	// created there. Leaving it out is what lets `wrangler deploy` provision one — and the
+	// plugin, which sets this up over the API, fills the same slot.
+	"kv_namespaces": [
+		{ "binding": "SNAPSHOT" }
+	],
+
+	// AUTH_TOKEN is the one credential, and it is a Secret rather than a var — the difference
+	// is that it never comes back out of the dashboard or the API once set.
+	//
+	//   wrangler secret put AUTH_TOKEN     (paste the token the plugin generated)
+	//
+	// Locally it comes from .dev.vars instead; see .dev.vars.example.
+
+	"observability": {
+		"enabled": true
+	}
+}

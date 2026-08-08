@@ -1,0 +1,89 @@
+{
+  "name": "viewer",
+  "desc": "Read your backlog on your phone, from a place you own",
+  "author": "amenbo",
+  "repo": "ShiroDoromoto/amenbo-plugin-viewer",
+  "os": ["macos", "windows", "linux"],
+  "category": "integration",
+  "assets": {
+    "macos-arm64": {
+      "url": "https://github.com/ShiroDoromoto/amenbo-plugin-viewer/releases/download/v0/viewer-v0-macos-arm64.tar.gz",
+      "checksum": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "macos-x64": {
+      "url": "https://github.com/ShiroDoromoto/amenbo-plugin-viewer/releases/download/v0/viewer-v0-macos-x64.tar.gz",
+      "checksum": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "linux-x64": {
+      "url": "https://github.com/ShiroDoromoto/amenbo-plugin-viewer/releases/download/v0/viewer-v0-linux-x64.tar.gz",
+      "checksum": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "linux-arm64": {
+      "url": "https://github.com/ShiroDoromoto/amenbo-plugin-viewer/releases/download/v0/viewer-v0-linux-arm64.tar.gz",
+      "checksum": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "windows-x64": {
+      "url": "https://github.com/ShiroDoromoto/amenbo-plugin-viewer/releases/download/v0/viewer-v0-windows-x64.tar.gz",
+      "checksum": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "windows-arm64": {
+      "url": "https://github.com/ShiroDoromoto/amenbo-plugin-viewer/releases/download/v0/viewer-v0-windows-arm64.tar.gz",
+      "checksum": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  },
+  "payload_v": 1,
+  "config": [
+    {
+      "key": "icloud_folder",
+      "label": "iCloud Drive folder to write the snapshot into (macOS only)",
+      "required": false
+    },
+    {
+      "key": "worker_url",
+      "label": "Your Cloudflare Worker's URL (filled in by setup)",
+      "required": false
+    },
+    {
+      "key": "auth_token",
+      "label": "Token the Worker lets writes in with (filled in by setup)",
+      "secret": true,
+      "required": false
+    },
+    {
+      "key": "encryption_key",
+      "label": "Key the snapshot is encrypted with (filled in by setup)",
+      "secret": true,
+      "required": false
+    }
+  ],
+  "events": [
+    "task.created",
+    "task.status_changed",
+    "task.done",
+    "task.rejected",
+    "task.assigned",
+    "task.moved",
+    "task.deleted",
+    "decision.accepted",
+    "decision.rejected",
+    "comment.added",
+    "comment.removed"
+  ],
+  "agent": {
+    "when": "Setting up the phone viewer, or sending the snapshot it reads by hand",
+    "commands": [
+      {
+        "cmd": "setup",
+        "does": "Stands up the Worker and KV in the user's own Cloudflare account, and generates the token and key"
+      },
+      {
+        "cmd": "push",
+        "does": "Encrypts the snapshot as it stands and sends it over every route that is configured"
+      },
+      {
+        "cmd": "qr",
+        "does": "Shows the pairing QR the phone's camera reads — endpoint, token and key, never over the network"
+      }
+    ]
+  }
+}

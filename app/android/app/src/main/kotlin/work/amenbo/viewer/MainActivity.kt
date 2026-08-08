@@ -1,0 +1,5 @@
+package work.amenbo.viewer
+
+import io.flutter.embedding.android.FlutterActivity
+
+class MainActivity : FlutterActivity()
