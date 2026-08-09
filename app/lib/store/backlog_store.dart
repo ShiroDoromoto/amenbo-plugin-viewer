@@ -256,6 +256,17 @@ class BacklogStore {
     db.execute('COMMIT');
   }
 
+  /// Every record the device holds, under the key it arrived as — `<dataset>/<id>`.
+  ///
+  /// The iCloud route is what needs it. There the folder is the whole current truth and a
+  /// deletion is a file that is gone, so what the device holds and the folder does not is the only
+  /// place a removal can be read. It is a key per record and nothing else: the rows themselves
+  /// stay where they are.
+  Set<String> heldKeys() => {
+    for (final row in db.select('SELECT dataset, id FROM record'))
+      '${row['dataset']}/${row['id']}',
+  };
+
   void _put(String dataset, int id, Map<String, Object?> row) {
     db.execute(
       'INSERT INTO record (dataset, id, raw) VALUES (?, ?, ?) '

@@ -124,13 +124,30 @@ class ICloudContainer {
         : ContainerStatus.fromMap(result);
   }
 
-  /// Lists the container through a coordinated read.
-  static Future<List<ContainerEntry>> list() async {
-    final result = await _channel.invokeMethod<Map<Object?, Object?>>('list');
+  /// Lists one directory of the container through a coordinated read — `Documents/` itself, or
+  /// [path] under it. A directory that is not there lists as nothing.
+  static Future<List<ContainerEntry>> list({String path = ''}) async {
+    final result = await _channel.invokeMethod<Map<Object?, Object?>>('list', {
+      'path': path,
+    });
     final entries = result?['entries'] as List<Object?>? ?? const [];
     return entries
         .map((entry) => ContainerEntry.fromMap(entry! as Map<Object?, Object?>))
         .toList(growable: false);
+  }
+
+  /// Reads one file whole and hands back its text, or null where there is no such file.
+  ///
+  /// Waits for iCloud to hand the contents over when the device is not holding them, the same as
+  /// [read] does — the difference is that this one is the whole file rather than a first stretch
+  /// of it, because a record has to be opened, not glanced at.
+  static Future<String?> readText(String name) async {
+    final result = await _channel.invokeMethod<Map<Object?, Object?>>(
+      'readText',
+      {'name': name},
+    );
+    if (result == null || result['found'] != true) return null;
+    return result['text'] as String? ?? '';
   }
 
   /// Reads one file out of the container, waiting for iCloud to hand over the contents if the

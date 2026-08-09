@@ -42,13 +42,20 @@ final class ICloudContainerBridge: NSObject {
     case "status":
       async(result) { try self.status() }
     case "list":
-      async(result) { try self.list() }
+      let path = (call.arguments as? [String: Any])?["path"] as? String ?? ""
+      async(result) { try self.list(path: path) }
     case "read":
       guard let name = (call.arguments as? [String: Any])?["name"] as? String else {
         result(FlutterError(code: "bad_args", message: "read needs a file name", details: nil))
         return
       }
       async(result) { try self.read(name: name) }
+    case "readText":
+      guard let name = (call.arguments as? [String: Any])?["name"] as? String else {
+        result(FlutterError(code: "bad_args", message: "readText needs a file name", details: nil))
+        return
+      }
+      async(result) { try self.readText(name: name) }
     default:
       result(FlutterMethodNotImplemented)
     }
@@ -109,15 +116,38 @@ final class ICloudContainerBridge: NSObject {
     .ubiquitousItemDownloadingStatusKey, .contentModificationDateKey,
   ]
 
-  private func list() throws -> [String: Any] {
-    let documents = try requireDocuments()
+  /// Lists one directory of the container — `Documents/` itself with no path, or something under
+  /// it, which is how the records are walked (`records`, then `records/<dataset>`).
+  ///
+  /// A directory that is not there comes back empty rather than as an error: the drop grows one
+  /// dataset at a time, and a backlog with no decisions in it has no `records/decision`.
+  private func list(path: String) throws -> [String: Any] {
+    let dir = try under(path)
+    guard FileManager.default.fileExists(atPath: dir.path) else {
+      return ["path": dir.path, "entries": []]
+    }
     var found: [[String: Any]] = []
-    try coordinatedRead(documents) { dir in
+    try coordinatedRead(dir) { dir in
       let urls = try FileManager.default.contentsOfDirectory(
         at: dir, includingPropertiesForKeys: Self.entryKeys, options: [.skipsHiddenFiles])
       found = urls.map(Self.describe)
     }
-    return ["path": documents.path, "entries": found]
+    return ["path": dir.path, "entries": found]
+  }
+
+  /// Where a relative path lands inside `Documents/`.
+  ///
+  /// The path is built from what a listing said, and it is still checked: a name climbing out of
+  /// the container would read a file this app was never granted, and the check costs nothing.
+  private func under(_ relative: String) throws -> URL {
+    var url = try requireDocuments()
+    for part in relative.split(separator: "/") {
+      guard part != "." && part != ".." else {
+        throw Failure("\(relative) is not a path inside the container")
+      }
+      url = url.appendingPathComponent(String(part))
+    }
+    return url
   }
 
   /// Reads one file out of the container and reports whether it had to be fetched first.
@@ -148,6 +178,31 @@ final class ICloudContainerBridge: NSObject {
       "statusBefore": before,
       "statusAfter": Self.downloadStatus(of: URL(fileURLWithPath: file.path)),
     ]
+  }
+
+  /// Reads one file whole, as the text it is — every document on this route is JSON.
+  ///
+  /// A file that is not there is `found: false` rather than an error. That is an ordinary answer
+  /// twice over: `meta.json` is missing until the PC has placed anything, and a record can be
+  /// taken away between the listing and the read.
+  private func readText(name: String) throws -> [String: Any] {
+    let file = try under(name)
+    guard FileManager.default.fileExists(atPath: file.path) else {
+      return ["found": false]
+    }
+    if Self.downloadStatus(of: file) != URLUbiquitousItemDownloadingStatus.current.rawValue {
+      try? FileManager.default.startDownloadingUbiquitousItem(at: file)
+    }
+    var text = ""
+    var bytes = 0
+    // The coordinated read is what waits for the file provider: a record whose contents are not
+    // on the device is the ordinary case here, not the exception.
+    try coordinatedRead(file) { url in
+      let data = try Data(contentsOf: url)
+      bytes = data.count
+      text = String(decoding: data, as: UTF8.self)
+    }
+    return ["found": true, "text": text, "bytes": bytes]
   }
 
   private func coordinatedRead(_ url: URL, _ body: (URL) throws -> Void) throws {
