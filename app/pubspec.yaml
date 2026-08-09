@@ -55,6 +55,23 @@ dependencies:
   # socket. `dart:io` would do the fetching just as well and leave nothing to stand in for it.
   http: ^1.6.0
 
+  # Pairing, and only pairing. The three below exist for the one screen that reads the code off
+  # the PC, and none of them is reached again afterwards.
+
+  # The camera and the decoder. It reads a still picture as well as a live view, which is what
+  # lets a phone with its camera turned off still be paired from a photograph.
+  mobile_scanner: ^7.4.0
+
+  # Asking for the camera, and — the part nothing else offers on both platforms — sending someone
+  # to this app's own page in the system settings, which is the only way back from a refusal.
+  #
+  # Held below 13 for the same reason as flutter_secure_storage above: its Android half compiles
+  # against SDK 37, which is not a level that exists to compile against yet.
+  permission_handler: ^12.0.0
+
+  # Picking that photograph.
+  image_picker: ^1.2.3
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
