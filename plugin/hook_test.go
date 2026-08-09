@@ -11,48 +11,40 @@ func fired(event string, settings map[string]any) input {
 	return input{V: contractVersion, Event: event, ID: 42, Actor: "ai", Config: settings}
 }
 
-// A route the user has pointed somewhere, and nothing arriving at the other end, is the one
-// state worth a line: their question is "why is my phone not updating?", and the execution log
-// is where it gets answered.
-func TestTheHookSaysWhyNothingIsArrivingOnceARouteIsConfigured(t *testing.T) {
-	for name, test := range map[string]struct {
-		settings map[string]any
-		token    string
-		says     string
-	}{
-		"the iCloud folder": {
-			settings: map[string]any{configICloudFolder: "/Users/x/Library/Mobile Documents/…"},
-			says:     "iCloud Drive folder",
-		},
-		"the Cloudflare Worker": {
-			settings: map[string]any{configWorkerURL: "https://viewer.example.workers.dev"},
-			token:    "t0ken",
-			says:     "Cloudflare Worker",
-		},
-		"both at once": {
-			settings: map[string]any{
-				configICloudFolder: "/Users/x/Library/Mobile Documents/…",
-				configWorkerURL:    "https://viewer.example.workers.dev",
-			},
-			token: "t0ken",
-			says:  "and",
-		},
-	} {
-		t.Run(name, func(t *testing.T) {
-			t.Setenv(envAuthToken, test.token)
+// The iCloud folder is a route the user pointed somewhere and nothing arriving at the other end.
+// That is the one state worth a line: their question is "why is my phone not updating?", and the
+// execution log is where it gets answered.
+func TestTheHookSaysWhyNothingIsReachingTheICloudFolder(t *testing.T) {
+	t.Setenv(envAuthToken, "")
+	t.Setenv(envEncryptionKey, "")
 
-			stdout, stderr := capture(t, func() { hook(fired("task.done", test.settings)) })
+	stdout, stderr := capture(t, func() {
+		hook(fired("task.done", map[string]any{configICloudFolder: "/somewhere/in/iCloud Drive"}))
+	})
 
-			if stdout != "" {
-				t.Errorf("a hook's stdout is not a return value and nothing belongs on it: %q", stdout)
-			}
-			if !strings.Contains(stderr, test.says) {
-				t.Errorf("the line does not name the route: %q", stderr)
-			}
-			if !strings.Contains(stderr, "not built yet") {
-				t.Errorf("the line has to say why nothing arrived: %q", stderr)
-			}
-		})
+	if stdout != "" {
+		t.Errorf("a hook's stdout is not a return value and nothing belongs on it: %q", stdout)
+	}
+	if !strings.Contains(stderr, "iCloud Drive folder") || !strings.Contains(stderr, "not built yet") {
+		t.Errorf("the line does not say what is not arriving, or why: %q", stderr)
+	}
+}
+
+// A send that got nowhere is the state the user most needs written down: the route IS pointed
+// somewhere, so the phone falls further behind with every write.
+func TestTheHookSaysWhyTheSendToTheWorkerFailed(t *testing.T) {
+	t.Setenv(envAuthToken, "a-throwaway-token")
+	t.Setenv(envEncryptionKey, "")
+
+	stdout, stderr := capture(t, func() {
+		hook(fired("task.done", map[string]any{configWorkerURL: "https://viewer.example.workers.dev"}))
+	})
+
+	if stdout != "" {
+		t.Errorf("a hook's stdout is not a return value and nothing belongs on it: %q", stdout)
+	}
+	if !strings.Contains(stderr, "Cloudflare Worker") || !strings.Contains(stderr, "encryption key") {
+		t.Errorf("the line does not say what stopped the send: %q", stderr)
 	}
 }
 
@@ -71,15 +63,16 @@ func TestTheHookIsQuietWhenThereIsNothingToSay(t *testing.T) {
 		},
 		"the document announces a contract this build does not read": {
 			in:    input{V: contractVersion + 1, Event: "task.done", Config: map[string]any{configICloudFolder: "/tmp/x"}},
-			token: "t0ken",
+			token: "a-throwaway-token",
 		},
 		"nothing fired at all": {
 			in:    input{V: contractVersion, Config: map[string]any{configICloudFolder: "/tmp/x"}},
-			token: "t0ken",
+			token: "a-throwaway-token",
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Setenv(envAuthToken, test.token)
+			t.Setenv(envEncryptionKey, "")
 
 			stdout, stderr := capture(t, func() { hook(test.in) })
 
@@ -95,28 +88,34 @@ func TestTheHookIsQuietWhenThereIsNothingToSay(t *testing.T) {
 func TestHalfOfTheCloudflareRouteIsNotARoute(t *testing.T) {
 	t.Setenv(envAuthToken, "")
 
-	if live := routesFor(fired("task.done", map[string]any{configWorkerURL: "https://viewer.example.workers.dev"})); len(live) != 0 {
-		t.Errorf("routes = %v", live)
+	if _, err := storeFor(fired("task.done", map[string]any{configWorkerURL: "https://viewer.example.workers.dev"})); err == nil {
+		t.Error("a URL with no token was taken for a route")
 	}
 
-	t.Setenv(envAuthToken, "t0ken")
+	t.Setenv(envAuthToken, "a-throwaway-token")
 
-	if live := routesFor(fired("task.done", map[string]any{configWorkerURL: ""})); len(live) != 0 {
-		t.Errorf("routes = %v", live)
+	if _, err := storeFor(fired("task.done", map[string]any{configWorkerURL: ""})); err == nil {
+		t.Error("a token with no URL was taken for a route")
 	}
 }
 
-// Both routes carry the same bytes to two places, so they are not modes to choose between: a
-// mac user with an iPhone at home and an Android phone at work wants the snapshot in both.
-func TestBothRoutesCanBeLiveAtOnce(t *testing.T) {
-	t.Setenv(envAuthToken, "t0ken")
+// Both routes carry the same records to two places, so they are not modes to choose between: a
+// mac user with an iPhone at home and an Android phone at work wants them in both.
+func TestBothRoutesAreReportedOnIndependently(t *testing.T) {
+	t.Setenv(envAuthToken, "a-throwaway-token")
+	t.Setenv(envEncryptionKey, "")
 
-	live := routesFor(fired("task.done", map[string]any{
-		configICloudFolder: "/Users/x/Library/Mobile Documents/…",
-		configWorkerURL:    "https://viewer.example.workers.dev",
-	}))
+	_, stderr := capture(t, func() {
+		hook(fired("task.done", map[string]any{
+			configICloudFolder: "/somewhere/in/iCloud Drive",
+			configWorkerURL:    "https://viewer.example.workers.dev",
+		}))
+	})
 
-	if len(live) != 2 {
-		t.Errorf("routes = %v", live)
+	if !strings.Contains(stderr, "iCloud Drive folder") {
+		t.Errorf("the iCloud route went unmentioned: %q", stderr)
+	}
+	if !strings.Contains(stderr, "Cloudflare Worker") {
+		t.Errorf("the Cloudflare route went unmentioned: %q", stderr)
 	}
 }

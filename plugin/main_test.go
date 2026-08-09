@@ -37,13 +37,13 @@ func fed(t *testing.T, text string) *os.File {
 	return f
 }
 
-// The commands the plugin dispatches. Each is unbuilt, and the exit code is what says so — the
-// point of refusing rather than printing a note and exiting 0.
-var unbuiltCommands = []string{"setup", "push", "qr"}
+// The commands that are still unwritten. The exit code is what says so — the point of refusing
+// rather than printing a note and exiting 0.
+var unbuiltCommands = []string{"setup", "qr"}
 
 // An unbuilt command fails, and fails visibly. A caller that reads only the exit code has to be
-// able to tell this from a send that went through.
-func TestAnUnbuiltCommandFailsAndSaysWhatItWaitsOn(t *testing.T) {
+// able to tell this from one that did the work.
+func TestAnUnbuiltCommandFailsAndSaysSo(t *testing.T) {
 	for _, command := range unbuiltCommands {
 		t.Run(command, func(t *testing.T) {
 			var code int
@@ -55,8 +55,8 @@ func TestAnUnbuiltCommandFailsAndSaysWhatItWaitsOn(t *testing.T) {
 			if stdout != "" {
 				t.Errorf("stdout is the return value and there is none: %q", stdout)
 			}
-			if !strings.Contains(stderr, "not built yet") || !strings.Contains(stderr, "spec/") {
-				t.Errorf("a refusal has to say what it waits on: %q", stderr)
+			if !strings.Contains(stderr, "not built yet") {
+				t.Errorf("a refusal has to say that it is one: %q", stderr)
 			}
 		})
 	}
@@ -65,9 +65,31 @@ func TestAnUnbuiltCommandFailsAndSaysWhatItWaitsOn(t *testing.T) {
 // The refusals are one sentinel, so a caller can branch on "unbuilt" without matching prose.
 func TestTheRefusalIsRecognisable(t *testing.T) {
 	for _, command := range unbuiltCommands {
-		if err := errWaitingOnSpec(command); !strings.Contains(err.Error(), errUnbuilt.Error()) {
+		if err := errNotBuilt(command); !strings.Contains(err.Error(), errUnbuilt.Error()) {
 			t.Errorf("%s: %v does not carry the sentinel", command, err)
 		}
+	}
+}
+
+// push is built, and what it refuses is a route that was never stood up — a different answer
+// from "not written yet", and one the user can act on.
+func TestPushSaysWhenThereIsNowhereToSendTo(t *testing.T) {
+	t.Setenv(envAuthToken, "")
+
+	var code int
+	stdout, stderr := capture(t, func() { code = run(input{}, []string{"push"}) })
+
+	if code != 1 {
+		t.Errorf("exit %d — a send with nowhere to go did not happen", code)
+	}
+	if stdout != "" {
+		t.Errorf("stdout is the return value and there is none: %q", stdout)
+	}
+	if strings.Contains(stderr, "not built yet") {
+		t.Errorf("push is built — the refusal misreads as unwritten: %q", stderr)
+	}
+	if !strings.Contains(stderr, "setup") {
+		t.Errorf("the refusal does not say what to do about it: %q", stderr)
 	}
 }
 

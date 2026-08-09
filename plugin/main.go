@@ -22,13 +22,12 @@
 // off the network, so the Worker never sees it — which is what makes a place the user merely
 // rents safe to leave a snapshot in.
 //
-// # Skeleton
+// # What is built
 //
-// The frame is here; the payload is not. Taking the snapshot, encrypting it and sending it all
-// stand on the shared contract in `spec/`, which is not written yet — the four parts have to
-// agree on the snapshot format, the cipher, what the QR carries and what the endpoints answer,
-// and guessing any of it here would be a guess three other parts have to live with. So each
-// command is dispatched, refuses honestly, and says what it waits on.
+// The send is: `push` and the hook both carry what the store holds to the Cloudflare route,
+// encrypted a record at a time. Standing up that route (`setup`) and handing the key to a phone
+// (`qr`) are not written yet, and each refuses rather than pretending, so nothing can be built on
+// top of them believing it worked.
 package main
 
 import (
@@ -95,6 +94,10 @@ type input struct {
 	// At is when the event fired, as "2026-07-22T09:00:00Z". Redelivery of one event carries
 	// the same moment, which is what tells a replay from the user acting twice.
 	At string `json:"at"`
+	// Version is what the store was at when the event fired, on the events that carry it. It is
+	// a pointer because 0 is a version like any other: absent and zero have to stay apart, or a
+	// store legitimately sitting at 0 would be asked what version it is at on every write.
+	Version *int64 `json:"version"`
 	// New is the record's state after the change, for the events whose name does not already
 	// say it.
 	New string `json:"new"`
@@ -108,6 +111,13 @@ type input struct {
 func (in input) setting(key string) string {
 	text, _ := in.Config[key].(string)
 	return strings.TrimSpace(text)
+}
+
+// secret reads one of the settings amenbo declares secret. Those never reach the document on
+// stdin — they arrive in the environment instead, which is the whole reason for the second way
+// of reading a setting.
+func secret(name string) string {
+	return strings.TrimSpace(os.Getenv(name))
 }
 
 // readInput reads the document amenbo feeds on stdin.
@@ -180,40 +190,51 @@ func do(err error) int {
 // written yet" from "this ran and failed" without reading the sentence.
 var errUnbuilt = errors.New("not built yet")
 
-// errWaitingOnSpec is what every command answers with while the shared contract is unwritten.
+// errNotBuilt is what a command that has not been written yet answers with.
 //
 // Refusing is the honest answer, and the exit code is the point: a command that printed a
 // friendly note and exited 0 would be indistinguishable, to anything that calls it, from one
-// that had sent the snapshot. Nothing should be able to build on this and believe it worked.
-func errWaitingOnSpec(what string) error {
-	return fmt.Errorf("%s: %w — it waits on the shared contract in spec/ (the snapshot format, the cipher, what the QR carries, what the endpoints answer). See the repository README", what, errUnbuilt)
+// that had done the work. Nothing should be able to build on this and believe it worked.
+func errNotBuilt(what string) error {
+	return fmt.Errorf("%s: %w. See the repository README for what is", what, errUnbuilt)
 }
 
-// setup stands up the Cloudflare route in the user's own account: a KV namespace, the Worker,
-// and the two secrets that are generated rather than chosen. What is left for the user is to
-// press and to paste — never to judge which permissions a token should carry.
+// setup stands up the Cloudflare route in the user's own account: the database, the Worker, and
+// the two secrets that are generated rather than chosen. What is left for the user is to press
+// and to paste — never to judge which permissions a token should carry.
 //
 // The iCloud route has no setup at all, which is the whole reason it is the default one on mac.
 func setup(input, []string) error {
-	return errWaitingOnSpec("setup")
+	return errNotBuilt("setup")
 }
 
-// push takes the snapshot as it stands, encrypts it, and puts it wherever the routes in play
-// say: the iCloud Drive folder, the Worker, or both. It overwrites in full, every time — the
-// same key, the same file — so what the user deleted is absent from the next snapshot rather
-// than lingering as a tombstone.
-func push(input, []string) error {
-	return errWaitingOnSpec("push")
+// push carries what the store holds to the Cloudflare route, by hand.
+//
+// The hook does this on its own whenever a write moves the store version, so this is the way to
+// push what was left behind — a send that failed while the network was down, a store that was
+// restored, a phone that has fallen behind for a reason nobody can see. Being asked out loud is
+// what makes it skip the version guard and read the ledger regardless.
+func push(in input, _ []string) error {
+	placed, err := carry(in, true)
+	if err != nil {
+		return err
+	}
+	if placed == 0 {
+		logf("%s: nothing had moved — the phone is level with the store", pluginName)
+		return nil
+	}
+	logf("%s: placed %d record(s)", pluginName, placed)
+	return nil
 }
 
-// qr puts the endpoint URL, the auth token and the encryption key on screen as a QR code, for
+// qr puts the endpoint URL, the read token and the encryption key on screen as a QR code, for
 // the phone's camera to take.
 //
 // **The key must not travel through the Worker.** Route it through the server and the server
 // becomes able to read what it is storing, and the end-to-end encryption stops meaning
 // anything. A screen and a camera are the one path with no network on it.
 func qr(input, []string) error {
-	return errWaitingOnSpec("qr")
+	return errNotBuilt("qr")
 }
 
 func usage() {
@@ -228,12 +249,14 @@ Two routes carry the same bytes:
   anywhere your own Cloudflare Worker + KV, over HTTPS.
 
 Usage (through amenbo, from the project the plugin is enabled for):
-  amenbo plugin run %s setup     stand up the Worker and KV in your own Cloudflare account
-  amenbo plugin run %s push      encrypt the snapshot as it stands and send it
+  amenbo plugin run %s setup     stand up the Worker and its database in your own account
+  amenbo plugin run %s push      carry what has not reached the phone yet, by hand
   amenbo plugin run %s qr        show the pairing QR for the phone's camera to read
 
 With no arguments the plugin is an observation hook: amenbo fires it when the project changed,
-which is what tells it the phone is now behind.
+which is what tells it the phone is now behind. It carries what moved on its own, so 'push' is
+for what was left behind — a send that failed while the network was down, or a phone that has
+fallen behind for a reason nobody can see.
 
 Settings:
   %s   where in your iCloud Drive to write (mac only; the route is off while it is empty)
@@ -243,8 +266,7 @@ Settings:
 
 Only the first is yours to fill in. 'setup' writes the rest.
 
-**None of the three commands is built yet.** They wait on the shared contract in spec/, which
-the plugin, the Worker and the app all read. Until it is written they refuse rather than
-pretend, so nothing can be built on top believing it worked.`,
+**'setup' and 'qr' are not built yet**, and neither is writing to the iCloud Drive folder. They
+refuse rather than pretend, so nothing can be built on top believing it worked.`,
 		pluginName, pluginName, pluginName, pluginName, configICloudFolder, configWorkerURL)
 }
