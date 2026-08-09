@@ -33,8 +33,11 @@ import (
 //   - **the ciphertext ends with its 16-byte Poly1305 tag**, exactly as the cipher emits it.
 //     Nothing is stripped, added or reordered, so any implementation of XChaCha20-Poly1305 opens
 //     it without being told about this file.
-//   - **nothing is bound as additional data.** The tag authenticates the record's bytes, and
-//     nothing ties a ciphertext to the key it is filed under.
+//   - **the key the record is filed under goes into the tag**, as additional data — its own
+//     bytes, as it is written. It stays in the clear beside the ciphertext, but a record moved
+//     to another key no longer opens. Leave it out and whoever can write to the store can serve
+//     one task's contents under another task's key: still unable to read either, and still able
+//     to make the phone show the wrong thing.
 
 // keySize is the key the cipher takes and `setup` generates: 256 bits.
 const keySize = chacha20poly1305.KeySize
@@ -77,15 +80,17 @@ func newSealer(encodedKey string) (*sealer, error) {
 }
 
 // seal encrypts one record and hands back the two halves of its envelope, ready to be written as
-// they are.
+// they are. `filedUnder` is the key the record travels under, and it is bound into the tag rather
+// than encrypted — it has to stay readable for the store to update a row, and binding it is what
+// stops the row being moved.
 //
 // The nonce is drawn fresh on every call and never derived from the record: two records sealed
 // under one nonce and one key would give away both plaintexts to anyone holding the pair.
-func (s *sealer) seal(record []byte) (nonce, ciphertext string) {
+func (s *sealer) seal(filedUnder string, record []byte) (nonce, ciphertext string) {
 	// crypto/rand does not report failure — it panics rather than hand back a buffer it could
 	// not fill, which is the right end for a value whose whole job is to never repeat.
 	raw := make([]byte, s.aead.NonceSize())
 	rand.Read(raw)
-	sealed := s.aead.Seal(nil, raw, record, nil)
+	sealed := s.aead.Seal(nil, raw, record, []byte(filedUnder))
 	return base64.RawURLEncoding.EncodeToString(raw), base64.RawURLEncoding.EncodeToString(sealed)
 }

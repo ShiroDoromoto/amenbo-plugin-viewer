@@ -81,8 +81,9 @@ func sealRows(seal *sealer, dataset string, rows []json.RawMessage) ([]outgoing,
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", dataset, err)
 		}
-		nonce, cipher := seal.seal(raw)
-		placed = append(placed, outgoing{Key: recordKey(dataset, id), Op: "put", Nonce: nonce, Cipher: cipher})
+		key := recordKey(dataset, id)
+		nonce, cipher := seal.seal(key, raw)
+		placed = append(placed, outgoing{Key: key, Op: "put", Nonce: nonce, Cipher: cipher})
 	}
 	return placed, nil
 }

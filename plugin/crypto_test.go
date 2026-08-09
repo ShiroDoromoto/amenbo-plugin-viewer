@@ -21,11 +21,12 @@ func testKey(t *testing.T) string {
 	return base64.RawURLEncoding.EncodeToString(raw)
 }
 
-// unseal opens an envelope the way the phone has to: with the cipher and the two base64url
-// values, and nothing else. It deliberately does not call back into this package — what is being
-// checked is that the envelope is openable by an implementation that has only been told which
-// cipher it is, which is the whole of what the app on the other end will have.
-func unseal(t *testing.T, encodedKey, nonce, ciphertext string) []byte {
+// unseal opens an envelope the way the phone has to: with the cipher, the key the record is
+// filed under, and the two base64url values. It deliberately does not call back into this
+// package — what is being checked is that the envelope is openable by an implementation that has
+// only been told which cipher it is, which is the whole of what the app on the other end will
+// have.
+func unseal(t *testing.T, encodedKey, filedUnder, nonce, ciphertext string) []byte {
 	t.Helper()
 	key, err := base64.RawURLEncoding.DecodeString(encodedKey)
 	if err != nil {
@@ -43,7 +44,7 @@ func unseal(t *testing.T, encodedKey, nonce, ciphertext string) []byte {
 	if err != nil {
 		t.Fatalf("cipher: %v", err)
 	}
-	record, err := aead.Open(nil, raw, sealed, nil)
+	record, err := aead.Open(nil, raw, sealed, []byte(filedUnder))
 	if err != nil {
 		t.Fatalf("open: %v", err)
 	}
@@ -58,9 +59,9 @@ func TestASealedRecordOpensAgainOnTheOtherSide(t *testing.T) {
 	}
 	record := []byte(`{"id":2812,"title":"レコード単位の暗号"}`)
 
-	nonce, ciphertext := sealer.seal(record)
+	nonce, ciphertext := sealer.seal("task/2812", record)
 
-	if got := unseal(t, key, nonce, ciphertext); !bytes.Equal(got, record) {
+	if got := unseal(t, key, "task/2812", nonce, ciphertext); !bytes.Equal(got, record) {
 		t.Errorf("opened %q, sealed %q", got, record)
 	}
 }
@@ -75,7 +76,7 @@ func TestTheEnvelopeIsANonceAndTheCiphertextWithItsTag(t *testing.T) {
 	}
 	record := []byte("a record")
 
-	nonce, ciphertext := sealer.seal(record)
+	nonce, ciphertext := sealer.seal("task/1", record)
 
 	raw, err := base64.RawURLEncoding.DecodeString(nonce)
 	if err != nil {
@@ -104,8 +105,8 @@ func TestEveryRecordIsSealedUnderItsOwnNonce(t *testing.T) {
 	}
 	record := []byte("the same record twice")
 
-	firstNonce, firstCiphertext := sealer.seal(record)
-	secondNonce, secondCiphertext := sealer.seal(record)
+	firstNonce, firstCiphertext := sealer.seal("task/1", record)
+	secondNonce, secondCiphertext := sealer.seal("task/1", record)
 
 	if firstNonce == secondNonce {
 		t.Error("two records were sealed under one nonce")
@@ -124,7 +125,7 @@ func TestATamperedRecordDoesNotOpen(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	nonce, ciphertext := sealer.seal([]byte("a record"))
+	nonce, ciphertext := sealer.seal("task/1", []byte("a record"))
 
 	sealed, err := base64.RawURLEncoding.DecodeString(ciphertext)
 	if err != nil {
@@ -139,9 +140,48 @@ func TestATamperedRecordDoesNotOpen(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := aead.Open(nil, raw, sealed, nil); err == nil {
+	if _, err := aead.Open(nil, raw, sealed, []byte("task/1")); err == nil {
 		t.Error("an altered record opened")
 	}
+}
+
+// A record moved to another key does not open, though nothing about it was altered. The key is
+// in the clear beside the ciphertext so the store can update a row by it — binding it into the
+// tag is what stops whoever can write to that store from serving one task's contents under
+// another task's key.
+func TestARecordMovedToAnotherKeyDoesNotOpen(t *testing.T) {
+	key := testKey(t)
+	sealer, err := newSealer(key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	record := []byte(`{"id":2812,"title":"レコード単位の暗号"}`)
+
+	nonce, ciphertext := sealer.seal("task/2812", record)
+
+	aead, err := chacha20poly1305.NewX(mustDecodeKey(t, key))
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, sealed := mustDecode(t, nonce), mustDecode(t, ciphertext)
+	if _, err := aead.Open(nil, raw, sealed, []byte("task/2799")); err == nil {
+		t.Error("a record filed under one key opened under another")
+	}
+	if _, err := aead.Open(nil, raw, sealed, nil); err == nil {
+		t.Error("a record opened with the key left out — nothing is bound into the tag")
+	}
+	if opened, err := aead.Open(nil, raw, sealed, []byte("task/2812")); err != nil || !bytes.Equal(opened, record) {
+		t.Errorf("the record does not open under its own key: %v", err)
+	}
+}
+
+func mustDecode(t *testing.T, text string) []byte {
+	t.Helper()
+	raw, err := base64.RawURLEncoding.DecodeString(text)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return raw
 }
 
 func mustDecodeKey(t *testing.T, encodedKey string) []byte {
@@ -169,8 +209,8 @@ func TestTheKeyIsTakenPaddedOrNot(t *testing.T) {
 				t.Fatal(err)
 			}
 			record := []byte("a record")
-			nonce, ciphertext := sealer.seal(record)
-			if got := unseal(t, unpadded, nonce, ciphertext); !bytes.Equal(got, record) {
+			nonce, ciphertext := sealer.seal("task/1", record)
+			if got := unseal(t, unpadded, "task/1", nonce, ciphertext); !bytes.Equal(got, record) {
 				t.Errorf("opened %q, sealed %q", got, record)
 			}
 		})
