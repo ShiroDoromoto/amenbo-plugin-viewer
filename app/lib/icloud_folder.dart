@@ -22,9 +22,9 @@ enum DownloadStatus {
   final String raw;
 
   static DownloadStatus parse(Object? raw) => values.firstWhere(
-        (status) => status.raw == raw,
-        orElse: () => DownloadStatus.unknown,
-      );
+    (status) => status.raw == raw,
+    orElse: () => DownloadStatus.unknown,
+  );
 }
 
 /// Whether a folder is being held, and which one.
@@ -51,12 +51,12 @@ class FolderStatus {
   static const none = FolderStatus(saved: false);
 
   factory FolderStatus.fromMap(Map<Object?, Object?> map) => FolderStatus(
-        saved: map['saved'] as bool? ?? false,
-        path: map['path'] as String?,
-        name: map['name'] as String?,
-        wasStale: map['wasStale'] as bool? ?? false,
-        reachable: map['reachable'] as bool? ?? false,
-      );
+    saved: map['saved'] as bool? ?? false,
+    path: map['path'] as String?,
+    name: map['name'] as String?,
+    wasStale: map['wasStale'] as bool? ?? false,
+    reachable: map['reachable'] as bool? ?? false,
+  );
 }
 
 /// One entry in the chosen folder.
@@ -78,12 +78,12 @@ class FolderEntry {
   final DownloadStatus status;
 
   factory FolderEntry.fromMap(Map<Object?, Object?> map) => FolderEntry(
-        name: map['name'] as String? ?? '',
-        isDirectory: map['isDirectory'] as bool? ?? false,
-        bytes: map['bytes'] as int? ?? 0,
-        ubiquitous: map['ubiquitous'] as bool? ?? false,
-        status: DownloadStatus.parse(map['status']),
-      );
+    name: map['name'] as String? ?? '',
+    isDirectory: map['isDirectory'] as bool? ?? false,
+    bytes: map['bytes'] as int? ?? 0,
+    ubiquitous: map['ubiquitous'] as bool? ?? false,
+    status: DownloadStatus.parse(map['status']),
+  );
 }
 
 /// The result of reading one file, with the download status on either side of the read.
@@ -110,12 +110,12 @@ class FileRead {
   final DownloadStatus statusAfter;
 
   factory FileRead.fromMap(Map<Object?, Object?> map) => FileRead(
-        name: map['name'] as String? ?? '',
-        bytes: map['bytes'] as int? ?? 0,
-        head: map['head'] as String? ?? '',
-        statusBefore: DownloadStatus.parse(map['statusBefore']),
-        statusAfter: DownloadStatus.parse(map['statusAfter']),
-      );
+    name: map['name'] as String? ?? '',
+    bytes: map['bytes'] as int? ?? 0,
+    head: map['head'] as String? ?? '',
+    statusBefore: DownloadStatus.parse(map['statusBefore']),
+    statusAfter: DownloadStatus.parse(map['statusAfter']),
+  );
 }
 
 /// A folder in iCloud Drive the user picked once, read as often as needed afterwards.
@@ -150,8 +150,9 @@ class ICloudFolder {
   /// Reads one file out of the folder, waiting for iCloud to hand over the contents if the
   /// device is not holding them.
   static Future<FileRead> read(String name) async {
-    final result =
-        await _channel.invokeMethod<Map<Object?, Object?>>('read', {'name': name});
+    final result = await _channel.invokeMethod<Map<Object?, Object?>>('read', {
+      'name': name,
+    });
     return FileRead.fromMap(result ?? const {});
   }
 

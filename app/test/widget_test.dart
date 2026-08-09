@@ -17,7 +17,9 @@ void main() {
     expect(find.text(AmenboViewerApp.title), findsOneWidget);
   });
 
-  testWidgets('an unpaired app explains itself instead of failing', (tester) async {
+  testWidgets('an unpaired app explains itself instead of failing', (
+    tester,
+  ) async {
     await tester.pumpWidget(const AmenboViewerApp());
 
     // Not an error, not a spinner, not a plausible empty backlog — a screen that looked
@@ -27,10 +29,12 @@ void main() {
     expect(find.byType(CircularProgressIndicator), findsNothing);
   });
 
-  testWidgets('the steps are the ones the person can actually take', (tester) async {
-    await tester.pumpWidget(const MaterialApp(
-      home: PairingGuideScreen(appName: 'amenbo Viewer'),
-    ));
+  testWidgets('the steps are the ones the person can actually take', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(home: PairingGuideScreen(appName: 'amenbo Viewer')),
+    );
 
     for (final step in PairingRoute.cloudflare.steps) {
       expect(find.text(step), findsOneWidget);
@@ -41,20 +45,28 @@ void main() {
     // The iCloud route is not a preference — it is a capability. Only the iPhone has one, so
     // offering it anywhere else would be an instruction that cannot be followed.
     test('an iPhone gets both', () {
-      expect(PairingRoute.forPlatform(TargetPlatform.iOS),
-          [PairingRoute.iCloud, PairingRoute.cloudflare]);
+      expect(PairingRoute.forPlatform(TargetPlatform.iOS), [
+        PairingRoute.iCloud,
+        PairingRoute.cloudflare,
+      ]);
     });
 
     test('an Android phone gets Cloudflare alone', () {
-      expect(PairingRoute.forPlatform(TargetPlatform.android), [PairingRoute.cloudflare]);
+      expect(PairingRoute.forPlatform(TargetPlatform.android), [
+        PairingRoute.cloudflare,
+      ]);
     });
   });
 
-  testWidgets('an Android phone is not told to open a folder it cannot open', (tester) async {
-    await tester.pumpWidget(MaterialApp(
-      theme: ThemeData(platform: TargetPlatform.android),
-      home: const PairingGuideScreen(appName: 'amenbo Viewer'),
-    ));
+  testWidgets('an Android phone is not told to open a folder it cannot open', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData(platform: TargetPlatform.android),
+        home: const PairingGuideScreen(appName: 'amenbo Viewer'),
+      ),
+    );
 
     expect(find.text(PairingRoute.iCloud.name), findsNothing);
     expect(find.text(PairingRoute.cloudflare.name), findsOneWidget);

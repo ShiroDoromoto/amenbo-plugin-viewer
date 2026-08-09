@@ -35,6 +35,15 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
 
+  # The local copy of the backlog. This package bundles SQLite with the app rather than calling
+  # whichever one the OS happens to ship, which is what makes the phone, this machine and CI agree
+  # on what the database can do — FTS5 and its trigram tokeniser above all, since a word tokeniser
+  # has nothing to split Japanese on.
+  sqlite3: ^3.5.1
+
+  # Where that file goes: application support, which is neither backed up nor shown as documents.
+  path_provider: ^2.1.6
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
