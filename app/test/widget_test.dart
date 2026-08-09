@@ -8,10 +8,15 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:amenbo_viewer/main.dart';
 import 'package:amenbo_viewer/pairing_guide.dart';
+import 'package:amenbo_viewer/settings.dart';
+
+/// Settings with nothing behind them. The app boots the same way whether the choices came off the
+/// device or are the defaults, and the boot is what is being checked here.
+SettingsController unkeptSettings() => SettingsController(UnkeptSettings());
 
 void main() {
   testWidgets('the app boots with nothing else present', (tester) async {
-    await tester.pumpWidget(const AmenboViewerApp());
+    await tester.pumpWidget(AmenboViewerApp(settings: unkeptSettings()));
 
     expect(find.byType(MaterialApp), findsOneWidget);
     expect(find.text(AmenboViewerApp.title), findsOneWidget);
@@ -20,13 +25,32 @@ void main() {
   testWidgets('an unpaired app explains itself instead of failing', (
     tester,
   ) async {
-    await tester.pumpWidget(const AmenboViewerApp());
+    await tester.pumpWidget(AmenboViewerApp(settings: unkeptSettings()));
 
     // Not an error, not a spinner, not a plausible empty backlog — a screen that looked
     // finished would make "no tasks" and "not set up yet" the same picture.
     expect(find.text(PairingGuideScreen.heading), findsOneWidget);
     expect(find.byType(ErrorWidget), findsNothing);
     expect(find.byType(CircularProgressIndicator), findsNothing);
+  });
+
+  testWidgets('the app wears the brightness that was chosen', (tester) async {
+    final settings = unkeptSettings();
+    await tester.pumpWidget(AmenboViewerApp(settings: settings));
+    expect(
+      tester.widget<MaterialApp>(find.byType(MaterialApp)).themeMode,
+      ThemeMode.system,
+    );
+
+    settings.setAppearance(Appearance.dark);
+    await tester.pump();
+
+    // The choice is made on a screen two pushes down, so the app has to be listening — otherwise
+    // it takes effect on the next launch and reads as a setting that did nothing.
+    expect(
+      tester.widget<MaterialApp>(find.byType(MaterialApp)).themeMode,
+      ThemeMode.dark,
+    );
   });
 
   testWidgets('the steps are the ones the person can actually take', (

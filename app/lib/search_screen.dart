@@ -170,7 +170,7 @@ class _SearchScreenState extends State<SearchScreen>
       // is shown as it is now, and one it deleted quietly drops off.
       switch (seen.kind) {
         case Seen.task:
-          final line = widget.store.task(seen.id, today: today);
+          final line = widget.store.task(seen.id);
           if (line != null) _seenTasks = [..._seenTasks, line];
         case Seen.decision:
           final line = widget.store.decision(seen.id);

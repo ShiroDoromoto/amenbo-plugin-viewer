@@ -20,12 +20,14 @@ void main() {
   late _Arrivals arrivals;
   late List<int> opened;
   late List<Bundle> widened;
+  late List<Moved> sinced;
 
   setUp(() {
     store = BacklogStore.openInMemory();
     arrivals = _Arrivals();
     opened = [];
     widened = [];
+    sinced = [];
   });
   tearDown(() {
     arrivals.dispose();
@@ -41,6 +43,7 @@ void main() {
       clock: () => today,
       onOpen: (line) => opened.add(line.id),
       onMore: widened.add,
+      onSince: sinced.add,
     ),
   );
 
@@ -80,7 +83,22 @@ void main() {
           .bundle(Bundle.stalled, today: today)
           .rows
           .singleWhere((row) => row.id == 5);
-      expect(find.text(stallReason(line)!), findsOneWidget);
+      expect(find.text(stallReason(line, today: today)!), findsOneWidget);
+    });
+
+    testWidgets('a day that has not come is a reason like any other', (
+      tester,
+    ) async {
+      store.applyPage([
+        BacklogChange.put('task', 1, task(id: 1, startOn: '2026-09-01')),
+      ]);
+
+      await tester.pumpWidget(screen());
+
+      // It lands in the stalled bundle, so the row owes an answer for why — even the one stall
+      // nobody has to do anything about.
+      expect(find.text(bundleHeading(Bundle.stalled)), findsOneWidget);
+      expect(find.textContaining('Starts'), findsOneWidget);
     });
 
     testWidgets('only the moving rows carry a time', (tester) async {
@@ -202,6 +220,7 @@ void main() {
             clock: () => today,
             onOpen: (_) {},
             onMore: (_) {},
+            onSince: (_) {},
           ),
         ),
       );
@@ -300,9 +319,172 @@ void main() {
     });
   });
 
+  group('what moved while they were away', () {
+    /// The mark the previous visit left behind. Everything in this group is stamped after it.
+    const lastLook = '2026-08-09T00:00:00Z';
+    const after = '2026-08-09T09:00:00Z';
+
+    testWidgets('a device nobody has opened before has nothing to say', (
+      tester,
+    ) async {
+      store.applyPage([BacklogChange.put('task', 1, task(id: 1))]);
+
+      await tester.pumpWidget(screen());
+
+      expect(find.text(NowScreen.sinceLastLook), findsNothing);
+    });
+
+    testWidgets('the three numbers are counted from the last visit', (
+      tester,
+    ) async {
+      store.setMeta(MetaKey.lastOpenedAt, lastLook);
+      store.applyPage([
+        BacklogChange.put(
+          'task',
+          1,
+          task(id: 1, status: 'done', completedAt: after),
+        ),
+        BacklogChange.put('task', 2, task(id: 2, createdAt: after)),
+        BacklogChange.put('task', 3, task(id: 3)),
+        BacklogChange.put(
+          'task_comment',
+          1,
+          comment(id: 1, taskId: 3, createdAt: after),
+        ),
+      ]);
+
+      await tester.pumpWidget(screen());
+
+      expect(find.text(NowScreen.sinceLastLook), findsOneWidget);
+      for (final moved in Moved.values) {
+        expect(
+          find.text(NowScreen.moved(moved, const Counted(1, false))),
+          findsOneWidget,
+        );
+      }
+    });
+
+    testWidgets('nothing moved is no card at all, not a card saying so', (
+      tester,
+    ) async {
+      store.setMeta(MetaKey.lastOpenedAt, after);
+      store.applyPage([
+        BacklogChange.put('task', 1, task(id: 1, createdAt: lastLook)),
+      ]);
+
+      await tester.pumpWidget(screen());
+
+      expect(find.text(NowScreen.sinceLastLook), findsNothing);
+      expect(find.textContaining(movedHeading(Moved.filed)), findsNothing);
+    });
+
+    testWidgets('a number opens the list of just what it counted', (
+      tester,
+    ) async {
+      store.setMeta(MetaKey.lastOpenedAt, lastLook);
+      store.applyPage([
+        BacklogChange.put(
+          'task',
+          1,
+          task(id: 1, status: 'done', completedAt: after),
+        ),
+      ]);
+
+      await tester.pumpWidget(screen());
+      await tester.tap(
+        find.text(NowScreen.moved(Moved.finished, const Counted(1, false))),
+      );
+
+      expect(sinced, [Moved.finished]);
+    });
+
+    testWidgets('it counts inside the narrowing the screen is holding', (
+      tester,
+    ) async {
+      store.setMeta(MetaKey.lastOpenedAt, lastLook);
+      store.applyPage([
+        BacklogChange.put('project', 16, project(id: 16, name: 'viewer')),
+        BacklogChange.put('project', 20, project(id: 20, name: 'nsys')),
+        BacklogChange.put(
+          'task',
+          1,
+          task(id: 1, projectId: 16, createdAt: after),
+        ),
+        BacklogChange.put(
+          'task',
+          2,
+          task(id: 2, projectId: 20, createdAt: after),
+        ),
+      ]);
+
+      await tester.pumpWidget(screen());
+      expect(
+        find.text(NowScreen.moved(Moved.filed, const Counted(2, false))),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text(NowScreen.allProjects));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('viewer').last);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(NowScreen.moved(Moved.filed, const Counted(1, false))),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('the mark is taken on arriving and held while reading', (
+      tester,
+    ) async {
+      store.setMeta(MetaKey.lastOpenedAt, lastLook);
+      store.applyPage([
+        BacklogChange.put('task', 1, task(id: 1, createdAt: after)),
+      ]);
+
+      await tester.pumpWidget(screen());
+      expect(store.meta(MetaKey.lastOpenedAt), amenboStamp(today));
+
+      // Rows landing behind the pill, and then being let in, are not a new visit: the card has to
+      // still say what it said when the person started reading.
+      store.applyPage([
+        BacklogChange.put(
+          'task',
+          2,
+          task(id: 2, createdAt: after, updatedAt: after),
+        ),
+      ]);
+      arrivals.tick();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(NowScreen.arrived(const Counted(1, false))));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(NowScreen.moved(Moved.filed, const Counted(2, false))),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('opening a row takes its dot away', (tester) async {
+      store.setMeta(MetaKey.lastOpenedAt, lastLook);
+      store.applyPage([
+        BacklogChange.put('task', 1, task(id: 1, updatedAt: after)),
+      ]);
+
+      await tester.pumpWidget(screen());
+      expect(tester.widget<TaskRow>(find.byType(TaskRow)).unread, isTrue);
+
+      await tester.tap(find.byType(TaskRow));
+      await tester.pumpAndSettle();
+
+      expect(tester.widget<TaskRow>(find.byType(TaskRow)).unread, isFalse);
+    });
+  });
+
   testWidgets('nothing overflows at the largest text a phone offers', (
     tester,
   ) async {
+    store.setMeta(MetaKey.lastOpenedAt, '2026-07-01T00:00:00Z');
     store.applyPage([
       BacklogChange.put('project', 16, project(id: 16, name: 'viewer')),
       BacklogChange.put('project', 20, project(id: 20, name: 'nsys')),
@@ -337,6 +519,7 @@ void main() {
               clock: () => today,
               onOpen: (_) {},
               onMore: (_) {},
+              onSince: (_) {},
             ),
           ),
         ),

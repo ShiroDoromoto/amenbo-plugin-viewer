@@ -13,6 +13,9 @@
 ///   sync should be seen filling up.
 /// * **Projects narrow, they do not divide.** Everything the machine sends is stacked together by
 ///   default, because "what moved overnight" is not a question anybody asks one project at a time.
+/// * **"Last looked" is the moment the app came to the front, and it does not move while it is
+///   there.** Both the card at the top and the unread dots count from it, so a mark that vanished
+///   while it was being read would be one the person never got to act on.
 library;
 
 import 'package:flutter/material.dart';
@@ -35,12 +38,20 @@ String bundleHeading(Bundle bundle) => switch (bundle) {
   Bundle.finished => 'Finished (7 days)',
 };
 
+/// What the card calls each of its three numbers.
+String movedHeading(Moved moved) => switch (moved) {
+  Moved.finished => 'Finished',
+  Moved.filed => 'New',
+  Moved.commented => 'Comments',
+};
+
 class NowScreen extends StatefulWidget {
   const NowScreen({
     super.key,
     required this.store,
     required this.onOpen,
     required this.onMore,
+    required this.onSince,
     this.take,
     this.arrivals,
     this.clock = DateTime.now,
@@ -53,6 +64,9 @@ class NowScreen extends StatefulWidget {
 
   /// The rest of a bundle, past the window the screen holds.
   final void Function(Bundle bundle) onMore;
+
+  /// One number on the card, opened into the list of just what it counted.
+  final void Function(Moved moved) onSince;
 
   /// Goes and fetches. Null before anything is paired — the screen still draws what is on the
   /// device, which is the whole point of it being a local store.
@@ -78,11 +92,18 @@ class NowScreen extends StatefulWidget {
 
   static String arrived(Counted count) => 'New activity · ${countLabel(count)}';
 
+  /// The card's heading. It names the moment rather than the span, because "since you last looked"
+  /// is a moment the person remembers and "in the last 9 hours" is one they have to work out.
+  static const sinceLastLook = 'Since you last looked';
+
+  static String moved(Moved moved, Counted count) =>
+      '${movedHeading(moved)} ${countLabel(count)}';
+
   @override
   State<NowScreen> createState() => _NowScreenState();
 }
 
-class _NowScreenState extends State<NowScreen> {
+class _NowScreenState extends State<NowScreen> with WidgetsBindingObserver {
   /// Null is every project at once, and it is where the screen starts. Narrowing is a state of
   /// the screen, not a setting — coming back tomorrow shows everything again.
   int? _projectId;
@@ -95,7 +116,19 @@ class _NowScreenState extends State<NowScreen> {
   /// the pill offers.
   String? _drawnAt;
 
+  /// When the app was last brought to the front, taken once on arriving there and held for as
+  /// long as it stays. Null on a device that has never had it open, where there is no "last time"
+  /// to count from.
   String? _lastLooked;
+
+  /// The card's three numbers, counted from [_lastLooked]. Empty when nothing moved, which is
+  /// also when no card is drawn — a card saying "nothing changed" is a line of the screen spent
+  /// on the one answer the person could have assumed.
+  var _sinceCounts = const <Moved, Counted>{};
+
+  /// Rows opened during this visit. Their dots are gone: the person has read them, and
+  /// [_lastLooked] deliberately does not move to say so.
+  final _opened = <int>{};
 
   /// What has arrived since [_drawnAt], waiting to be let in. Null while nothing has.
   Counted? _arrived;
@@ -107,8 +140,28 @@ class _NowScreenState extends State<NowScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _cameToFront();
     _load();
     widget.arrivals?.addListener(_rowsArrived);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) setState(_cameToFront);
+  }
+
+  /// Takes the new mark for "last looked", and leaves the old one standing as what the screen
+  /// counts against.
+  ///
+  /// The new one is written the moment the app arrives, not on the way out: the question the card
+  /// answers is "what happened while I was away", and away began here.
+  void _cameToFront() {
+    _lastLooked = widget.store.meta(MetaKey.lastOpenedAt);
+    widget.store.setMeta(MetaKey.lastOpenedAt, amenboStamp(widget.clock()));
+    // A new visit, and nothing on the screen has been read in it yet.
+    _opened.clear();
+    _countSinceLook();
   }
 
   @override
@@ -123,6 +176,7 @@ class _NowScreenState extends State<NowScreen> {
   @override
   void dispose() {
     widget.arrivals?.removeListener(_rowsArrived);
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
@@ -146,8 +200,23 @@ class _NowScreenState extends State<NowScreen> {
         ),
       );
     _drawnAt = widget.store.latestTaskChange(projectId: _projectId);
-    _lastLooked = widget.store.meta(MetaKey.lastOpenedAt);
     _arrived = null;
+    _countSinceLook();
+  }
+
+  /// Counted inside the narrowing the screen is holding, or a number the person presses opens a
+  /// list that does not hold that many.
+  void _countSinceLook() {
+    final since = _lastLooked;
+    _sinceCounts = since == null
+        ? const {}
+        : Map.fromEntries(
+            widget.store
+                .sinceLastLook(since, projectId: _projectId)
+                .entries
+                // A zero is not worth its width, and it is a number that opens an empty list.
+                .where((counted) => counted.value.value > 0),
+          );
   }
 
   void _apply() => setState(_load);
@@ -188,8 +257,11 @@ class _NowScreenState extends State<NowScreen> {
   }
 
   bool _unread(TaskLine line) {
+    // Opening it is what reads it. The dot goes at that moment rather than at the next visit,
+    // because the row is still on the screen the person comes back to.
+    if (_opened.contains(line.id)) return false;
     final since = _lastLooked;
-    // Both are amenbo's own instants, written the same way, so the comparison is a string one.
+    // Both are written in amenbo's shape, so the comparison is a string one.
     return since != null && line.updatedAt.compareTo(since) > 0;
   }
 
@@ -297,7 +369,12 @@ class _NowScreenState extends State<NowScreen> {
   );
 
   Widget _scroll(DateTime today) {
-    final rows = <Widget>[];
+    final rows = <Widget>[
+      // First, because the person who opens this in bed is asking what happened overnight before
+      // they are asking anything else.
+      if (_sinceCounts.isNotEmpty)
+        _SinceCard(counts: _sinceCounts, onOpen: widget.onSince),
+    ];
     for (final bundle in Bundle.values) {
       final held = _bundles[bundle]!;
       // A heading over nothing is a line that says only that a question was asked.
@@ -330,7 +407,10 @@ class _NowScreenState extends State<NowScreen> {
             projectName: _projectId == null && _projects.length > 1
                 ? _names[line.projectId]
                 : null,
-            onOpen: () => widget.onOpen(line),
+            onOpen: () {
+              setState(() => _opened.add(line.id));
+              widget.onOpen(line);
+            },
           ),
         ),
       );
@@ -347,6 +427,88 @@ class _NowScreenState extends State<NowScreen> {
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
       children: rows,
+    );
+  }
+}
+
+/// What moved while the person was away, in one card.
+///
+/// Every number is its own way in: pressing one opens the list of exactly what it counted, so the
+/// card is a set of doors rather than a summary to be read and dismissed. They are laid out in a
+/// [Wrap] because at the largest text size a phone offers, three of them do not share a line.
+class _SinceCard extends StatelessWidget {
+  const _SinceCard({required this.counts, required this.onOpen});
+
+  final Map<Moved, Counted> counts;
+  final void Function(Moved moved) onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(NowScreen.sinceLastLook, style: theme.textTheme.titleSmall),
+            const SizedBox(height: 4),
+            Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                // Fixed order, so the same number is in the same place every morning.
+                for (final moved in Moved.values)
+                  if (counts[moved] case final count?)
+                    _SinceNumber(
+                      moved: moved,
+                      count: count,
+                      onOpen: () => onOpen(moved),
+                    ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SinceNumber extends StatelessWidget {
+  const _SinceNumber({
+    required this.moved,
+    required this.count,
+    required this.onOpen,
+  });
+
+  final Moved moved;
+  final Counted count;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final label = NowScreen.moved(moved, count);
+    return Semantics(
+      // On its own it would be read as two words and a number, with no way to tell what the
+      // number is since.
+      label: '$label, ${NowScreen.sinceLastLook.toLowerCase()}',
+      button: true,
+      container: true,
+      child: ExcludeSemantics(
+        child: InkWell(
+          onTap: onOpen,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+            child: Text(
+              label,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.primary,
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
