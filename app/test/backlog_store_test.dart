@@ -25,14 +25,14 @@ void main() {
       ]);
 
       expect(store.record('task', 1)!['notes'], '## やること\n本文');
-      expect(store.task(1, today: DateTime(2026, 8, 9))!.title, 'QR を読む');
+      expect(store.task(1)!.title, 'QR を読む');
     });
 
     test('a record that comes again replaces the one before it', () {
       store.applyPage([BacklogChange.put('task', 1, task(id: 1, title: 'まえ'))]);
       store.applyPage([BacklogChange.put('task', 1, task(id: 1, title: 'あと'))]);
 
-      expect(store.task(1, today: DateTime(2026, 8, 9))!.title, 'あと');
+      expect(store.task(1)!.title, 'あと');
       expect(
         store.taskCount(const TaskQuery(), today: DateTime(2026, 8, 9)).value,
         1,
@@ -46,7 +46,7 @@ void main() {
       store.applyPage([const BacklogChange.deleted('task', 1)]);
 
       expect(store.record('task', 1), isNull);
-      expect(store.task(1, today: DateTime(2026, 8, 9)), isNull);
+      expect(store.task(1), isNull);
       expect(
         store.tasks(
           const TaskQuery(text: 'めずらしい'),

@@ -80,7 +80,22 @@ void main() {
           .bundle(Bundle.stalled, today: today)
           .rows
           .singleWhere((row) => row.id == 5);
-      expect(find.text(stallReason(line)!), findsOneWidget);
+      expect(find.text(stallReason(line, today: today)!), findsOneWidget);
+    });
+
+    testWidgets('a day that has not come is a reason like any other', (
+      tester,
+    ) async {
+      store.applyPage([
+        BacklogChange.put('task', 1, task(id: 1, startOn: '2026-09-01')),
+      ]);
+
+      await tester.pumpWidget(screen());
+
+      // It lands in the stalled bundle, so the row owes an answer for why — even the one stall
+      // nobody has to do anything about.
+      expect(find.text(bundleHeading(Bundle.stalled)), findsOneWidget);
+      expect(find.textContaining('Starts'), findsOneWidget);
     });
 
     testWidgets('only the moving rows carry a time', (tester) async {
