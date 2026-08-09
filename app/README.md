@@ -10,8 +10,14 @@ iOS と Android を1本で作る。`ios/` と `android/` は Flutter がこの�
 
 表示名は日英どちらでも通るので、言語ごとに変えず揃える。
 
-iOS は2経路を持つ。iCloud Drive のフォルダを読む経路と、Cloudflare へ HTTPS で取りに行く経路。
-Android は Cloudflare 経路だけ。復号した後の扱いはどちらも同じで、書き戻さない。
+iOS は2経路を持つ。アプリ専用の iCloud コンテナ（`iCloud.work.amenbo.viewer`）を読む経路と、
+Cloudflare へ HTTPS で取りに行く経路。Android は Cloudflare 経路だけ。
+復号した後の扱いはどちらも同じで、書き戻さない。
+
+**iCloud 経路に、この端末の操作は無い。** 利用者はフォルダを選ばない——置き場はエンタイトルメントで
+与えられ、コンテナの `Documents/` を直に読む（`ios/Runner/ICloudContainerBridge.swift`）。
+そのディレクトリを作れるのはアプリだけなので、**mac 側の書き先はアプリを一度起動して初めて生える**。
+iCloud にサインインしていない状態は失敗ではなく、`available: false` として扱う。
 
 ## 見た目の作法
 
