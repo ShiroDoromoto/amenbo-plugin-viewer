@@ -23,7 +23,13 @@ final class ICloudContainerBridge: NSObject {
   /// the Mac writes into.
   private static let containerIdentifier = "iCloud.work.amenbo.viewer"
 
-  private let work = DispatchQueue(label: "work.amenbo.viewer.icloud_container", qos: .userInitiated)
+  /// Concurrent on purpose: a read waiting on the file provider is the ordinary case here, and on
+  /// a serial queue one of those would hold up every question asked after it.
+  private let work = DispatchQueue(
+    label: "work.amenbo.viewer.icloud_container", qos: .userInitiated, attributes: .concurrent)
+
+  /// How long a coordinated read may wait before it is called off, when the caller does not say.
+  private static let defaultDeadline: TimeInterval = 30
 
   static func register(with registrar: FlutterPluginRegistrar) {
     let channel = FlutterMethodChannel(
@@ -43,7 +49,8 @@ final class ICloudContainerBridge: NSObject {
       async(result) { try self.status() }
     case "list":
       let path = (call.arguments as? [String: Any])?["path"] as? String ?? ""
-      async(result) { try self.list(path: path) }
+      let seconds = Self.deadline(in: call)
+      async(result) { try self.list(path: path, deadline: seconds) }
     case "read":
       guard let name = (call.arguments as? [String: Any])?["name"] as? String else {
         result(FlutterError(code: "bad_args", message: "read needs a file name", details: nil))
@@ -55,7 +62,8 @@ final class ICloudContainerBridge: NSObject {
         result(FlutterError(code: "bad_args", message: "readText needs a file name", details: nil))
         return
       }
-      async(result) { try self.readText(name: name) }
+      let seconds = Self.deadline(in: call)
+      async(result) { try self.readText(name: name, deadline: seconds) }
     default:
       result(FlutterMethodNotImplemented)
     }
@@ -116,18 +124,24 @@ final class ICloudContainerBridge: NSObject {
     .ubiquitousItemDownloadingStatusKey, .contentModificationDateKey,
   ]
 
+  /// How long the caller is prepared to wait, or this side's own limit where it did not say.
+  private static func deadline(in call: FlutterMethodCall) -> TimeInterval {
+    let asked = (call.arguments as? [String: Any])?["seconds"] as? Double
+    return asked ?? defaultDeadline
+  }
+
   /// Lists one directory of the container — `Documents/` itself with no path, or something under
   /// it, which is how the records are walked (`records`, then `records/<dataset>`).
   ///
   /// A directory that is not there comes back empty rather than as an error: the drop grows one
   /// dataset at a time, and a backlog with no decisions in it has no `records/decision`.
-  private func list(path: String) throws -> [String: Any] {
+  private func list(path: String, deadline: TimeInterval) throws -> [String: Any] {
     let dir = try under(path)
     guard FileManager.default.fileExists(atPath: dir.path) else {
       return ["path": dir.path, "entries": []]
     }
     var found: [[String: Any]] = []
-    try coordinatedRead(dir) { dir in
+    try coordinatedRead(dir, deadline: deadline) { dir in
       let urls = try FileManager.default.contentsOfDirectory(
         at: dir, includingPropertiesForKeys: Self.entryKeys, options: [.skipsHiddenFiles])
       found = urls.map(Self.describe)
@@ -166,7 +180,7 @@ final class ICloudContainerBridge: NSObject {
     var head = ""
     // A coordinated read waits for the file provider to materialise the contents, so the read
     // inside the block sees real bytes even when the status above said they were not here.
-    try coordinatedRead(file) { url in
+    try coordinatedRead(file, deadline: Self.defaultDeadline) { url in
       let data = try Data(contentsOf: url)
       bytes = data.count
       head = String(decoding: data.prefix(120), as: UTF8.self)
@@ -185,7 +199,7 @@ final class ICloudContainerBridge: NSObject {
   /// A file that is not there is `found: false` rather than an error. That is an ordinary answer
   /// twice over: `meta.json` is missing until the PC has placed anything, and a record can be
   /// taken away between the listing and the read.
-  private func readText(name: String) throws -> [String: Any] {
+  private func readText(name: String, deadline: TimeInterval) throws -> [String: Any] {
     let file = try under(name)
     guard FileManager.default.fileExists(atPath: file.path) else {
       return ["found": false]
@@ -197,7 +211,7 @@ final class ICloudContainerBridge: NSObject {
     var bytes = 0
     // The coordinated read is what waits for the file provider: a record whose contents are not
     // on the device is the ordinary case here, not the exception.
-    try coordinatedRead(file) { url in
+    try coordinatedRead(file, deadline: deadline) { url in
       let data = try Data(contentsOf: url)
       bytes = data.count
       text = String(decoding: data, as: UTF8.self)
@@ -205,10 +219,22 @@ final class ICloudContainerBridge: NSObject {
     return ["found": true, "text": text, "bytes": bytes]
   }
 
-  private func coordinatedRead(_ url: URL, _ body: (URL) throws -> Void) throws {
+  /// Coordinates one read, and calls it off after [deadline] where one is given.
+  ///
+  /// A file whose contents are not on the device is fetched by the file provider, and with no
+  /// network there is nobody to fetch it from — the coordinated read then never returns. Cancelling
+  /// the coordinator is the only way to end that wait, and what comes back is an error the calling
+  /// side reports the same way it reports any other place it could not reach.
+  private func coordinatedRead(_ url: URL, deadline: TimeInterval? = nil, _ body: (URL) throws -> Void)
+    throws
+  {
     var coordinationError: NSError?
     var thrown: Error?
-    NSFileCoordinator().coordinate(readingItemAt: url, options: [], error: &coordinationError) {
+    let coordinator = NSFileCoordinator()
+    if let deadline = deadline {
+      work.asyncAfter(deadline: .now() + deadline) { coordinator.cancel() }
+    }
+    coordinator.coordinate(readingItemAt: url, options: [], error: &coordinationError) {
       resolved in
       do { try body(resolved) } catch { thrown = error }
     }

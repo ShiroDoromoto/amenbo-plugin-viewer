@@ -21,7 +21,10 @@
 /// What it leaves behind is rows in the local store, exactly as the other route does.
 library;
 
+import 'dart:async';
 import 'dart:convert';
+
+import 'package:flutter/services.dart';
 
 import 'cloudflare_intake.dart';
 import 'icloud_container.dart';
@@ -46,10 +49,13 @@ abstract interface class BacklogDrop {
   Future<bool> available();
 
   /// One directory's entries, relative to the drop's root. A directory that is not there is empty.
-  Future<List<DropEntry>> entriesIn(String path);
+  ///
+  /// [within] is how long the answer may take. Whoever is reading is the one who knows how long a
+  /// wait is worth it, so the limit is carried in rather than kept here.
+  Future<List<DropEntry>> entriesIn(String path, {Duration? within});
 
   /// One file's text, or null where there is no such file.
-  Future<String?> readText(String path);
+  Future<String?> readText(String path, {Duration? within});
 }
 
 /// The drop as it really is: this app's own iCloud container.
@@ -60,13 +66,14 @@ class ICloudDrop implements BacklogDrop {
   Future<bool> available() async => (await ICloudContainer.status()).available;
 
   @override
-  Future<List<DropEntry>> entriesIn(String path) async =>
-      (await ICloudContainer.list(path: path))
+  Future<List<DropEntry>> entriesIn(String path, {Duration? within}) async =>
+      (await ICloudContainer.list(path: path, within: within))
           .map((entry) => DropEntry(entry.name, isDirectory: entry.isDirectory))
           .toList(growable: false);
 
   @override
-  Future<String?> readText(String path) => ICloudContainer.readText(path);
+  Future<String?> readText(String path, {Duration? within}) =>
+      ICloudContainer.readText(path, within: within);
 }
 
 /// What the drop's `meta.json` says.
@@ -85,6 +92,7 @@ class ICloudIntake {
     required this.cipher,
     required this.store,
     this.drop = const ICloudDrop(),
+    this.timeout = const Duration(seconds: 30),
   });
 
   /// Opens the records. It comes from the pairing, the same as on the other route — the key is
@@ -92,6 +100,14 @@ class ICloudIntake {
   final RecordCipher cipher;
   final BacklogStore store;
   final BacklogDrop drop;
+
+  /// How long one answer out of the folder may take.
+  ///
+  /// A file whose contents are not on the device is fetched by the file provider, and with nothing
+  /// on the other end of the network there is nobody to fetch it from — the read simply does not
+  /// come back. The other route gives up after this long and says the place was not reached; a
+  /// reader that waits forever instead is the quietest way this app could break.
+  final Duration timeout;
 
   /// The file naming what the drop as a whole holds. Written last by the PC, so it never claims a
   /// version the files beside it do not carry.
@@ -118,7 +134,7 @@ class ICloudIntake {
   Future<IntakeReport> run({
     void Function(IntakeProgress reached)? watching,
   }) async {
-    if (!await drop.available()) {
+    if (!await _within(drop.available(), 'whether iCloud is there')) {
       throw const IntakeException(
         IntakeFailure.unreachable,
         'iCloud is not available on this device',
@@ -194,9 +210,35 @@ class ICloudIntake {
     );
   }
 
+  /// Waits on one answer out of the folder, and gives up on it the way the other route gives up
+  /// on a request.
+  ///
+  /// Giving up is this side letting go, not the read being called off: iOS is still waiting for a
+  /// file provider that may yet answer, and there is no way to say otherwise. What it buys is the
+  /// pass ending — with a line the person can act on — rather than a screen that sits there.
+  Future<T> _within<T>(Future<T> asked, String what) async {
+    try {
+      return await asked.timeout(timeout);
+    } on TimeoutException {
+      throw IntakeException(
+        IntakeFailure.unreachable,
+        'iCloud did not hand $what over in time',
+      );
+    } on PlatformException {
+      // The iOS side called its own read off, which is the same event seen a moment earlier.
+      throw IntakeException(
+        IntakeFailure.unreachable,
+        'iCloud did not hand $what over',
+      );
+    }
+  }
+
   /// Reads `meta.json`, or null where the drop has never been written into.
   Future<DropStanding?> readStanding() async {
-    final said = await drop.readText(metaName);
+    final said = await _within(
+      drop.readText(metaName, within: timeout),
+      metaName,
+    );
     if (said == null) return null;
     final Object? decoded;
     try {
@@ -230,10 +272,16 @@ class ICloudIntake {
   /// Every record file in the drop, with the key its place gives it.
   Future<List<({String key, String path})>> _walk() async {
     final files = <({String key, String path})>[];
-    for (final dataset in await drop.entriesIn(recordsDir)) {
+    for (final dataset in await _within(
+      drop.entriesIn(recordsDir, within: timeout),
+      recordsDir,
+    )) {
       if (!dataset.isDirectory) continue;
       final within = '$recordsDir/${dataset.name}';
-      for (final file in await drop.entriesIn(within)) {
+      for (final file in await _within(
+        drop.entriesIn(within, within: timeout),
+        within,
+      )) {
         if (file.isDirectory || !file.name.endsWith('.json')) continue;
         final id = file.name.substring(0, file.name.length - '.json'.length);
         files.add((key: '${dataset.name}/$id', path: '$within/${file.name}'));
@@ -246,7 +294,10 @@ class ICloudIntake {
   /// between being listed and being read — the PC removing a row mid-pass is an ordinary race, and
   /// the next round is what settles it.
   Future<BacklogChange?> _open(({String key, String path}) file) async {
-    final said = await drop.readText(file.path);
+    final said = await _within(
+      drop.readText(file.path, within: timeout),
+      file.key,
+    );
     if (said == null) return null;
 
     final Object? decoded;

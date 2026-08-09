@@ -1,6 +1,7 @@
 // The iCloud route, walked over a folder written by hand: the drop is the whole truth there, so
 // what is tested is a pass over it — what lands, what is forgotten, and what stops the pass.
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:amenbo_viewer/cloudflare_intake.dart';
@@ -172,6 +173,34 @@ void main() {
     expect(store.meta(MetaKey.version), isNull);
   });
 
+  test('a read that never comes back is given up on, not waited on', () async {
+    drop.place(version: 1);
+    await drop.put('task/1', {'id': 1, 'title': 'とどかない', 'status': 'todo'});
+    // Airplane mode, from the reader's side: the file is listed, its contents are elsewhere, and
+    // there is nobody to fetch them from.
+    drop.stall = true;
+
+    final waiting = ICloudIntake(
+      cipher: RecordCipher.fromBase64Key(key),
+      store: store,
+      drop: drop,
+      timeout: const Duration(milliseconds: 20),
+    );
+
+    await expectLater(
+      waiting.run(),
+      throwsA(
+        isA<IntakeException>().having(
+          (thrown) => thrown.failure,
+          'failure',
+          IntakeFailure.unreachable,
+        ),
+      ),
+    );
+    // The same limit went down to the read itself, so the one left behind ends too.
+    expect(drop.asked, const Duration(milliseconds: 20));
+  });
+
   test('how far the pass has got is reported as it goes', () async {
     drop.place(version: 3);
     for (var id = 1; id <= 3; id++) {
@@ -193,6 +222,13 @@ class _Drop implements BacklogDrop {
   final files = <String, String>{};
   var reachable = true;
   var reads = 0;
+
+  /// A record whose contents are not on the device, with nobody to fetch them from: the read is
+  /// handed out and never answered.
+  var stall = false;
+
+  /// The limit the last read was handed.
+  Duration? asked;
 
   /// Writes `meta.json`, which is what says the folder has been placed into at all.
   void place({required int version, int specVersion = contractVersion}) {
@@ -216,7 +252,7 @@ class _Drop implements BacklogDrop {
   Future<bool> available() async => reachable;
 
   @override
-  Future<List<DropEntry>> entriesIn(String path) async {
+  Future<List<DropEntry>> entriesIn(String path, {Duration? within}) async {
     final under = path.isEmpty ? '' : '$path/';
     final entries = <String, bool>{};
     for (final name in files.keys) {
@@ -232,8 +268,14 @@ class _Drop implements BacklogDrop {
   }
 
   @override
-  Future<String?> readText(String path) async {
+  Future<String?> readText(String path, {Duration? within}) async {
     reads += 1;
+    // The iOS side is handed the same limit the pass holds, which is what lets it call its own
+    // read off rather than leaving one pinned behind a reader that stopped waiting.
+    asked = within;
+    if (stall && path != ICloudIntake.metaName) {
+      return Completer<String?>().future;
+    }
     return files[path];
   }
 }

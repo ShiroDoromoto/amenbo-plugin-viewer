@@ -126,9 +126,13 @@ class ICloudContainer {
 
   /// Lists one directory of the container through a coordinated read — `Documents/` itself, or
   /// [path] under it. A directory that is not there lists as nothing.
-  static Future<List<ContainerEntry>> list({String path = ''}) async {
+  static Future<List<ContainerEntry>> list({
+    String path = '',
+    Duration? within,
+  }) async {
     final result = await _channel.invokeMethod<Map<Object?, Object?>>('list', {
       'path': path,
+      if (within != null) 'seconds': within.inMilliseconds / 1000,
     });
     final entries = result?['entries'] as List<Object?>? ?? const [];
     return entries
@@ -141,10 +145,17 @@ class ICloudContainer {
   /// Waits for iCloud to hand the contents over when the device is not holding them, the same as
   /// [read] does — the difference is that this one is the whole file rather than a first stretch
   /// of it, because a record has to be opened, not glanced at.
-  static Future<String?> readText(String name) async {
+  ///
+  /// [within] is how long that wait may last. With no network there is nobody to hand the
+  /// contents over and the read would otherwise never come back, so it is called off on the iOS
+  /// side and comes back as a channel error.
+  static Future<String?> readText(String name, {Duration? within}) async {
     final result = await _channel.invokeMethod<Map<Object?, Object?>>(
       'readText',
-      {'name': name},
+      {
+        'name': name,
+        if (within != null) 'seconds': within.inMilliseconds / 1000,
+      },
     );
     if (result == null || result['found'] != true) return null;
     return result['text'] as String? ?? '';
