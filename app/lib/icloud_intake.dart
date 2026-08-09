@@ -3,12 +3,16 @@
 /// **On this route the folder is the store.** There is no server keeping a ledger and no cursor to
 /// ask from, so a round is a pass over what is there: `meta.json` says which contract the files are
 /// written to and which version of the backlog they are a picture of, and `records/<dataset>/<id>`
-/// holds one record each, in the same envelope the Cloudflare route carries.
+/// holds one record each, with the row written as it is.
 ///
 /// Three things follow from the folder being the truth rather than a log.
 ///
 /// * **A deletion is a file that is gone.** Nobody could collect tombstones here, so what the
 ///   device holds and the folder does not is a row the PC has removed, and the pass takes it away.
+/// * **Nothing here is sealed.** The folder is this device's own iCloud container, in the reader's
+///   own account, guarded the way the local store is — so the rows are written as they are and no
+///   key has to reach the phone before a mac and an iPhone can talk. The other route ends up
+///   somewhere its owner merely rents, which is why that one is the one with an envelope on it.
 /// * **The version is written last, by both sides.** The PC places the records and then names the
 ///   version; this pass writes the records and then keeps the version. A round cut short leaves the
 ///   device without the version, so the next one reads the folder again rather than believing it
@@ -28,7 +32,6 @@ import 'package:flutter/services.dart';
 
 import 'cloudflare_intake.dart';
 import 'icloud_container.dart';
-import 'record_envelope.dart';
 import 'store/backlog_store.dart';
 
 /// One entry of the drop, as much of it as the pass cares about.
@@ -89,15 +92,11 @@ class DropStanding {
 /// Reads the iCloud drop and writes what it holds into the local store.
 class ICloudIntake {
   ICloudIntake({
-    required this.cipher,
     required this.store,
     this.drop = const ICloudDrop(),
     this.timeout = const Duration(seconds: 30),
   });
 
-  /// Opens the records. It comes from the pairing, the same as on the other route — the key is
-  /// what the QR code carries, and the folder is reached without one.
-  final RecordCipher cipher;
   final BacklogStore store;
   final BacklogDrop drop;
 
@@ -316,31 +315,28 @@ class ICloudIntake {
       );
     }
 
-    final SealedRecord record;
-    try {
-      record = SealedRecord.fromJson(decoded);
-    } on EnvelopeException catch (broken) {
-      // A record that does not fit is not skipped: leaving it out would show a backlog with a hole
-      // in it and nothing to say a hole was there.
-      throw IntakeException(IntakeFailure.unreadable, broken.message);
-    }
-    // The key is written twice here — once as the file's place, once inside the envelope — and
-    // they have to agree. The seal already refuses a record opened under another name; this says
-    // so before decrypting, and keeps the sweep from being told about a row that is not there.
-    if (record.key != file.key) {
+    // The key is written twice — once as the file's place, once in the record — and they have to
+    // agree. Nothing here is sealed, so there is no tag refusing a record that was moved: this
+    // check is the whole of what says a row is where it says it is.
+    final key = decoded['k'];
+    if (key != file.key) {
       throw IntakeException(
         IntakeFailure.unreadable,
-        '${file.key} carries a record that calls itself ${record.key}',
+        '${file.key} carries a record that calls itself $key',
       );
     }
 
-    if (record.deleted) return BacklogChange.fromKey(record.key);
-    final Map<String, Object?> row;
-    try {
-      row = await cipher.openJson(record);
-    } on EnvelopeException catch (shut) {
-      throw IntakeException(IntakeFailure.unreadable, shut.message);
+    // A deletion is not written here — the file simply goes away — but a route that says it in
+    // words is not wrong, and forgetting the row is what it asks for either way.
+    if (decoded['op'] == 'del') return BacklogChange.fromKey(file.key);
+
+    final row = decoded['r'];
+    if (row is! Map<String, Object?>) {
+      throw IntakeException(
+        IntakeFailure.unreadable,
+        '${file.key} does not carry a row this app can read',
+      );
     }
-    return BacklogChange.fromKey(record.key, row: row);
+    return BacklogChange.fromKey(file.key, row: row);
   }
 }
