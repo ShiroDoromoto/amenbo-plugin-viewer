@@ -47,24 +47,6 @@ type pairing struct {
 // image a phone reads from a comfortable distance without filling the screen.
 const codeScale = 10
 
-// phonesName is where the labels are kept, in the plugin's own directory beside the sync state.
-//
-// **The tokens themselves are not here.** Revoking a phone needs only the ability to say which
-// one, and the value exists on the phone that photographed it and nowhere else. Keeping it would
-// put every paired phone's credential in one file, to be taken all at once.
-const phonesName = "paired-phones.json"
-
-// phones is that record: a label and the day it was issued, per phone.
-type phones struct {
-	V      int     `json:"v"`
-	Paired []phone `json:"paired"`
-}
-
-type phone struct {
-	Label    string `json:"label"`
-	IssuedAt string `json:"issued_at"`
-}
-
 func qr(in input, args []string) error {
 	options := flag.NewFlagSet("qr", flag.ContinueOnError)
 	options.SetOutput(errOut)
@@ -166,62 +148,6 @@ func (s store) issue(label, hash string) (string, error) {
 func hashOf(token string) string {
 	sum := sha256.Sum256([]byte(token))
 	return hex.EncodeToString(sum[:])
-}
-
-// rememberThePhone adds the label to the local record, or moves its date if that name was paired
-// before — re-pairing one phone replaces its token at the store, so a second row here would name
-// a token that no longer exists.
-//
-// **A record that cannot be written is a failed pairing**, even though the token is already
-// issued: a phone that can read and cannot be named is one nobody can cut off.
-func rememberThePhone(label, issuedAt string) error {
-	known, err := readPhones()
-	if err != nil {
-		return err
-	}
-	for i, paired := range known.Paired {
-		if paired.Label == label {
-			known.Paired[i].IssuedAt = issuedAt
-			return writePhones(known)
-		}
-	}
-	known.Paired = append(known.Paired, phone{Label: label, IssuedAt: issuedAt})
-	return writePhones(known)
-}
-
-func readPhones() (phones, error) {
-	dir, err := pluginDir()
-	if err != nil {
-		return phones{}, err
-	}
-	raw, err := os.ReadFile(filepath.Join(dir, phonesName))
-	if os.IsNotExist(err) {
-		return phones{V: stateVersion}, nil
-	}
-	if err != nil {
-		return phones{}, fmt.Errorf("the paired phones cannot be read: %w", err)
-	}
-	var known phones
-	if err := json.Unmarshal(raw, &known); err != nil || known.V != stateVersion {
-		return phones{}, errors.New("the record of paired phones is in a shape this build cannot read")
-	}
-	return known, nil
-}
-
-func writePhones(known phones) error {
-	known.V = stateVersion
-	dir, err := pluginDir()
-	if err != nil {
-		return err
-	}
-	raw, err := json.Marshal(known)
-	if err != nil {
-		return err
-	}
-	if err := os.WriteFile(filepath.Join(dir, phonesName), raw, 0o600); err != nil {
-		return fmt.Errorf("the paired phones cannot be written: %w", err)
-	}
-	return nil
 }
 
 // present encodes what the phone is to read and puts it in front of the camera.

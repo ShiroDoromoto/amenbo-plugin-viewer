@@ -12,6 +12,7 @@ import (
 type manifest struct {
 	Name   string   `json:"name"`
 	OS     []string `json:"os"`
+	Scope  string   `json:"scope"`
 	Events []string `json:"events"`
 	Config []field  `json:"config"`
 	Agent  struct {
@@ -141,9 +142,13 @@ func TestItRunsOnEveryOSAmenboDoes(t *testing.T) {
 	}
 }
 
-// Any write changes the snapshot, so there is no event that leaves the phone up to date. A
-// subscription narrower than what amenbo fires would be a window the viewer silently misses.
-func TestItSubscribesToEveryEventBecauseEveryWriteChangesTheSnapshot(t *testing.T) {
+// Any write leaves the phone behind, so there is no event that can be left out as uninteresting.
+// A subscription narrower than what amenbo fires would be a window the viewer silently misses.
+//
+// `store.changed` is the one that cannot be dropped for being redundant: it fires on every write,
+// and the other eleven name things that happen to a record rather than the record being edited —
+// so a note or a title changed on its own reaches the phone through this event and no other.
+func TestItSubscribesToEveryEventBecauseEveryWriteLeavesThePhoneBehind(t *testing.T) {
 	events := read(t).Events
 
 	for _, event := range []string{
@@ -151,9 +156,19 @@ func TestItSubscribesToEveryEventBecauseEveryWriteChangesTheSnapshot(t *testing.
 		"task.assigned", "task.moved", "task.deleted",
 		"decision.accepted", "decision.rejected",
 		"comment.added", "comment.removed",
+		"store.changed",
 	} {
 		if !strings.Contains(strings.Join(events, " "), event) {
 			t.Errorf("%s is not subscribed to: %v", event, events)
 		}
+	}
+}
+
+// One machine, one plugin. The default scope is per project, and taking it would stand up a
+// Worker, a key and a round of pairing for every project on the machine — the phone would then
+// read as many backlogs as the user has projects, each behind its own QR code.
+func TestItIsEnabledForTheMachineRatherThanForEachProject(t *testing.T) {
+	if scope := read(t).Scope; scope != "machine" {
+		t.Errorf("the manifest declares scope %q, so the user pays for the whole setup per project", scope)
 	}
 }
