@@ -153,6 +153,54 @@ void main() {
       );
     });
 
+    test('a wider reach takes in what the week left out', () {
+      store.applyPage([
+        BacklogChange.put(
+          'task',
+          1,
+          task(id: 1, status: 'done', completedAt: '2026-07-20T10:00:00Z'),
+        ),
+      ]);
+
+      expect(store.bundle(Bundle.finished, today: today).rows, isEmpty);
+      expect(
+        store
+            .bundle(Bundle.finished, today: today, finishedDays: 30)
+            .rows
+            .map((row) => row.id),
+        [1],
+      );
+    });
+
+    test('everything has no cut-off, and still hands back a window', () {
+      store.applyPage([
+        for (var id = 1; id <= 25; id++)
+          BacklogChange.put(
+            'task',
+            id,
+            task(id: id, status: 'done', completedAt: '2024-01-01T10:00:00Z'),
+          ),
+      ]);
+
+      final finished = store.bundle(
+        Bundle.finished,
+        today: today,
+        finishedDays: null,
+      );
+      expect(finished.rows, hasLength(Windows.bundle));
+      // The count is asked the same question as the window, or "5 more" would open nothing.
+      expect(finished.total.value, 25);
+      expect(
+        store
+            .tasks(
+              const TaskQuery(bundle: Bundle.finished, finishedDays: null),
+              today: today,
+            )
+            .length,
+        25,
+      );
+    });
+
     test(
       'a bundle hands back a window, and says how many there are behind it',
       () {
