@@ -233,7 +233,10 @@ void main() {
 
       await tester.scrollUntilVisible(find.text(NowScreen.more(3)), 200);
       await tester.tap(find.text(NowScreen.more(3)));
-      expect(widened, [Bundle.finished]);
+      expect(widened.single.bundle, Bundle.finished);
+      // The reach travels with it: the rest of a list that stopped at a different day would not
+      // be the rest of this one.
+      expect(widened.single.finishedDays, isNull);
     });
 
     testWidgets('past the window the bundle offers the rest', (tester) async {

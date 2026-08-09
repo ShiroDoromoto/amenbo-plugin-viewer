@@ -262,7 +262,12 @@ class _NowScreenState extends State<NowScreen> with WidgetsBindingObserver {
     final since = DateTime.tryParse(_lastLooked ?? '');
     if (since == null) return;
     widget.onSince(
-      TaskQuery(changedSince: since, moved: moved, projectId: _projectId),
+      TaskQuery(
+        changedSince: since,
+        moved: moved,
+        projectId: _projectId,
+        finishedDays: widget.doneWindow.days,
+      ),
     );
   }
 
@@ -487,8 +492,15 @@ class _NowScreenState extends State<NowScreen> with WidgetsBindingObserver {
         rows.add(
           _MoreRow(
             label: NowScreen.more(rest, overflowed: held.total.overflowed),
-            onTap: () =>
-                widget.onMore(TaskQuery(bundle: bundle, projectId: _projectId)),
+            onTap: () => widget.onMore(
+              TaskQuery(
+                bundle: bundle,
+                projectId: _projectId,
+                // The reach the person set, carried with the bundle: the rest of a list that
+                // stopped at a different day would not be the rest of this one.
+                finishedDays: widget.doneWindow.days,
+              ),
+            ),
           ),
         );
       }

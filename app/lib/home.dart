@@ -20,6 +20,7 @@ import 'package:flutter/material.dart';
 
 import 'cloudflare_intake.dart';
 import 'connection.dart';
+import 'decision_detail.dart';
 import 'first_sync.dart';
 import 'icloud_container.dart';
 import 'now_screen.dart';
@@ -268,9 +269,21 @@ class _HomeShellState extends State<HomeShell> {
 
   /// A decision, from a task that links one or from the other tab of the search face.
   ///
-  /// Nothing opens yet: the screen that reads a decision is being built. This is the one place it
-  /// will be reached from.
-  void _openDecision(int decisionId) {}
+  /// Always pushed, whatever the width: what it was opened from is a detail as often as a list,
+  /// and swapping the pane beside a list would leave the person on a screen they cannot see the
+  /// way back from.
+  void _openDecision(int decisionId) => Navigator.of(context).push(
+    MaterialPageRoute(
+      builder: (_) => DecisionDetailScreen(
+        store: widget.store,
+        decisionId: decisionId,
+        clock: widget.clock,
+        onOpenTask: _push,
+        onOpenDecision: _openDecision,
+        onProject: (projectId) => _list(TaskQuery(projectId: projectId)),
+      ),
+    ),
+  );
 
   Widget _detail(int taskId, {required void Function(int taskId) opens}) =>
       TaskDetailScreen(
@@ -331,6 +344,7 @@ class _HomeShellState extends State<HomeShell> {
           NowScreen(
             store: widget.store,
             clock: widget.clock,
+            doneWindow: widget.settings.value.doneWindow,
             take: widget.take,
             failure: widget.failure,
             iCloudAvailable: widget.iCloudAvailable,
