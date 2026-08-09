@@ -8,11 +8,43 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:amenbo_viewer/main.dart';
 import 'package:amenbo_viewer/pairing_guide.dart';
+import 'package:amenbo_viewer/pairing_scan.dart';
+import 'package:amenbo_viewer/pairing_store.dart';
 import 'package:amenbo_viewer/settings.dart';
 
 /// Settings with nothing behind them. The app boots the same way whether the choices came off the
 /// device or are the defaults, and the boot is what is being checked here.
 SettingsController unkeptSettings() => SettingsController(UnkeptSettings());
+
+final aPairing = Pairing(
+  url: Uri.parse('https://amenbo.example.workers.dev'),
+  readToken: 'cmVhZC10b2tlbg',
+  encryptionKey: 'AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8',
+);
+
+/// Presses the one button the screen has, which on an iPhone sits under two cards.
+Future<void> tapTheAction(WidgetTester tester) async {
+  final button = find.text(PairingRoute.cloudflare.action!);
+  await tester.scrollUntilVisible(button, 200);
+  await tester.ensureVisible(button);
+  await tester.pumpAndSettle();
+  await tester.tap(button);
+  await tester.pumpAndSettle();
+}
+
+/// The guide as a screen on its own, with the camera stood in for.
+Widget guide({
+  TargetPlatform platform = TargetPlatform.iOS,
+  ValueChanged<Pairing>? onPaired,
+  Future<Pairing?> Function(BuildContext context)? readACode,
+}) => MaterialApp(
+  theme: ThemeData(platform: platform),
+  home: PairingGuideScreen(
+    appName: 'amenbo Viewer',
+    onPaired: onPaired ?? (_) {},
+    readACode: readACode ?? (_) async => null,
+  ),
+);
 
 void main() {
   testWidgets('the app boots with nothing else present', (tester) async {
@@ -56,13 +88,64 @@ void main() {
   testWidgets('the steps are the ones the person can actually take', (
     tester,
   ) async {
-    await tester.pumpWidget(
-      const MaterialApp(home: PairingGuideScreen(appName: 'amenbo Viewer')),
-    );
+    await tester.pumpWidget(guide());
 
     for (final step in PairingRoute.cloudflare.steps) {
       expect(find.text(step), findsOneWidget);
     }
+  });
+
+  testWidgets('only the one thing this phone can do is pressable', (
+    tester,
+  ) async {
+    await tester.pumpWidget(guide());
+
+    // The iCloud route's whole setup is on the Mac. A button beside it would read as the app
+    // being broken rather than as the next step being somewhere else.
+    expect(find.byType(FilledButton), findsOneWidget);
+    expect(find.text(PairingRoute.cloudflare.action!), findsOneWidget);
+    expect(PairingRoute.iCloud.action, isNull);
+  });
+
+  testWidgets('the button opens the camera on the code', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PairingGuideScreen(appName: 'amenbo Viewer', onPaired: (_) {}),
+      ),
+    );
+
+    await tapTheAction(tester);
+
+    // The reason for the camera comes before the camera — the scanning screen's own rule, and
+    // the default way in has to be the one that carries it.
+    expect(find.text(PairingScanScreen.heading), findsOneWidget);
+  });
+
+  testWidgets('a code that read hands the pairing up and says nothing else', (
+    tester,
+  ) async {
+    Pairing? handed;
+    await tester.pumpWidget(
+      guide(onPaired: (p) => handed = p, readACode: (_) async => aPairing),
+    );
+
+    await tapTheAction(tester);
+
+    expect(handed, aPairing);
+    // The guide is still the screen. What replaces it is the root's judgement, and deciding it
+    // here as well would put the same decision in two places.
+    expect(find.byType(PairingGuideScreen), findsOneWidget);
+  });
+
+  testWidgets('backing out of the camera changes nothing', (tester) async {
+    var handed = 0;
+    await tester.pumpWidget(
+      guide(onPaired: (_) => handed += 1, readACode: (_) async => null),
+    );
+
+    await tapTheAction(tester);
+
+    expect(handed, 0);
   });
 
   group('which routes a phone is offered', () {
@@ -85,12 +168,7 @@ void main() {
   testWidgets('an Android phone is not told to open a folder it cannot open', (
     tester,
   ) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: ThemeData(platform: TargetPlatform.android),
-        home: const PairingGuideScreen(appName: 'amenbo Viewer'),
-      ),
-    );
+    await tester.pumpWidget(guide(platform: TargetPlatform.android));
 
     expect(find.text(PairingRoute.iCloud.name), findsNothing);
     expect(find.text(PairingRoute.cloudflare.name), findsOneWidget);

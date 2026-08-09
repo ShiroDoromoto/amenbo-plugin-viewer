@@ -6,18 +6,24 @@
 /// error and not an empty list — it is the instructions, which is the only thing the app can
 /// usefully offer until a route exists.
 ///
-/// The setup happens on the PC, in amenbo itself; nothing here can start it. That is why the
-/// screen carries steps rather than buttons: the one action the app will own — reading the QR
-/// code — arrives with the route it belongs to, and a button that did nothing would be worse
-/// than no button. The iCloud route owns no action at all: the phone is holding up its end by
-/// having been opened once.
+/// The setup happens on the PC, in amenbo itself; almost nothing here can start it. That is why
+/// the screen is mostly steps: **one button, on one card.** Reading the QR code is the whole of
+/// this phone's half of the Cloudflare route, and the iCloud route has no half at all — the phone
+/// held up its end by having been opened once. A second button would have to do nothing.
 ///
-/// It knows nothing about the contract. No snapshot format, no cipher, no QR payload. That is
-/// deliberate: it means this screen is finished while the other three parts are not, which is the
-/// same property the release needs — the app has to stand on its own.
+/// What follows a pairing is not decided here. This screen has said everything it has to say the
+/// moment the phone has one, and which screen replaces it is the root's judgement.
+///
+/// It knows nothing about the contract. No snapshot format, no cipher, no QR payload — the code
+/// is read by the screen it pushes and comes back as a pairing. That is deliberate: it means this
+/// screen is finished while the other three parts are not, which is the same property the release
+/// needs — the app has to stand on its own.
 library;
 
 import 'package:flutter/material.dart';
+
+import 'pairing_scan.dart';
+import 'pairing_store.dart';
 
 /// One of the two ways a snapshot reaches the phone.
 ///
@@ -29,6 +35,7 @@ class PairingRoute {
     required this.who,
     required this.cost,
     required this.steps,
+    this.action,
   });
 
   final String name;
@@ -41,6 +48,11 @@ class PairingRoute {
   /// most of why someone would choose it.
   final String cost;
   final List<String> steps;
+
+  /// The one thing this phone can do about the route, or null where there is nothing to do. A
+  /// route whose whole setup is on the PC gets no button: one that did nothing would read as the
+  /// app being broken rather than as the person's next step being elsewhere.
+  final String? action;
 
   /// mac and iPhone. iOS only — the place both ends meet is this app's own iCloud container, and
   /// Android has no equivalent at all.
@@ -64,6 +76,7 @@ class PairingRoute {
       'In amenbo on your PC, set up the Worker. It does the work; you press and paste.',
       'Scan the QR code it shows you with this app.',
     ],
+    action: 'Scan the QR code',
   );
 
   /// What the phone in hand can actually do.
@@ -74,13 +87,36 @@ class PairingRoute {
 }
 
 class PairingGuideScreen extends StatelessWidget {
-  const PairingGuideScreen({super.key, required this.appName});
+  const PairingGuideScreen({
+    super.key,
+    required this.appName,
+    required this.onPaired,
+    this.readACode = scanForACode,
+  });
 
   /// Handed down rather than read back out of the app, so the screen stays a screen and the
   /// product name keeps one home.
   final String appName;
 
+  /// Called the moment this phone has a pairing. The screen does not decide what follows — it has
+  /// nothing left to say once a route exists, and choosing the screen that replaces it is the
+  /// root's judgement, not this one's.
+  final ValueChanged<Pairing> onPaired;
+
+  /// How a code gets read. The default opens the camera; a test hands back an answer.
+  final Future<Pairing?> Function(BuildContext context) readACode;
+
   static const heading = 'No backlog is reaching this phone yet.';
+
+  /// The scanning screen, which saves the pairing itself and hands it back on the way out.
+  static Future<Pairing?> scanForACode(BuildContext context) => Navigator.of(
+    context,
+  ).push<Pairing>(MaterialPageRoute(builder: (_) => const PairingScanScreen()));
+
+  Future<void> _pair(BuildContext context) async {
+    final pairing = await readACode(context);
+    if (pairing != null) onPaired(pairing);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -104,7 +140,7 @@ class PairingGuideScreen extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           for (final route in routes) ...[
-            _RouteCard(route: route),
+            _RouteCard(route: route, onAction: () => _pair(context)),
             const SizedBox(height: 16),
           ],
           const SizedBox(height: 8),
@@ -116,9 +152,12 @@ class PairingGuideScreen extends StatelessWidget {
 }
 
 class _RouteCard extends StatelessWidget {
-  const _RouteCard({required this.route});
+  const _RouteCard({required this.route, required this.onAction});
 
   final PairingRoute route;
+
+  /// What the card's button does, where the route has one.
+  final VoidCallback onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -143,6 +182,15 @@ class _RouteCard extends StatelessWidget {
             const SizedBox(height: 16),
             for (var i = 0; i < route.steps.length; i++)
               _Step(number: i + 1, text: route.steps[i]),
+            if (route.action case final action?) ...[
+              const SizedBox(height: 8),
+              // Left where the steps are, not stretched across the card: it is the last step's
+              // other half, not a decision about the whole screen.
+              Align(
+                alignment: Alignment.centerLeft,
+                child: FilledButton(onPressed: onAction, child: Text(action)),
+              ),
+            ],
           ],
         ),
       ),
