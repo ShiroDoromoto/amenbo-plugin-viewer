@@ -5,6 +5,7 @@
   "repo": "ShiroDoromoto/amenbo-plugin-viewer",
   "os": ["macos", "windows", "linux"],
   "category": "integration",
+  "scope": "machine",
   "assets": {
     "macos-arm64": {
       "url": "https://github.com/ShiroDoromoto/amenbo-plugin-viewer/releases/download/v0/viewer-v0-macos-arm64.tar.gz",
@@ -46,7 +47,7 @@
     },
     {
       "key": "encryption_key",
-      "label": "Key the snapshot is encrypted with (filled in by setup)",
+      "label": "Key the records are encrypted with (filled in by setup)",
       "secret": true,
       "required": false
     }
@@ -62,10 +63,11 @@
     "decision.accepted",
     "decision.rejected",
     "comment.added",
-    "comment.removed"
+    "comment.removed",
+    "store.changed"
   ],
   "agent": {
-    "when": "Setting up the phone viewer, or sending the snapshot it reads by hand",
+    "when": "Setting up the phone viewer, pairing a phone with it, or carrying by hand what has not reached one yet",
     "commands": [
       {
         "cmd": "setup",
@@ -73,7 +75,7 @@
       },
       {
         "cmd": "push",
-        "does": "Encrypts the snapshot as it stands and sends it over every route that is configured"
+        "does": "Carries by hand what has not reached the phone yet, encrypting a record at a time, over every route that is configured. The hook does this per write, so this is for what was left behind"
       },
       {
         "cmd": "phones",
