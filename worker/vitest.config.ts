@@ -15,8 +15,9 @@ export default defineConfig({
 			wrangler: { configPath: "./wrangler.jsonc" },
 			miniflare: {
 				// The real one is a Secret set on the deployed Worker. Here it is whatever the
-				// tests agree on — what is under test is the gate, not the value.
-				bindings: { AUTH_TOKEN: "a-long-random-token", TEST_MIGRATIONS: migrations },
+				// tests agree on — what is under test is the gate, not the value. The read
+				// tokens are not bindings at all: they are rows, so the tests issue them.
+				bindings: { WRITE_TOKEN: "a-long-random-write-token", TEST_MIGRATIONS: migrations },
 			},
 		}),
 	],
