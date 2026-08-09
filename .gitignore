@@ -18,6 +18,9 @@ Thumbs.db
 /plugin/viewer.exe
 /plugin/dist/
 *.test
+# プラグインが自分のディレクトリに残す覚え。手元で直接動かすとここに出る
+/plugin/sync-state.json
+/plugin/paired-phones.json
 
 # --- Worker（Node / wrangler）
 node_modules/
