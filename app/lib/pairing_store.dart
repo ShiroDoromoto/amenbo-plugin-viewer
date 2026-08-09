@@ -1,0 +1,103 @@
+/// Where the pairing lives on the phone.
+///
+/// The decrypted backlog is kept in the clear locally and protected by the OS the way the
+/// desktop store is — so the one thing worth guarding is the key, and it is kept apart from the
+/// rows it opens. The keychain on iOS and the keystore on Android are that separate place.
+///
+/// The read token rides along with it. A pairing is one act and one thing to revoke: the URL to
+/// read from, the token that gets in, and the key that opens what comes back. Splitting the three
+/// across two homes would only invent a way for a phone to hold half a pairing.
+library;
+
+import 'dart:convert';
+
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
+import 'record_envelope.dart';
+
+/// Everything a QR code hands the phone, and everything it needs afterwards.
+class Pairing {
+  const Pairing({
+    required this.url,
+    required this.readToken,
+    required this.encryptionKey,
+  });
+
+  /// The owner's own Worker.
+  final Uri url;
+
+  /// This device's read token, base64url as issued. One per device, so losing one phone costs
+  /// only that phone its pairing.
+  final String readToken;
+
+  /// The key, base64url as issued. Shared by every device the owner pairs.
+  final String encryptionKey;
+
+  /// Builds the cipher this pairing's records open with.
+  ///
+  /// Throws [EnvelopeException] if the stored key is not a 256-bit key.
+  RecordCipher cipher() => RecordCipher.fromBase64Key(encryptionKey);
+
+  Map<String, Object?> toJson() => {
+    'url': url.toString(),
+    't': readToken,
+    'k': encryptionKey,
+  };
+
+  static Pairing? _fromJson(Object? decoded) {
+    if (decoded is! Map<String, Object?>) return null;
+    final url = Uri.tryParse(decoded['url'] as String? ?? '');
+    final readToken = decoded['t'];
+    final encryptionKey = decoded['k'];
+    if (url == null || readToken is! String || encryptionKey is! String) {
+      return null;
+    }
+    return Pairing(
+      url: url,
+      readToken: readToken,
+      encryptionKey: encryptionKey,
+    );
+  }
+}
+
+/// Reads and writes the pairing in the keychain / keystore.
+class PairingStore {
+  const PairingStore({FlutterSecureStorage? storage})
+    : _storage = storage ?? _protected;
+
+  /// One entry, written and dropped whole, because a pairing is all three fields or none.
+  static const _entry = 'pairing';
+
+  /// `first_unlock_this_device` on the Apple side: after-first-unlock so a refresh that runs
+  /// while the phone is in a pocket can still reach the key, and this-device-only so a backup
+  /// restored onto a new phone arrives unpaired rather than quietly carrying the old phone's
+  /// token — revoking a device has to mean something. The Android defaults are already a
+  /// keystore-wrapped AES-GCM entry, which is the same bargain.
+  static const _protected = FlutterSecureStorage(
+    iOptions: IOSOptions(
+      accessibility: KeychainAccessibility.first_unlock_this_device,
+    ),
+  );
+
+  final FlutterSecureStorage _storage;
+
+  /// The pairing, or null when this device has none.
+  ///
+  /// An entry that no longer parses reads as null — the same as never having paired, which is
+  /// the state the app already knows how to explain.
+  Future<Pairing?> read() async {
+    final stored = await _storage.read(key: _entry);
+    if (stored == null) return null;
+    try {
+      return Pairing._fromJson(jsonDecode(stored));
+    } on FormatException {
+      return null;
+    }
+  }
+
+  Future<void> save(Pairing pairing) =>
+      _storage.write(key: _entry, value: jsonEncode(pairing.toJson()));
+
+  /// Unpairs this device. What was already decrypted is not this store's to remove.
+  Future<void> forget() => _storage.delete(key: _entry);
+}

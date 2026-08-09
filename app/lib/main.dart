@@ -15,6 +15,7 @@ library;
 import 'package:flutter/material.dart';
 
 import 'pairing_guide.dart';
+import 'ui/theme.dart';
 
 void main() {
   runApp(const AmenboViewerApp());
@@ -31,14 +32,8 @@ class AmenboViewerApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: title,
-      theme: ThemeData(
-        colorSchemeSeed: Colors.teal,
-        brightness: Brightness.light,
-      ),
-      darkTheme: ThemeData(
-        colorSchemeSeed: Colors.teal,
-        brightness: Brightness.dark,
-      ),
+      theme: viewerTheme(Brightness.light),
+      darkTheme: viewerTheme(Brightness.dark),
       home: const PairingGuideScreen(appName: title),
     );
   }
