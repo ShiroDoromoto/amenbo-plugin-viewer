@@ -2,6 +2,6 @@
 #
 # On the deployed Worker this is a Secret instead:
 #
-#   wrangler secret put AUTH_TOKEN
+#   wrangler secret put WRITE_TOKEN
 #
-AUTH_TOKEN=a-long-random-token-for-local-development-only
+WRITE_TOKEN=a-long-random-token-for-local-development-only
