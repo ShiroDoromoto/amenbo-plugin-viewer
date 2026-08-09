@@ -448,6 +448,11 @@ extension BacklogQueries on BacklogStore {
   Counted commentCount(int taskId) =>
       _count('SELECT 1 FROM task_comment WHERE task_id = ?', [taskId]);
 
+  Counted decisionCommentCount(int decisionId) => _count(
+    'SELECT 1 FROM decision_comment WHERE decision_id = ?',
+    [decisionId],
+  );
+
   /// What this task waits on, with the other side's state — whether the other one is finished is
   /// the whole of what waiting means.
   List<TaskLine> blockers(int taskId) => _relatedTasks(
