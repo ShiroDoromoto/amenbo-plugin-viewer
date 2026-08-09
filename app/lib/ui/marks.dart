@@ -94,10 +94,10 @@ class DueMark extends StatelessWidget {
 }
 
 bool isOverdue(String dueOn, {required DateTime today}) =>
-    dueOn.compareTo(_isoDay(today)) < 0;
+    dueOn.compareTo(isoDay(today)) < 0;
 
 String dueLabel(String dueOn, {required DateTime today}) {
-  final day = _isoDay(today);
+  final day = isoDay(today);
   if (dueOn.compareTo(day) < 0) return 'Overdue ${dayLabel(dueOn, now: today)}';
   if (dueOn == day) return 'Due today';
   return 'Due ${dayLabel(dueOn, now: today)}';
@@ -205,7 +205,9 @@ class SpokenAsOne extends StatelessWidget {
   );
 }
 
-String _isoDay(DateTime when) {
+/// A day as amenbo writes one, so a `due_on` or a `start_on` can be compared against today
+/// without either side being parsed into an instant.
+String isoDay(DateTime when) {
   final local = when.toLocal();
   return '${local.year.toString().padLeft(4, '0')}-'
       '${local.month.toString().padLeft(2, '0')}-'

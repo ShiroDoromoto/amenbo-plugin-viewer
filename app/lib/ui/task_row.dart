@@ -24,12 +24,21 @@ String countLabel(Counted counted) =>
 /// A named blocker comes first because it is the only one that says what to go and do. `blocked`
 /// comes last for the same reason from the other end: it is amenbo's word for a stall nobody has
 /// written down, so it is what is left when there is nothing more useful to say.
-String? stallReason(TaskLine line) {
+///
+/// **Every premise the store bundles as stalled has a line here.** A row that landed in the bundle
+/// and then had nothing to say about why would be the one row on the screen that wastes its
+/// second line — a start day still ahead included, which is a stall nobody has to do anything
+/// about and therefore the easiest one to leave out.
+String? stallReason(TaskLine line, {required DateTime today}) {
   final blocker = line.blockedBy;
   if (blocker != null) return '${taskRef(blocker)} is not finished';
   final undecided = line.undecided;
   if (undecided != null) return '${decisionRef(undecided)} is undecided';
   if (line.draft) return 'Still being written';
+  final start = line.startOn;
+  if (start != null && start.compareTo(isoDay(today)) > 0) {
+    return 'Starts ${dayLabel(start, now: today)}';
+  }
   if (line.status == 'blocked') return 'Blocked';
   return null;
 }
@@ -69,7 +78,7 @@ class TaskRow extends StatelessWidget {
     final quiet = theme.textTheme.bodySmall?.copyWith(
       color: theme.colorScheme.onSurfaceVariant,
     );
-    final reason = stallReason(line);
+    final reason = stallReason(line, today: today);
     final moved = movedAt;
 
     final second = <Widget>[

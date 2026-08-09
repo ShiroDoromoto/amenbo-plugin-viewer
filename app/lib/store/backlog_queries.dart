@@ -124,10 +124,6 @@ class TaskLine {
 
   /// The stretch of text a search matched, when the line came out of a search.
   final String? excerpt;
-
-  /// It cannot be started: a premise is missing.
-  bool get stalled =>
-      draft || blockedBy != null || undecided != null || status == 'blocked';
 }
 
 /// One decision as a list shows it.
@@ -370,7 +366,9 @@ extension BacklogQueries on BacklogStore {
     return jsonDecode(rows.first['raw'] as String) as Map<String, Object?>;
   }
 
-  TaskLine? task(int id, {required DateTime today}) {
+  /// One task's line. No day is needed: nothing about a single row depends on which day it is —
+  /// what does (lateness, a start day still ahead) is decided by the screen that draws it.
+  TaskLine? task(int id) {
     final rows = db.select(
       'SELECT ${_taskColumns()} FROM task t WHERE t.id = ?',
       [id],
