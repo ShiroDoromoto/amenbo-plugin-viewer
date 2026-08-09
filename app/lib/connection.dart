@@ -62,12 +62,18 @@ class LastTaken {
 class Connection {
   const Connection({
     required this.route,
+    this.label,
     this.host,
     this.iCloudAvailable,
     this.lastTaken = const LastTaken(),
   });
 
   final ConnectionRoute route;
+
+  /// What the PC calls this phone. It is the name a read token is cut off by, so showing it is
+  /// what lets the person match the phone in their hand against the rows on the PC. Null off the
+  /// Cloudflare route, and on a pairing made before the code carried a name.
+  final String? label;
 
   /// The Worker's host, on the Cloudflare route. The host alone: the token and the key on the same
   /// URL are the pairing itself, and a screen is a thing people photograph.
@@ -122,6 +128,7 @@ class PhoneConnection implements ConnectionFacts {
     if (pairing != null) {
       return Connection(
         route: ConnectionRoute.cloudflare,
+        label: pairing.label,
         host: pairing.url.host,
         lastTaken: lastTaken,
       );

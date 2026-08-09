@@ -1,12 +1,14 @@
 /// The connection, as this one phone can describe it and act on it.
 ///
-/// Three things are worth saying here and the rest is noise: where the snapshot is coming from,
-/// how old what you are reading is, and how to stop this phone holding a copy. Everything on the
-/// screen is one of the three.
+/// Four things are worth saying here and the rest is noise: what this phone is called, where the
+/// snapshot is coming from, how old what you are reading is, and how to stop this phone holding a
+/// copy. Everything on the screen is one of the four.
 ///
 /// **What is not here is other devices.** Adding and revoking read tokens happens at the writing
 /// end, and this app holds one token — its own. A list of the person's phones would be a list
-/// nothing on this screen could change.
+/// nothing on this screen could change. The name is the one part of that list this phone can
+/// answer for, and it is here because cutting a phone off is done by name: without it the person
+/// is at the PC choosing between rows with no way to tell which is the phone in their hand.
 library;
 
 import 'package:flutter/material.dart';
@@ -24,6 +26,7 @@ class ConnectionScreen extends StatefulWidget {
   final ConnectionFacts facts;
 
   static const title = 'Connection';
+  static const thisPhone = 'This phone';
   static const nothingYet = 'Nothing has arrived yet.';
   static const pairAgain = 'Pair this phone again';
   static const erase = 'Erase this phone\'s copy';
@@ -132,6 +135,12 @@ class _Details extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.only(bottom: 32),
       children: [
+        if (connection.label case final named?)
+          _Fact(
+            label: ConnectionScreen.thisPhone,
+            value: named,
+            detail: 'The name to cut this phone off by, on the PC.',
+          ),
         _Fact(
           label: 'Route',
           value: connection.route.words,

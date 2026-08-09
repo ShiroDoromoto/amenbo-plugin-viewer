@@ -23,6 +23,7 @@ class FakeFacts implements ConnectionFacts {
 
 final _cloudflare = Connection(
   route: ConnectionRoute.cloudflare,
+  label: 'iPhone',
   host: 'amenbo.example.workers.dev',
   lastTaken: LastTaken(
     at: DateTime.now().subtract(const Duration(minutes: 12)),
@@ -63,6 +64,33 @@ Future<bool?> pumpConnection(WidgetTester tester, ConnectionFacts facts) async {
 }
 
 void main() {
+  testWidgets('this phone is named the way the PC would cut it off', (
+    tester,
+  ) async {
+    await pumpConnection(tester, FakeFacts(_cloudflare));
+
+    expect(find.text(ConnectionScreen.thisPhone), findsOneWidget);
+    expect(find.text('iPhone'), findsOneWidget);
+  });
+
+  testWidgets('a phone paired before the code carried a name says nothing', (
+    tester,
+  ) async {
+    // An empty row headed "This phone" would read as the phone having no name on the PC, which
+    // is not what happened — the code it was paired from simply did not carry one.
+    await pumpConnection(
+      tester,
+      FakeFacts(
+        const Connection(
+          route: ConnectionRoute.cloudflare,
+          host: 'amenbo.example.workers.dev',
+        ),
+      ),
+    );
+
+    expect(find.text(ConnectionScreen.thisPhone), findsNothing);
+  });
+
   testWidgets('the Cloudflare route names its host and can be paired again', (
     tester,
   ) async {
