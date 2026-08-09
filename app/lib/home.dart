@@ -86,9 +86,9 @@ class _ViewerHomeState extends State<ViewerHome> with WidgetsBindingObserver {
   /// How the last round ended, for the band at the top of the front screen.
   IntakeFailure? _failure;
 
-  /// Ticks when a round nobody asked for has written rows. The front screen turns that into a
-  /// pill and waits to be pressed.
-  final _arrivals = _Arrivals();
+  /// Ticks when a round the front screen did not run has written rows. What it does about them
+  /// depends on whether anybody was watching them land.
+  final _arrivals = Arrivals();
 
   /// Whether a round is already running. The launch and the return to the front can land close
   /// together, and two rounds at once would read the same pages twice.
@@ -190,7 +190,11 @@ class _ViewerHomeState extends State<ViewerHome> with WidgetsBindingObserver {
         builder: (_) => FirstSyncScreen(take: _rounds(pairing)),
       ),
     );
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    // The front screen was built behind this wait, against a store that was still empty, and it
+    // reads the store once. Rebuilding it would draw the same answer again — what it has to be
+    // told is that there is a newer one to go and ask for.
+    _arrivals.tick(watched: true);
   }
 
   /// A fresh code, from the band that says this device was turned away. The scanning screen keeps
@@ -267,8 +271,8 @@ class HomeShell extends StatefulWidget {
   final String appName;
   final Future<void> Function()? take;
 
-  /// Ticks when rows landed without being asked for.
-  final Listenable? arrivals;
+  /// Ticks when rows landed from somewhere other than the front screen's own pull.
+  final Arrivals? arrivals;
 
   final IntakeFailure? failure;
   final bool? iCloudAvailable;
@@ -451,9 +455,4 @@ class _HomeShellState extends State<HomeShell> {
       ],
     ),
   );
-}
-
-/// Says that rows arrived. Nothing about which — the screen that cares reads the store itself.
-class _Arrivals extends ChangeNotifier {
-  void tick() => notifyListeners();
 }

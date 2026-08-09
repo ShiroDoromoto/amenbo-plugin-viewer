@@ -155,6 +155,40 @@ void main() {
       expect(find.byType(HomeShell), findsOneWidget);
       expect(find.byType(FirstSyncScreen), findsNothing);
     });
+
+    testWidgets('what the first round brought is on the screen it lands on', (
+      tester,
+    ) async {
+      final round = Completer<IntakeReport>();
+      await tester.pumpWidget(
+        home(
+          rounds: (pairing) =>
+              (watching) => round.future,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      tester
+          .widget<PairingGuideScreen>(find.byType(PairingGuideScreen))
+          .onPaired(aPairing);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      // The front screen is built behind the wait, against a store that is still empty — so the
+      // rows this round writes are ones it has already read past.
+      store.applyPage([
+        BacklogChange.put('task', 1, task(id: 1, title: 'はじめてとどいた')),
+      ]);
+      round.complete(
+        const IntakeReport(records: 1, pages: 1, seq: 1, startedOver: false),
+      );
+      await tester.pumpAndSettle();
+
+      // Not "nothing has arrived yet", and not behind a pill either: this is the backlog the
+      // person just watched arrive.
+      expect(find.text('はじめてとどいた'), findsOneWidget);
+      expect(find.textContaining('New activity'), findsNothing);
+    });
   });
 
   group('the three tabs', () {

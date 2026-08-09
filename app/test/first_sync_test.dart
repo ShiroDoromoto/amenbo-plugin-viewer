@@ -113,6 +113,28 @@ void main() {
     );
   });
 
+  testWidgets('a place that has spoken is not a record that has landed', (
+    tester,
+  ) async {
+    final round = Round();
+    await open(tester, round.take);
+
+    // Where the whole wait is actually spent: a backlog that fits in one page has nothing to
+    // report until that page is written, so this is the only thing the screen is told.
+    round.reached(0, seq: 0, target: 27);
+    await tester.pump();
+
+    expect(find.text(FirstSyncScreen.opening), findsOneWidget);
+    expect(find.text(FirstSyncScreen.taken(0)), findsNothing);
+    // And the bar goes on moving rather than standing at a zero it cannot leave.
+    expect(
+      tester
+          .widget<LinearProgressIndicator>(find.byType(LinearProgressIndicator))
+          .value,
+      isNull,
+    );
+  });
+
   testWidgets('finishing buzzes once and gets out of the way', (tester) async {
     final round = Round();
     final finished = await open(tester, round.take);

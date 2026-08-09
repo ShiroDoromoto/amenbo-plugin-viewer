@@ -43,8 +43,11 @@ class FirstSyncScreen extends StatefulWidget {
       'Leaving this is safe. It carries on from where it stopped.';
   static const tryAgain = 'Try again';
 
-  /// What the count reads as while nothing has landed. The place has been asked and has not
-  /// answered yet, which is not the same as an empty backlog.
+  /// What the count reads as while nothing has landed yet.
+  ///
+  /// Not "0 records so far": a page is written whole, so the whole of a backlog that fits in one
+  /// arrives at once and there is nothing to count until it does. A zero standing there for the
+  /// length of the wait is the screen answering a question it has not been told the answer to.
   static const opening = 'Reading from your PC';
 
   /// How the running count is said. It is the records that are on the phone, not a countdown:
@@ -122,16 +125,18 @@ class _FirstSyncScreenState extends State<FirstSyncScreen> {
         padding: const EdgeInsets.fromLTRB(20, 32, 20, 32),
         children: [
           Text(
-            _records == 0 && _through == null
+            _records == 0
                 ? FirstSyncScreen.opening
                 : FirstSyncScreen.taken(_records),
             style: theme.textTheme.headlineSmall,
           ),
           const SizedBox(height: 20),
-          // Determinate once the place has said where it stands, and indeterminate only while
-          // waiting for that first answer — a bar sitting at zero would read as stuck rather
-          // than as not yet spoken to. A round that stopped holds still at where it got to.
-          LinearProgressIndicator(value: _running ? _through : (_through ?? 0)),
+          // Determinate once there is a position worth pointing at, and indeterminate while there
+          // is not — a bar sitting at zero would read as stuck rather than as still going. A round
+          // that stopped holds still at where it got to.
+          LinearProgressIndicator(
+            value: _running && (_through ?? 0) == 0 ? null : (_through ?? 0),
+          ),
           const SizedBox(height: 20),
           // Promising that it carries on is only true while carrying on is still what happens
           // next. Under a refusal it is the sentence that keeps somebody sitting here.

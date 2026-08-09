@@ -20,14 +20,14 @@ final today = DateTime(2026, 8, 9, 12);
 
 void main() {
   late BacklogStore store;
-  late _Arrivals arrivals;
+  late Arrivals arrivals;
   late List<int> opened;
   late List<TaskQuery> widened;
   late List<TaskQuery> sinced;
 
   setUp(() {
     store = BacklogStore.openInMemory();
-    arrivals = _Arrivals();
+    arrivals = Arrivals();
     opened = [];
     widened = [];
     sinced = [];
@@ -377,6 +377,27 @@ void main() {
       expect(find.textContaining('New activity'), findsNothing);
     });
 
+    testWidgets('rows somebody sat and watched land are not held back', (
+      tester,
+    ) async {
+      // Pairing again from a phone that already holds a backlog. The person watched this round
+      // fill a screen of its own, so a pill offering it would be offering them what they just
+      // waited for.
+      store.applyPage([
+        BacklogChange.put('task', 1, task(id: 1, title: 'まえから')),
+      ]);
+      await tester.pumpWidget(screen());
+
+      store.applyPage([
+        BacklogChange.put('task', 2, task(id: 2, title: 'みていた')),
+      ]);
+      arrivals.tick(watched: true);
+      await tester.pumpAndSettle();
+
+      expect(find.text('みていた'), findsOneWidget);
+      expect(find.textContaining('New activity'), findsNothing);
+    });
+
     testWidgets('asking for it applies it there and then', (tester) async {
       var takes = 0;
       await tester.pumpWidget(
@@ -626,10 +647,4 @@ void main() {
       expect(tester.takeException(), isNull, reason: 'nothing broke at $scale');
     }
   });
-}
-
-/// Stands in for whatever is fetching in the background — the app coming to the front, or a first
-/// sync still running.
-class _Arrivals extends ChangeNotifier {
-  void tick() => notifyListeners();
 }

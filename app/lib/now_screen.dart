@@ -56,6 +56,24 @@ String movedHeading(Moved moved) => switch (moved) {
   Moved.commented => 'Comments',
 };
 
+/// Says that rows arrived. Nothing about which — the screen that cares reads the store itself.
+///
+/// [watched] is the one thing it carries, because it decides whether the floor may be swapped.
+/// Rows that landed behind someone's back are offered behind a pill; rows the person sat and
+/// watched land — the first sync — are what they are here to read, and holding those back would
+/// be offering them what they just finished waiting for.
+class Arrivals extends ChangeNotifier {
+  bool _watched = false;
+
+  /// Whether the last lot were watched arriving.
+  bool get watched => _watched;
+
+  void tick({bool watched = false}) {
+    _watched = watched;
+    notifyListeners();
+  }
+}
+
 class NowScreen extends StatefulWidget {
   const NowScreen({
     super.key,
@@ -103,8 +121,8 @@ class NowScreen extends StatefulWidget {
   /// device, which is the whole point of it being a local store.
   final Future<void> Function()? take;
 
-  /// Ticks when a fetch the person did not ask for has written rows.
-  final Listenable? arrivals;
+  /// Ticks when a fetch this screen did not run has written rows.
+  final Arrivals? arrivals;
 
   /// How far back the finished bundle reaches. Handed in rather than read from the settings here,
   /// and required rather than defaulted, because a screen that quietly kept its own week would
@@ -290,9 +308,10 @@ class _NowScreenState extends State<NowScreen> with WidgetsBindingObserver {
 
   void _rowsArrived() {
     if (!mounted) return;
-    // Nothing is being read yet, so there is no place to lose. This is also the first sync:
-    // the rows are meant to be watched arriving, not held back behind a pill.
-    if (_empty) {
+    // Nothing is being read yet, so there is no place to lose — and a list somebody watched fill
+    // up is one they are already looking at. Either way the rows go straight in rather than
+    // waiting behind a pill.
+    if (_empty || (widget.arrivals?.watched ?? false)) {
       _apply();
       return;
     }
