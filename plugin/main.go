@@ -16,7 +16,7 @@
 // rather than by a setting:
 //
 //	mac      → a folder in the user's iCloud Drive. No account, no key handover, no setup.
-//	anywhere → the user's own Cloudflare Worker + KV, over HTTPS.
+//	anywhere → the user's own Cloudflare Worker and its database, over HTTPS.
 //
 // **The plugin encrypts, and nothing downstream decrypts.** The key reaches the phone by QR,
 // off the network, so the Worker never sees it — which is what makes a place the user merely
@@ -24,16 +24,15 @@
 //
 // # What is built
 //
-// Standing the Cloudflare route up (`setup`) and the send are: `push` and the hook both carry
-// what the store holds to that route, encrypted a record at a time. Handing the key to a phone
-// (`qr`) is not written yet, and it refuses rather than pretending, so nothing can be built on
-// top of it believing it worked.
+// The whole of the Cloudflare route: standing it up (`setup`), handing a phone the key over a
+// screen (`qr`), and the send — `push` and the hook both carry what the store holds to that
+// route, encrypted a record at a time. Writing to the iCloud folder is not built yet, and the
+// hook says so rather than pretending, so nothing can be built on top of it believing it worked.
 package main
 
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -191,19 +190,6 @@ func do(err error) int {
 	return 0
 }
 
-// errUnbuilt is the sentinel every unbuilt command wraps, so a caller can tell "this is not
-// written yet" from "this ran and failed" without reading the sentence.
-var errUnbuilt = errors.New("not built yet")
-
-// errNotBuilt is what a command that has not been written yet answers with.
-//
-// Refusing is the honest answer, and the exit code is the point: a command that printed a
-// friendly note and exited 0 would be indistinguishable, to anything that calls it, from one
-// that had done the work. Nothing should be able to build on this and believe it worked.
-func errNotBuilt(what string) error {
-	return fmt.Errorf("%s: %w. See the repository README for what is", what, errUnbuilt)
-}
-
 // push carries what the store holds to the Cloudflare route, by hand.
 //
 // The hook does this on its own whenever a write moves the store version, so this is the way to
@@ -223,16 +209,6 @@ func push(in input, _ []string) error {
 	return nil
 }
 
-// qr puts the endpoint URL, the read token and the encryption key on screen as a QR code, for
-// the phone's camera to take.
-//
-// **The key must not travel through the Worker.** Route it through the server and the server
-// becomes able to read what it is storing, and the end-to-end encryption stops meaning
-// anything. A screen and a camera are the one path with no network on it.
-func qr(input, []string) error {
-	return errNotBuilt("qr")
-}
-
 func usage() {
 	logf(`%s — amenbo's official plugin: read your backlog on your phone
 
@@ -250,7 +226,10 @@ Usage (through amenbo, from the project the plugin is enabled for):
   amenbo plugin run %s setup     stand up the Worker and its database in your own account
                                       --account <id>  when your token reaches more than one
   amenbo plugin run %s push      carry what has not reached the phone yet, by hand
-  amenbo plugin run %s qr        show the pairing QR for the phone's camera to read
+  amenbo plugin run %s qr        pair one phone: issue its read token and put it on screen
+                                      --label <name>  what to call it, since cutting it off
+                                                      later names it
+                                      --terminal      draw the code here instead of opening it
 
 'setup' asks you to press and to paste, and nothing else: it opens a Cloudflare token screen with
 the permissions already ticked, and you paste back the token it gives you. That token stands the
@@ -267,7 +246,11 @@ Settings — **none of them is yours to fill in.** 'setup' writes all three:
   %s      the token it generated (secret)
   %s  the key it generated (secret). It reaches the phone by QR, never by network
 
-**'qr' is not built yet**, and neither is writing to the iCloud folder. They refuse rather than
-pretend, so nothing can be built on top believing it worked.`,
+Every phone gets its own read token, issued when you pair it, so losing one is one token to cut
+rather than every phone to pair again. 'qr' is how one is issued: the code it puts on screen is
+read by the camera and never goes over the network, which is what keeps the key out of the Worker.
+
+**Writing to the iCloud folder is not built yet**, and the hook says so rather than pretending, so
+nothing can be built on top believing it worked.`,
 		pluginName, pluginName, pluginName, pluginName, configWorkerURL, configAuthToken, configEncryptionKey)
 }

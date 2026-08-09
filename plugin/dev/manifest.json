@@ -77,7 +77,7 @@
       },
       {
         "cmd": "qr",
-        "does": "Shows the pairing QR the phone's camera reads — endpoint, token and key, never over the network"
+        "does": "Pairs one phone: issues its own read token, registers the hash, shows endpoint/token/key as a QR the camera reads — never over the network. --label names it; --terminal draws it here"
       }
     ]
   }
