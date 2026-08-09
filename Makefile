@@ -1,8 +1,7 @@
 # ルートの Makefile は束ねるだけ。
 #
 # 部品ごとにツールチェーンが違う（プラグインは Go、Worker は Node、アプリは Flutter）ので、
-# ビルドの実体は各部品の Makefile が持ち、ここはそこへ渡す。`spec/` は契約の文書なので
-# ビルドを持たない。
+# ビルドの実体は各部品の Makefile が持ち、ここはそこへ渡す。
 #
 #   make plugin / worker / app   その部品だけをビルドする
 #   make build / test / clean    3部品まとめて
