@@ -1,10 +1,14 @@
 /// One task, as every list draws it.
 ///
-/// Two lines and no more. The first is what the task is; the second is the little that decides
-/// whether to open it — where it lives, why it is not moving, when it is due, who has it. The
-/// notes are deliberately absent: a title that does not say what the task is will not be rescued
-/// by the first forty characters of its body, and every row that carries an excerpt is a row that
-/// fits fewer tasks on the glass.
+/// Two lines. The first is what the task is; the second is the little that decides whether to open
+/// it — where it lives, why it is not moving, when it is due, who has it. The notes are
+/// deliberately absent: a title that does not say what the task is will not be rescued by the
+/// first forty characters of its body, and every row that carries an excerpt is a row that fits
+/// fewer tasks on the glass.
+///
+/// A row that came out of a search gets a third line, and only there: when the word was found in a
+/// body or a comment rather than in the title, the stretch around it is the answer to "why is this
+/// one in my results", which nothing else on the row can give.
 library;
 
 import 'package:flutter/material.dart';
@@ -43,6 +47,7 @@ class TaskRow extends StatelessWidget {
     this.projectName,
     this.movedAt,
     this.unread = false,
+    this.showStatus = false,
   });
 
   final TaskLine line;
@@ -63,6 +68,10 @@ class TaskRow extends StatelessWidget {
 
   final bool unread;
 
+  /// Whether to say what state it is in. A bundle already said it in its heading; a search result
+  /// stands on its own, and there the state is half of what the person came back to find out.
+  final bool showStatus;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -72,7 +81,10 @@ class TaskRow extends StatelessWidget {
     final reason = stallReason(line);
     final moved = movedAt;
 
+    final excerpt = line.matchLine?.trim();
+
     final second = <Widget>[
+      if (showStatus) StatusMark(line.status),
       if (projectName != null)
         // The first thing to be cut when the line will not fit: which project a task is in is
         // worth knowing, and never worth as much as why it is stuck or when it is due.
@@ -120,6 +132,7 @@ class TaskRow extends StatelessWidget {
         stallReason: reason,
         project: projectName,
         when: moved == null ? null : relativeTime(moved, now: today),
+        excerpt: excerpt,
       ),
       child: InkWell(
         onTap: onOpen,
@@ -141,6 +154,16 @@ class TaskRow extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(top: 2),
                   child: _Separated(children: second),
+                ),
+              if (excerpt != null && excerpt.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Text(
+                    excerpt,
+                    style: quiet,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
             ],
           ),

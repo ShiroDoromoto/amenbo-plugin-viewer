@@ -77,6 +77,19 @@ class MetaKey {
   /// When the app was last brought to the front. The "since you last looked" card counts from
   /// here, and it must not move while the person is reading.
   static const lastOpenedAt = 'last_opened_at';
+
+  /// The last few words typed into the search face.
+  static const recentTerms = 'recent_terms';
+
+  /// The last few records opened from it.
+  static const recentlyViewed = 'recently_viewed';
+
+  /// What the device wrote about itself, rather than took from the place.
+  ///
+  /// The place is replaced wholesale on a reset and after a gap on the PC, and the device empties
+  /// its copy to match — but the person has not stopped looking, nor forgotten what they were
+  /// searching for, just because the PC re-uploaded everything.
+  static const deviceOwn = {lastOpenedAt, recentTerms, recentlyViewed};
 }
 
 class BacklogStore {
@@ -213,8 +226,7 @@ class BacklogStore {
   /// Empties the store, keeping the settings that are the device's own.
   ///
   /// The place is replaced wholesale on a reset and after a gap on the PC, which the device sees
-  /// as `seq` going backwards. What it must not throw away is [MetaKey.lastOpenedAt]: the person
-  /// has not stopped looking just because the PC re-uploaded everything.
+  /// as `seq` going backwards. What it must not throw away is [MetaKey.deviceOwn].
   void wipe() {
     db.execute('BEGIN');
     db.execute('DELETE FROM record');
@@ -222,7 +234,10 @@ class BacklogStore {
       db.execute('DELETE FROM $table');
     }
     db.execute('DELETE FROM search_row');
-    db.execute("DELETE FROM meta WHERE key <> '${MetaKey.lastOpenedAt}'");
+    db.execute(
+      'DELETE FROM meta WHERE key NOT IN '
+      "(${MetaKey.deviceOwn.map((key) => "'$key'").join(', ')})",
+    );
     db.execute('COMMIT');
   }
 

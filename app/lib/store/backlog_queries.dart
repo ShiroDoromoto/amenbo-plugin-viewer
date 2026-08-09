@@ -80,6 +80,7 @@ class TaskLine {
     required this.blockedBy,
     required this.undecided,
     required this.excerpt,
+    required this.matchedIn,
   });
 
   final int id;
@@ -109,6 +110,16 @@ class TaskLine {
   /// The stretch of text a search matched, when the line came out of a search.
   final String? excerpt;
 
+  /// Where that stretch was found — `title`, `body` or `comment`.
+  final String? matchedIn;
+
+  /// The line a list puts under the row to say why the row is in it.
+  ///
+  /// Null for a title hit: the row already shows the title, and repeating it underneath says only
+  /// that the search worked.
+  String? get matchLine =>
+      matchedIn == null || matchedIn == 'title' ? null : excerpt;
+
   /// It cannot be started: a premise is missing.
   bool get stalled =>
       draft || blockedBy != null || undecided != null || status == 'blocked';
@@ -124,6 +135,7 @@ class DecisionLine {
     required this.createdAt,
     required this.decidedAt,
     required this.excerpt,
+    this.matchedIn,
   });
 
   final int id;
@@ -135,6 +147,12 @@ class DecisionLine {
   final String createdAt;
   final String? decidedAt;
   final String? excerpt;
+
+  /// Where a search matched — see [TaskLine.matchedIn].
+  final String? matchedIn;
+
+  String? get matchLine =>
+      matchedIn == null || matchedIn == 'title' ? null : excerpt;
 }
 
 /// One comment, with its text — the one place a list does carry a body, because the body is the
@@ -306,7 +324,7 @@ extension BacklogQueries on BacklogStore {
     }
     final rows = db.select(
       'SELECT d.id, d.project_id, d.title, d.status, d.created_at, d.decided_at'
-      '${search == null ? '' : ', h.excerpt AS excerpt'} '
+      '${search == null ? '' : ', h.excerpt AS excerpt, h.source AS matched_in'} '
       'FROM decision d ${search?.sql.replaceAll('t.id', 'd.id') ?? ''} '
       'WHERE ${clauses.join(' AND ')} '
       'ORDER BY d.created_at DESC, d.id DESC LIMIT ? OFFSET ?',
@@ -322,6 +340,7 @@ extension BacklogQueries on BacklogStore {
             createdAt: row['created_at'] as String,
             decidedAt: row['decided_at'] as String?,
             excerpt: search == null ? null : row['excerpt'] as String?,
+            matchedIn: search == null ? null : row['matched_in'] as String?,
           ),
         )
         .toList(growable: false);
@@ -352,6 +371,26 @@ extension BacklogQueries on BacklogStore {
     );
     if (rows.isEmpty) return null;
     return jsonDecode(rows.first['raw'] as String) as Map<String, Object?>;
+  }
+
+  /// One decision, for the places that hold its number and nothing else.
+  DecisionLine? decision(int id) {
+    final rows = db.select(
+      'SELECT d.id, d.project_id, d.title, d.status, d.created_at, d.decided_at '
+      'FROM decision d WHERE d.id = ?',
+      [id],
+    );
+    if (rows.isEmpty) return null;
+    final row = rows.first;
+    return DecisionLine(
+      id: row['id'] as int,
+      projectId: row['project_id'] as int,
+      title: row['title'] as String,
+      status: row['status'] as String,
+      createdAt: row['created_at'] as String,
+      decidedAt: row['decided_at'] as String?,
+      excerpt: null,
+    );
   }
 
   TaskLine? task(int id, {required DateTime today}) {
@@ -501,12 +540,33 @@ extension BacklogQueries on BacklogStore {
       .toList(growable: false);
 
   /// The projects the machine sent, in the order amenbo holds them.
-  List<({int id, String name})> projects() => db
+  ///
+  /// Archived ones are left out by default, because nothing in a project nobody adds to any more
+  /// belongs in "what to do when I get back". Search asks with [includeArchived] set: remembering
+  /// how something ended up is exactly what an archived project is kept for.
+  List<({int id, String name})> projects({bool includeArchived = false}) => db
       .select(
-        'SELECT id, name FROM project WHERE archived = 0 ORDER BY order_key, id',
+        'SELECT id, name FROM project '
+        '${includeArchived ? '' : 'WHERE archived = 0 '}'
+        'ORDER BY order_key, id',
       )
       .map((row) => (id: row['id'] as int, name: row['name'] as String))
       .toList(growable: false);
+
+  /// One category value, named by the dimension it belongs to — what a narrowing arriving from a
+  /// chip calls itself once the chip is behind it.
+  ({String dimension, String value})? dimensionValue(int id) {
+    final rows = db.select(
+      'SELECT m.name AS dimension, v.name AS value FROM dimension_value v '
+      'JOIN dimension m ON m.id = v.dimension_id WHERE v.id = ?',
+      [id],
+    );
+    if (rows.isEmpty) return null;
+    return (
+      dimension: rows.first['dimension'] as String,
+      value: rows.first['value'] as String,
+    );
+  }
 
   /// The newest change any task in view carries, as the PC stamped it.
   ///
@@ -611,7 +671,7 @@ String _taskColumns({bool excerpt = false}) =>
     '(SELECT l.decision_id FROM decision_task_link l JOIN decision c ON c.id = l.decision_id '
     "WHERE l.task_id = t.id AND c.status = 'proposed' "
     'ORDER BY l.decision_id LIMIT 1) AS undecided'
-    '${excerpt ? ', h.excerpt AS excerpt' : ''}';
+    '${excerpt ? ', h.excerpt AS excerpt, h.source AS matched_in' : ''}';
 
 TaskLine _taskLine(Row row) => TaskLine(
   id: row['id'] as int,
@@ -629,6 +689,9 @@ TaskLine _taskLine(Row row) => TaskLine(
   blockedBy: row['blocked_by'] as int?,
   undecided: row['undecided'] as int?,
   excerpt: row.keys.contains('excerpt') ? row['excerpt'] as String? : null,
+  matchedIn: row.keys.contains('matched_in')
+      ? row['matched_in'] as String?
+      : null,
 );
 
 ({String sql, List<Object?> args}) _bundleWhere(
@@ -756,9 +819,10 @@ List<Object?> _orderArgs(Bundle bundle, DateTime today) =>
   // it — so the hits are collected first, and only then ranked.
   return (
     sql:
-        'JOIN (SELECT owner_id, excerpt, '
+        'JOIN (SELECT owner_id, excerpt, source, '
         'ROW_NUMBER() OVER (PARTITION BY owner_id ORDER BY place, hit) AS n FROM ('
         'SELECT s.owner_id AS owner_id, ${matched.excerpt} AS excerpt, s.id AS hit, '
+        's.source AS source, '
         "CASE s.source WHEN 'title' THEN 0 WHEN 'body' THEN 1 ELSE 2 END AS place "
         'FROM ${matched.from} WHERE ${matched.where} AND s.kind = ?)) h '
         'ON h.owner_id = t.id AND h.n = 1',
