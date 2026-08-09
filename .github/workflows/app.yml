@@ -15,10 +15,15 @@ on:
   # 「今の main が通るか」を訊きたい場面が来る）。
   workflow_dispatch:
 
-# 同じブランチで走っている古い実行は畳む。
+# PR で走っている古い実行だけ畳む。あそこは1本のブランチを何度も直す場所で、要るのは
+# 先頭の判定だけ。
+#
+# **main では畳まない。** 複数のセッションが並行して main へ入れるので、push は短い間隔で
+# 重なる。畳むと判定が付くのは最後の1つだけになり、検証は抜けないまま（main は直列なので
+# 後の実行が前を含む）**自分の変更が緑かどうかを他人の実行から探すことになる**。
 concurrency:
   group: app-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   # 手元と CI で同じものを使う。channel だけの指定だと、ある朝 CI だけが上がって、
