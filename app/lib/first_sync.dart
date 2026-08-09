@@ -133,12 +133,15 @@ class _FirstSyncScreenState extends State<FirstSyncScreen> {
           // than as not yet spoken to. A round that stopped holds still at where it got to.
           LinearProgressIndicator(value: _running ? _through : (_through ?? 0)),
           const SizedBox(height: 20),
-          Text(
-            FirstSyncScreen.carriesOn,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.outline,
+          // Promising that it carries on is only true while carrying on is still what happens
+          // next. Under a refusal it is the sentence that keeps somebody sitting here.
+          if (stopped == null || worthAnotherRound(stopped.failure))
+            Text(
+              FirstSyncScreen.carriesOn,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.outline,
+              ),
             ),
-          ),
           if (stopped != null) ...[
             const SizedBox(height: 28),
             Text(
@@ -149,11 +152,13 @@ class _FirstSyncScreenState extends State<FirstSyncScreen> {
             ),
             const SizedBox(height: 8),
             Text(_wayOut(stopped.failure), style: theme.textTheme.bodyMedium),
-            const SizedBox(height: 20),
-            FilledButton(
-              onPressed: _running ? null : _take,
-              child: const Text(FirstSyncScreen.tryAgain),
-            ),
+            if (worthAnotherRound(stopped.failure)) ...[
+              const SizedBox(height: 20),
+              FilledButton(
+                onPressed: _running ? null : _take,
+                child: const Text(FirstSyncScreen.tryAgain),
+              ),
+            ],
           ],
         ],
       ),

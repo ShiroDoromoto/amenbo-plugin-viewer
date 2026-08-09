@@ -113,6 +113,7 @@ class StateBand extends StatelessWidget {
     this.onPairAgain,
     this.onOpenSettings,
     this.whole = false,
+    this.clock = DateTime.now,
   });
 
   final Standing standing;
@@ -122,6 +123,10 @@ class StateBand extends StatelessWidget {
 
   final VoidCallback? onPairAgain;
   final VoidCallback? onOpenSettings;
+
+  /// Passed in rather than read here, so the band and the rows under it cannot disagree about
+  /// what day it is — which is the whole of what [takenAt] needs it for.
+  final DateTime Function() clock;
 
   /// True where there is no picture to sit above — a device that has never had anything. Then the
   /// same words take the screen instead of a strip of it.
@@ -135,7 +140,12 @@ class StateBand extends StatelessWidget {
   /// This is the one place the app spells a time out. What the person is judging here is how old
   /// what they are reading is, and a phone whose clock is wrong can still say the hour it took
   /// something at — where "3 h ago" would be wrong by exactly the amount the clock is out.
-  static String takenAt(DateTime when) => 'Taken ${clockTime(when)}';
+  ///
+  /// The day comes with it once it is not today's. This line is the only thing a phone with no
+  /// signal has to date what it is reading by, and out of signal is exactly where a picture stops
+  /// being hours old and starts being days old.
+  static String takenAt(DateTime when, {required DateTime now}) =>
+      'Taken ${clockOnDay(when, now: now)}';
 
   @override
   Widget build(BuildContext context) {
@@ -177,7 +187,7 @@ class StateBand extends StatelessWidget {
           TimeOnHold(
             when: taken,
             child: Text(
-              takenAt(taken),
+              takenAt(taken, now: clock()),
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
