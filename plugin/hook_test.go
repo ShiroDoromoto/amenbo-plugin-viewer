@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -11,50 +13,47 @@ func fired(event string, settings map[string]any) input {
 	return input{V: contractVersion, Event: event, ID: 42, Actor: "ai", Config: settings}
 }
 
-// withICloud answers for the mac route, whose real switch is a directory no test may create.
-func withICloud(t *testing.T, live bool) {
+// withICloud answers for the mac route, whose real drop is a directory no test may create: the
+// route is stood up somewhere a test is allowed to write, or pointed at a path with nothing at
+// it. It hands back the drop either way.
+func withICloud(t *testing.T, live bool) string {
 	t.Helper()
-	was := icloudRouteIsLive
-	icloudRouteIsLive = func() bool { return live }
-	t.Cleanup(func() { icloudRouteIsLive = was })
+	drop := filepath.Join(t.TempDir(), "Documents")
+	if live {
+		if err := os.MkdirAll(drop, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	was := icloudDropPath
+	icloudDropPath = func() string { return drop }
+	t.Cleanup(func() { icloudDropPath = was })
+	return drop
 }
 
-// The iCloud folder is there and nothing is arriving at the other end. That is the one state
-// worth a line: the user's question is "why is my phone not updating?", and the execution log is
-// where it gets answered.
-func TestTheHookSaysWhyNothingIsReachingTheICloudFolder(t *testing.T) {
-	t.Setenv(envAuthToken, "")
-	t.Setenv(envEncryptionKey, "")
-	withICloud(t, true)
+// A send that got nowhere is the state the user most needs written down: a route IS open, so the
+// phone falls further behind with every write.
+func TestTheHookSaysWhatStoppedTheSend(t *testing.T) {
+	for name, test := range map[string]struct {
+		icloud   bool
+		settings map[string]any
+	}{
+		"the mac has a folder":       {icloud: true},
+		"a Worker has been stood up": {settings: map[string]any{configWorkerURL: "https://viewer.example.workers.dev"}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Setenv(envAuthToken, "a-throwaway-token")
+			t.Setenv(envEncryptionKey, "")
+			withICloud(t, test.icloud)
 
-	stdout, stderr := capture(t, func() {
-		hook(fired("task.done", nil))
-	})
+			stdout, stderr := capture(t, func() { hook(fired("task.done", test.settings)) })
 
-	if stdout != "" {
-		t.Errorf("a hook's stdout is not a return value and nothing belongs on it: %q", stdout)
-	}
-	if !strings.Contains(stderr, "iCloud Drive folder") || !strings.Contains(stderr, "not built yet") {
-		t.Errorf("the line does not say what is not arriving, or why: %q", stderr)
-	}
-}
-
-// A send that got nowhere is the state the user most needs written down: the route IS pointed
-// somewhere, so the phone falls further behind with every write.
-func TestTheHookSaysWhyTheSendToTheWorkerFailed(t *testing.T) {
-	t.Setenv(envAuthToken, "a-throwaway-token")
-	t.Setenv(envEncryptionKey, "")
-	withICloud(t, false)
-
-	stdout, stderr := capture(t, func() {
-		hook(fired("task.done", map[string]any{configWorkerURL: "https://viewer.example.workers.dev"}))
-	})
-
-	if stdout != "" {
-		t.Errorf("a hook's stdout is not a return value and nothing belongs on it: %q", stdout)
-	}
-	if !strings.Contains(stderr, "Cloudflare Worker") || !strings.Contains(stderr, "encryption key") {
-		t.Errorf("the line does not say what stopped the send: %q", stderr)
+			if stdout != "" {
+				t.Errorf("a hook's stdout is not a return value and nothing belongs on it: %q", stdout)
+			}
+			if !strings.Contains(stderr, "encryption key") {
+				t.Errorf("the line does not say what stopped the send: %q", stderr)
+			}
+		})
 	}
 }
 
@@ -118,19 +117,20 @@ func TestHalfOfTheCloudflareRouteIsNotARoute(t *testing.T) {
 
 // Both routes carry the same records to two places, so they are not modes to choose between: a
 // mac user with an iPhone at home and an Android phone at work wants them in both.
-func TestBothRoutesAreReportedOnIndependently(t *testing.T) {
+func TestEveryRouteThatIsOpenIsCarriedTo(t *testing.T) {
 	t.Setenv(envAuthToken, "a-throwaway-token")
-	t.Setenv(envEncryptionKey, "")
 	withICloud(t, true)
 
-	_, stderr := capture(t, func() {
-		hook(fired("task.done", map[string]any{configWorkerURL: "https://viewer.example.workers.dev"}))
-	})
+	open := routesFor(fired("task.done", map[string]any{configWorkerURL: "https://viewer.example.workers.dev"}))
 
-	if !strings.Contains(stderr, "iCloud Drive folder") {
-		t.Errorf("the iCloud route went unmentioned: %q", stderr)
+	named := make([]string, len(open))
+	for i, where := range open {
+		named[i] = where.String()
 	}
-	if !strings.Contains(stderr, "Cloudflare Worker") {
-		t.Errorf("the Cloudflare route went unmentioned: %q", stderr)
+	if len(open) != 2 {
+		t.Fatalf("routes = %v, want both of them", named)
+	}
+	if !strings.Contains(strings.Join(named, " "), "iCloud") || !strings.Contains(strings.Join(named, " "), "Cloudflare") {
+		t.Errorf("routes = %v", named)
 	}
 }

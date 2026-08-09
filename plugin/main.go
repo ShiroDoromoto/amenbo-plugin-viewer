@@ -24,10 +24,9 @@
 //
 // # What is built
 //
-// The whole of the Cloudflare route: standing it up (`setup`), handing a phone the key over a
-// screen (`qr`), and the send — `push` and the hook both carry what the store holds to that
-// route, encrypted a record at a time. Writing to the iCloud folder is not built yet, and the
-// hook says so rather than pretending, so nothing can be built on top of it believing it worked.
+// Both routes carry. The Cloudflare one is stood up by `setup` and handed a phone's key by `qr`;
+// the mac one needs neither, being a folder the OS grows once the app has been opened on a phone.
+// `push` and the hook place the same encrypted records on every route that is open.
 package main
 
 import (
@@ -258,8 +257,8 @@ rather than every phone to pair again. 'qr' is how one is issued: the code it pu
 read by the camera and never goes over the network, which is what keeps the key out of the Worker.
 'revoke' is the other end of that — one phone stops reading and the rest never notice.
 
-**Writing to the iCloud folder is not built yet**, and the hook says so rather than pretending, so
-nothing can be built on top believing it worked.`,
+The iCloud folder needs none of that: it holds one file per record, the folder itself is what the
+phone reads, and a record you delete here is a file that goes away.`,
 		pluginName, pluginName, pluginName, pluginName, pluginName, pluginName,
 		configWorkerURL, configAuthToken, configEncryptionKey)
 }

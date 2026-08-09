@@ -36,10 +36,18 @@ const idsPerRead = 500
 // be joined by the next write's, and the next.
 const sendTimeout = 30 * time.Second
 
-// errNoRoute is the Cloudflare route not being pointed anywhere. It is a sentinel because the
-// two faces answer it differently: the hook stays quiet (a user who has not set it up is not
-// failing at anything), and `push` says so (someone asked for a send out loud).
-var errNoRoute = errors.New("the Cloudflare route is not configured — run setup")
+// errNoRoute is there being nowhere to put anything: no Worker stood up, and no iCloud folder.
+// It is a sentinel because the two faces answer it differently: the hook stays quiet (a user who
+// has not set anything up is not failing at anything), and `push` says so (someone asked for a
+// send out loud).
+var errNoRoute = errors.New("there is nowhere to put anything yet — run setup for the Cloudflare route, or open amenbo Viewer once on an iPhone for the mac's iCloud folder to appear")
+
+// What can happen to a record on its way out: it now holds something, or it is gone. These are
+// the contract's words, and both routes write them — the Worker into a row, the drop into a file.
+const (
+	opPlaced  = "put"
+	opDeleted = "del"
+)
 
 // outgoing is one record as it travels: the key it is filed under, what happened to it, and —
 // for everything but a delete — the envelope holding it.
@@ -83,7 +91,7 @@ func sealRows(seal *sealer, dataset string, rows []json.RawMessage) ([]outgoing,
 		}
 		key := recordKey(dataset, id)
 		nonce, cipher := seal.seal(key, raw)
-		placed = append(placed, outgoing{Key: key, Op: "put", Nonce: nonce, Cipher: cipher})
+		placed = append(placed, outgoing{Key: key, Op: opPlaced, Nonce: nonce, Cipher: cipher})
 	}
 	return placed, nil
 }
@@ -195,9 +203,60 @@ func sealChanged(seal *sealer, changes []change, rows readBack) ([]outgoing, err
 		}
 	}
 	for _, key := range dropped {
-		placed = append(placed, outgoing{Key: key, Op: "del"})
+		placed = append(placed, outgoing{Key: key, Op: opDeleted})
 	}
 	return placed, nil
+}
+
+// route is a place the records are put. There are two, and they are not modes to choose between:
+// the same records go to both, so a mac user with an iPhone at home and an Android phone at work
+// is reading one backlog through two doors.
+//
+// **What differs is only where the bytes land.** The envelope, the keys and the version are the
+// send's, not the route's, which is what keeps the two ends from drifting into two contracts.
+type route interface {
+	// String names the route in a diagnostic, in the user's own words for it.
+	String() string
+	// holdsNothing says the place has never been written into, so it needs the whole window
+	// rather than what moved since the last send.
+	holdsNothing() bool
+	// place puts what moved.
+	place(placement) error
+	// replace makes the place hold exactly what it is given, and nothing that was there before.
+	replace(placement) error
+}
+
+// routesFor names every route that is open. None is not a failure: a plugin that is installed and
+// enabled, with no Worker stood up and no folder yet, is waiting rather than broken.
+func routesFor(in input) []route {
+	var open []route
+	if there, err := dropFor(); err == nil {
+		open = append(open, there)
+	}
+	if where, err := storeFor(in); err == nil {
+		open = append(open, where)
+	}
+	return open
+}
+
+// carryTo puts one body on every route, and says which of them did not take it.
+//
+// **A route that fails does not stop the others.** They are two places holding the same records,
+// and a phone reading one of them is not waiting on the other. What a failure does stop is the
+// state: nothing is remembered until every route has it, so the next turn carries the same
+// records again — which both routes take twice as well as once, being addressed by key.
+func carryTo(routes []route, body placement, whole bool) error {
+	var refusals []error
+	for _, where := range routes {
+		place := where.place
+		if whole {
+			place = where.replace
+		}
+		if err := place(body); err != nil {
+			refusals = append(refusals, fmt.Errorf("nothing reached %s: %w", where, err))
+		}
+	}
+	return errors.Join(refusals...)
 }
 
 // store is the place the records are put: the user's own Worker, and the token that opens its
@@ -205,6 +264,26 @@ func sealChanged(seal *sealer, changes []change, rows readBack) ([]outgoing, err
 type store struct {
 	url   string
 	token string
+}
+
+// String names the route in a diagnostic.
+func (s store) String() string { return "the Cloudflare Worker" }
+
+// holdsNothing is answered no: asking what the Worker holds costs a call over the network, and
+// the hook fires on every write. The drop answers it for free, the answer being a file lying
+// beside the records.
+func (s store) holdsNothing() bool { return false }
+
+// place puts what moved into the store.
+func (s store) place(body placement) error {
+	_, err := s.put("/records", body)
+	return err
+}
+
+// replace empties the store and places everything.
+func (s store) replace(body placement) error {
+	_, err := s.put("/reset", body)
+	return err
 }
 
 // storeFor names the Cloudflare route, or says it is not one. Half a route is not a route — a
@@ -263,9 +342,9 @@ func (s store) put(path string, body placement) (int64, error) {
 // question. `force` is what `push` passes — someone asked out loud, so the guard is skipped and
 // the ledger is read even when the version says the phone is level.
 func carry(in input, force bool) (int, error) {
-	where, err := storeFor(in)
-	if err != nil {
-		return 0, err
+	routes := routesFor(in)
+	if len(routes) == 0 {
+		return 0, errNoRoute
 	}
 	seal, err := newSealer(secret(envEncryptionKey))
 	if err != nil {
@@ -285,12 +364,12 @@ func carry(in input, force bool) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	if found && !force && remembered.Version == *version {
-		return 0, nil
-	}
 
-	if found {
-		placed, cursor, err := carryChanged(where, seal, remembered.Cursor, *version)
+	if found && !anyRouteHoldsNothing(routes) {
+		if !force && remembered.Version == *version {
+			return 0, nil
+		}
+		placed, cursor, err := carryChanged(routes, seal, remembered.Cursor, *version)
 		if !errors.Is(err, errSyncGap) {
 			if err != nil {
 				return 0, err
@@ -300,18 +379,33 @@ func carry(in input, force bool) (int, error) {
 		logf("%s: the ledger no longer reaches back to where this plugin left off — placing the whole store again", pluginName)
 	}
 
-	placed, cursor, err := carryWhole(where, seal, *version)
+	placed, cursor, err := carryWhole(routes, seal, *version)
 	if err != nil {
 		return 0, err
 	}
 	return placed, writeState(state{Version: *version, Cursor: cursor})
 }
 
+// anyRouteHoldsNothing says whether one of the open routes is starting from nothing.
+//
+// **What this plugin remembers is what it sent, not what a place holds.** The iCloud folder comes
+// into being when the user first opens the app on their phone, which can be any number of sends
+// later, and handing that folder only what has moved since would leave a phone reading this
+// week's edits with no backlog behind them.
+func anyRouteHoldsNothing(routes []route) bool {
+	for _, where := range routes {
+		if where.holdsNothing() {
+			return true
+		}
+	}
+	return false
+}
+
 // carryChanged places what moved since the cursor, and hands back the cursor to remember.
 //
 // A stretch that turns out to hold nothing to carry is still a turn: the cursor moves, so the
 // next one does not read it again.
-func carryChanged(where store, seal *sealer, cursor, version int64) (int, int64, error) {
+func carryChanged(routes []route, seal *sealer, cursor, version int64) (int, int64, error) {
 	changes, moved, err := changesSince(cursor)
 	if err != nil {
 		return 0, 0, err
@@ -323,20 +417,20 @@ func carryChanged(where store, seal *sealer, cursor, version int64) (int, int64,
 	if len(records) == 0 {
 		return 0, moved, nil
 	}
-	if _, err := where.put("/records", placement{SpecV: specVersion, Version: version, Records: records}); err != nil {
+	if err := carryTo(routes, placement{SpecV: specVersion, Version: version, Records: records}, false); err != nil {
 		return 0, 0, err
 	}
 	return len(records), moved, nil
 }
 
-// carryWhole empties the store and places everything, which is what a first run, a reset and a
-// gap all come down to.
+// carryWhole empties every route and places everything, which is what a first run, a reset, a gap
+// and a route that has just appeared all come down to.
 //
 // The version is read before the picture is taken, never after: a write landing in between makes
 // the remembered version one turn stale, which costs a turn that finds nothing. Remembering a
 // version newer than the picture would instead skip whatever landed in that gap, and the phone
 // would never learn of it.
-func carryWhole(where store, seal *sealer, version int64) (int, int64, error) {
+func carryWhole(routes []route, seal *sealer, version int64) (int, int64, error) {
 	whole, err := wholeWindow()
 	if err != nil {
 		return 0, 0, err
@@ -345,7 +439,7 @@ func carryWhole(where store, seal *sealer, version int64) (int, int64, error) {
 	if err != nil {
 		return 0, 0, err
 	}
-	if _, err := where.put("/reset", placement{SpecV: specVersion, Version: version, Records: records}); err != nil {
+	if err := carryTo(routes, placement{SpecV: specVersion, Version: version, Records: records}, true); err != nil {
 		return 0, 0, err
 	}
 	return len(records), whole.Header.Cursor, nil
