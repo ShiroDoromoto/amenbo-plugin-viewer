@@ -32,6 +32,7 @@ class TaskDetailScreen extends StatefulWidget {
     this.onProject,
     this.onValue,
     this.onLink,
+    this.onShare = shareHandoff,
     this.clock = DateTime.now,
   });
 
@@ -52,6 +53,10 @@ class TaskDetailScreen extends StatefulWidget {
   /// A link in the body, pressed. Null leaves links as text; nothing is ever followed unasked.
   final void Function(String url)? onLink;
 
+  /// Hands the three lines out to the OS. The app cannot write a word back to the backlog, so
+  /// this and the number are the whole of what a thought had here can be carried away in.
+  final Future<void> Function(String text) onShare;
+
   final DateTime Function() clock;
 
   static const stalled = 'Cannot start';
@@ -68,6 +73,7 @@ class TaskDetailScreen extends StatefulWidget {
 
   static const commits = 'Commits';
   static const gone = 'This task is not on the phone';
+  static const share = 'Share';
 
   @override
   State<TaskDetailScreen> createState() => _TaskDetailScreenState();
@@ -148,7 +154,24 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     final task = _task;
     final today = widget.clock();
     return Scaffold(
-      appBar: AppBar(),
+      appBar: AppBar(
+        actions: [
+          // Only where there is something to send. A task the phone does not hold has a number
+          // and nothing else, and a share sheet carrying one line is not the bridge this is for.
+          if (task != null)
+            IconButton(
+              icon: const Icon(Icons.share),
+              tooltip: TaskDetailScreen.share,
+              onPressed: () => widget.onShare(
+                handoffText(
+                  ref: taskRef(task.id),
+                  title: task.title,
+                  state: statusWords(task.status),
+                ),
+              ),
+            ),
+        ],
+      ),
       body: task == null
           ? Center(child: Text(TaskDetailScreen.gone))
           : ListView(

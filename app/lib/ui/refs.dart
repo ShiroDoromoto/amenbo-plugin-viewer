@@ -8,6 +8,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 
 /// The namespace amenbo puts on everything it shows. A bare number belongs to any tracker;
 /// this is what makes it belong to one.
@@ -16,6 +17,25 @@ const _namespace = 'AMB-';
 String taskRef(int id) => '${_namespace}T-$id';
 
 String decisionRef(int id) => '${_namespace}D-$id';
+
+/// The three lines that leave with a task or a decision: what to type on the PC, what it is, and
+/// where it had got to.
+///
+/// Nothing longer travels. The body is on the machine the person is heading back to, and a wall of
+/// notes pasted into a chat is not a message anybody reads — what has to survive the trip is the
+/// number, and the two lines that let the person recognise it when it arrives.
+String handoffText({
+  required String ref,
+  required String title,
+  required String state,
+}) => '$ref\n$title\n$state';
+
+/// Out to whatever the OS offers — notes, mail, a chat.
+///
+/// Screens are handed this rather than calling it, so a test can watch what would have left
+/// without a share sheet standing in front of it.
+Future<void> shareHandoff(String text) =>
+    SharePlus.instance.share(ShareParams(text: text));
 
 /// The ref, copied when it is tapped.
 ///

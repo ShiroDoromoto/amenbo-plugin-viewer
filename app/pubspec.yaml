@@ -72,6 +72,11 @@ dependencies:
   # Picking that photograph.
   image_picker: ^1.2.3
 
+  # The way out. Nothing written here goes back to the backlog, so a thought had while reading
+  # leaves through the OS share sheet or not at all — and that sheet is one of the few things
+  # neither Dart nor a few lines of our own platform code can put up on both phones.
+  share_plus: ^13.3.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

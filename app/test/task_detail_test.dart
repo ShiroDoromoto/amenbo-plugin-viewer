@@ -17,11 +17,13 @@ void main() {
   late BacklogStore store;
   late List<int> openedTasks;
   late List<int> openedDecisions;
+  late List<String> shared;
 
   setUp(() {
     store = BacklogStore.openInMemory();
     openedTasks = [];
     openedDecisions = [];
+    shared = [];
   });
   tearDown(() => store.close());
 
@@ -35,6 +37,7 @@ void main() {
           onProject: onProject,
           onOpenTask: openedTasks.add,
           onOpenDecision: openedDecisions.add,
+          onShare: (text) async => shared.add(text),
           clock: () => today,
         ),
       );
@@ -210,11 +213,33 @@ void main() {
     });
   });
 
+  group('the bridge back to the PC', () {
+    testWidgets('three lines leave: the number, the title, where it stands', (
+      tester,
+    ) async {
+      store.applyPage([
+        BacklogChange.put(
+          'task',
+          1,
+          task(id: 1, title: 'かく', status: 'in_progress', notes: 'ながいほんぶん'),
+        ),
+      ]);
+
+      await tester.pumpWidget(detail());
+      await tester.tap(find.byTooltip(TaskDetailScreen.share));
+
+      // The notes stay on the PC: what travels is what makes the row findable there.
+      expect(shared, ['${taskRef(1)}\nかく\nIn progress']);
+    });
+  });
+
   testWidgets('a task the phone does not hold says so instead of breaking', (
     tester,
   ) async {
     await tester.pumpWidget(detail(id: 4242));
     expect(find.text(TaskDetailScreen.gone), findsOneWidget);
+    // Nothing to hand over either — a number with no task behind it is not a message.
+    expect(find.byTooltip(TaskDetailScreen.share), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
