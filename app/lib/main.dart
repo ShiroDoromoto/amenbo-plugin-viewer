@@ -15,14 +15,29 @@ library;
 import 'package:flutter/material.dart';
 
 import 'pairing_guide.dart';
+import 'settings.dart';
+import 'store/backlog_store.dart';
 import 'ui/theme.dart';
 
-void main() {
-  runApp(const AmenboViewerApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(AmenboViewerApp(settings: await openSettings()));
 }
 
+/// The settings as this phone last left them.
+///
+/// Opening the local store is the only thing done before the first frame, and it is a file on the
+/// device — nothing is fetched here. Drawing the app in the wrong brightness and correcting it a
+/// moment later is a flash the person did not ask for, and the read costs less than the flash.
+Future<SettingsController> openSettings() async =>
+    SettingsController(StoredSettings(await BacklogStore.open()));
+
 class AmenboViewerApp extends StatelessWidget {
-  const AmenboViewerApp({super.key});
+  const AmenboViewerApp({super.key, required this.settings});
+
+  /// Held here rather than looked up, because the one setting the app itself obeys — how dark it
+  /// is — is decided at this level and nowhere else.
+  final SettingsController settings;
 
   /// The name the stores show, in both languages — it reads the same in each, so it is not
   /// translated per locale.
@@ -30,11 +45,15 @@ class AmenboViewerApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: title,
-      theme: viewerTheme(Brightness.light),
-      darkTheme: viewerTheme(Brightness.dark),
-      home: const PairingGuideScreen(appName: title),
+    return ListenableBuilder(
+      listenable: settings,
+      builder: (context, _) => MaterialApp(
+        title: title,
+        theme: viewerTheme(Brightness.light),
+        darkTheme: viewerTheme(Brightness.dark),
+        themeMode: settings.value.appearance.themeMode,
+        home: const PairingGuideScreen(appName: title),
+      ),
     );
   }
 }

@@ -29,13 +29,15 @@ const dumpFileName = 'screen.txt';
 /// sit on it. The dump is repeated once after this again, so a slow start is not a wrong answer.
 const _settle = Duration(seconds: 3);
 
-void main() {
+Future<void> main() async {
   final binding = WidgetsFlutterBinding.ensureInitialized();
   // Semantics are off until something asks for them — a screen reader, or this. The handle has to
   // outlive the dump, so it is never disposed: the app is here to be read and then killed.
   binding.ensureSemantics();
 
-  runApp(const AmenboViewerApp());
+  // The same start the real entrypoint makes, so what is dumped is the app as it runs and not a
+  // second assembly of it that could drift.
+  runApp(AmenboViewerApp(settings: await openSettings()));
 
   () async {
     await Future<void>.delayed(_settle);

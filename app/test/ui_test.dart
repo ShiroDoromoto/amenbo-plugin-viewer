@@ -2,6 +2,7 @@
 // screen — a screen that forgets one of them looks right to whoever wrote it.
 
 import 'package:amenbo_viewer/main.dart';
+import 'package:amenbo_viewer/settings.dart';
 import 'package:amenbo_viewer/ui/marks.dart';
 import 'package:amenbo_viewer/ui/refs.dart';
 import 'package:amenbo_viewer/ui/theme.dart';
@@ -299,7 +300,9 @@ void main() {
   });
 
   testWidgets('the app itself is drawn with this theme', (tester) async {
-    await tester.pumpWidget(const AmenboViewerApp());
+    await tester.pumpWidget(
+      AmenboViewerApp(settings: SettingsController(UnkeptSettings())),
+    );
     final app = tester.widget<MaterialApp>(find.byType(MaterialApp));
     expect(
       app.theme?.colorScheme.primary,

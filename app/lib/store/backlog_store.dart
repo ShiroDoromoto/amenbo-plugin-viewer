@@ -77,6 +77,21 @@ class MetaKey {
   /// When the app was last brought to the front. The "since you last looked" card counts from
   /// here, and it must not move while the person is reading.
   static const lastOpenedAt = 'last_opened_at';
+
+  /// When the app goes and looks — see `settings.dart`.
+  static const refresh = 'refresh';
+
+  /// Light, dark, or whatever the phone is doing.
+  static const appearance = 'appearance';
+
+  /// How far back the finished ones reach on the list.
+  static const doneWindow = 'done_window';
+
+  /// The keys that are the device's own rather than the place's, and so the ones a wipe leaves
+  /// alone. Everything else in `meta` describes the copy being thrown away; these describe the
+  /// person holding the phone, who has not changed their mind just because the PC re-uploaded
+  /// everything.
+  static const deviceOwn = {lastOpenedAt, refresh, appearance, doneWindow};
 }
 
 class BacklogStore {
@@ -213,8 +228,9 @@ class BacklogStore {
   /// Empties the store, keeping the settings that are the device's own.
   ///
   /// The place is replaced wholesale on a reset and after a gap on the PC, which the device sees
-  /// as `seq` going backwards. What it must not throw away is [MetaKey.lastOpenedAt]: the person
-  /// has not stopped looking just because the PC re-uploaded everything.
+  /// as `seq` going backwards. What it must not throw away is [MetaKey.deviceOwn]: the person has
+  /// not stopped looking, nor changed how they want the app to look, just because the PC
+  /// re-uploaded everything.
   void wipe() {
     db.execute('BEGIN');
     db.execute('DELETE FROM record');
@@ -222,7 +238,8 @@ class BacklogStore {
       db.execute('DELETE FROM $table');
     }
     db.execute('DELETE FROM search_row');
-    db.execute("DELETE FROM meta WHERE key <> '${MetaKey.lastOpenedAt}'");
+    final kept = MetaKey.deviceOwn.map((key) => "'$key'").join(', ');
+    db.execute('DELETE FROM meta WHERE key NOT IN ($kept)');
     db.execute('COMMIT');
   }
 
