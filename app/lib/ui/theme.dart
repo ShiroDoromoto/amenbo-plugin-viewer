@@ -60,30 +60,53 @@ class RowTitle extends StatelessWidget {
 /// The count is part of the heading rather than a badge: it is read out with the heading, and it
 /// is the number the person is actually after when they glance at the screen.
 class BundleHeading extends StatelessWidget {
-  const BundleHeading({super.key, required this.title, required this.count});
+  const BundleHeading({
+    super.key,
+    required this.title,
+    required this.count,
+    this.expanded,
+    this.onToggle,
+  });
 
   final String title;
 
   /// Already capped by the store — `999+` is what a backlog past the cap says.
   final String count;
 
+  /// Whether the rows under it are showing, for a bundle that folds. Null for one that does not,
+  /// and then the heading is not a button.
+  final bool? expanded;
+
+  final VoidCallback? onToggle;
+
   @override
   Widget build(BuildContext context) {
     final style = Theme.of(context).textTheme.titleSmall;
+    final folds = expanded != null;
+    final heading = Padding(
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
+      child: Row(
+        children: [
+          Expanded(child: Text(title, style: style)),
+          Text(count, style: style),
+          if (folds)
+            Icon(
+              expanded! ? Icons.expand_less : Icons.expand_more,
+              size: (style?.fontSize ?? 14) * 1.4,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+        ],
+      ),
+    );
     return Semantics(
       header: true,
       container: true,
-      label: '$title, $count',
+      button: folds,
+      label: folds
+          ? '$title, $count, ${expanded! ? 'showing' : 'folded'}'
+          : '$title, $count',
       child: ExcludeSemantics(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
-          child: Row(
-            children: [
-              Expanded(child: Text(title, style: style)),
-              Text(count, style: style),
-            ],
-          ),
-        ),
+        child: folds ? InkWell(onTap: onToggle, child: heading) : heading,
       ),
     );
   }

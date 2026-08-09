@@ -171,14 +171,20 @@ String rowLabel({
   int comments = 0,
   String? due,
   String? stallReason,
+  String? project,
+  String? when,
 }) => [
   if (unread) 'unread',
   ref,
   title,
+  // Only where the row shows it — a list narrowed to one project would otherwise say the same
+  // name on every line.
+  ?project,
   statusWords(status),
   if (priority != null) '${_priorityWords[priority] ?? priority} priority',
   ?due,
   ?stallReason,
+  ?when,
   if (assigneeKind == 'ai') 'assigned to AI',
   if (comments == 1) '1 comment' else if (comments > 1) '$comments comments',
 ].join(', ');

@@ -445,4 +445,116 @@ void main() {
       expect(store.edgesFor(8).single.kind, 'builds_on');
     });
   });
+
+  group('every project on the machine, narrowed rather than divided', () {
+    test('a bundle stacks the projects together, and can hold one', () {
+      store.applyPage([
+        BacklogChange.put('project', 16, project(id: 16, name: 'viewer')),
+        BacklogChange.put('project', 20, project(id: 20, name: 'nsys')),
+        BacklogChange.put(
+          'task',
+          1,
+          task(id: 1, projectId: 16, status: 'in_progress'),
+        ),
+        BacklogChange.put(
+          'task',
+          2,
+          task(id: 2, projectId: 20, status: 'in_progress'),
+        ),
+      ]);
+
+      expect(store.bundle(Bundle.moving, today: today).rows, hasLength(2));
+      expect(
+        store.bundle(Bundle.moving, today: today, projectId: 20).rows.single.id,
+        2,
+      );
+      expect(store.projects().map((row) => row.name), ['viewer', 'nsys']);
+    });
+
+    test('an archived project is out of the bundles and still searchable', () {
+      store.applyPage([
+        BacklogChange.put('project', 16, project(id: 16)),
+        BacklogChange.put(
+          'project',
+          20,
+          project(id: 20, name: 'old', archived: 1),
+        ),
+        BacklogChange.put('task', 1, task(id: 1, projectId: 16, title: 'qr')),
+        BacklogChange.put('task', 2, task(id: 2, projectId: 20, title: 'qr')),
+      ]);
+
+      expect(store.bundle(Bundle.next, today: today).rows.single.id, 1);
+      // The continuation of a bundle is the same set, so it drops it too.
+      expect(
+        store
+            .tasks(const TaskQuery(bundle: Bundle.next), today: today)
+            .single
+            .id,
+        1,
+      );
+      // Remembering how something ended up is what an archived project is kept for.
+      expect(
+        store
+            .tasks(const TaskQuery(text: 'qr'), today: today)
+            .map((row) => row.id),
+        [2, 1],
+      );
+      // It is not offered as somewhere to narrow to either.
+      expect(store.projects().map((row) => row.id), [16]);
+    });
+
+    test('a task whose project has not arrived yet is not hidden', () {
+      store.applyPage([BacklogChange.put('task', 1, task(id: 1))]);
+      expect(store.bundle(Bundle.next, today: today).rows, hasLength(1));
+    });
+  });
+
+  group('what arrived while the screen was being read', () {
+    test('it is counted against the PC\'s clock, not the phone\'s', () {
+      store.applyPage([
+        BacklogChange.put(
+          'task',
+          1,
+          task(id: 1, updatedAt: '2026-08-09T09:00:00Z'),
+        ),
+      ]);
+      final drawn = store.latestTaskChange();
+      expect(drawn, '2026-08-09T09:00:00Z');
+      expect(store.movedSince(drawn).value, 0);
+
+      store.applyPage([
+        BacklogChange.put(
+          'task',
+          2,
+          task(id: 2, updatedAt: '2026-08-09T09:05:00Z'),
+        ),
+        BacklogChange.put(
+          'task',
+          1,
+          task(id: 1, updatedAt: '2026-08-09T09:06:00Z'),
+        ),
+      ]);
+      expect(store.movedSince(drawn).value, 2);
+    });
+
+    test('a screen that drew nothing counts everything as new', () {
+      expect(store.latestTaskChange(), isNull);
+      store.applyPage([BacklogChange.put('task', 1, task(id: 1))]);
+      expect(store.movedSince(null).value, 1);
+    });
+
+    test('it counts only the project being looked at', () {
+      store.applyPage([
+        BacklogChange.put('project', 16, project(id: 16)),
+        BacklogChange.put('project', 20, project(id: 20, name: 'nsys')),
+        BacklogChange.put(
+          'task',
+          1,
+          task(id: 1, projectId: 20, updatedAt: '2026-08-09T09:05:00Z'),
+        ),
+      ]);
+      expect(store.movedSince(null, projectId: 16).value, 0);
+      expect(store.movedSince(null, projectId: 20).value, 1);
+    });
+  });
 }

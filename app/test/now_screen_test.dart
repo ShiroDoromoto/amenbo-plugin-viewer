@@ -1,0 +1,353 @@
+// The front screen: four bundles in one scroll, every project at once unless the person says
+// otherwise, and a floor that is never swapped while they are standing on it.
+
+import 'package:amenbo_viewer/now_screen.dart';
+import 'package:amenbo_viewer/store/backlog_queries.dart';
+import 'package:amenbo_viewer/store/backlog_store.dart';
+import 'package:amenbo_viewer/ui/task_row.dart';
+import 'package:amenbo_viewer/ui/theme.dart';
+import 'package:amenbo_viewer/ui/time.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+import 'backlog_fixture.dart';
+
+/// One day for the whole file, so a row and the heading over it cannot disagree about it.
+final today = DateTime(2026, 8, 9, 12);
+
+void main() {
+  late BacklogStore store;
+  late _Arrivals arrivals;
+  late List<int> opened;
+  late List<Bundle> widened;
+
+  setUp(() {
+    store = BacklogStore.openInMemory();
+    arrivals = _Arrivals();
+    opened = [];
+    widened = [];
+  });
+  tearDown(() {
+    arrivals.dispose();
+    store.close();
+  });
+
+  Widget screen({Future<void> Function()? take}) => MaterialApp(
+    theme: viewerTheme(Brightness.light),
+    home: NowScreen(
+      store: store,
+      take: take,
+      arrivals: arrivals,
+      clock: () => today,
+      onOpen: (line) => opened.add(line.id),
+      onMore: widened.add,
+    ),
+  );
+
+  group('the four bundles, stacked', () {
+    testWidgets('each one that has anything in it says how many', (
+      tester,
+    ) async {
+      store.applyPage([
+        BacklogChange.put('task', 1, task(id: 1, status: 'in_progress')),
+        BacklogChange.put('task', 2, task(id: 2, status: 'blocked')),
+        BacklogChange.put('task', 3, task(id: 3)),
+      ]);
+
+      await tester.pumpWidget(screen());
+
+      for (final bundle in [Bundle.moving, Bundle.stalled, Bundle.next]) {
+        expect(find.text(bundleHeading(bundle)), findsOneWidget);
+      }
+      // A heading over nothing would say only that a question had been asked.
+      expect(find.text(bundleHeading(Bundle.finished)), findsNothing);
+    });
+
+    testWidgets('a stalled row says the reason, by number', (tester) async {
+      store.applyPage([
+        BacklogChange.put('task', 1, task(id: 1)),
+        BacklogChange.put('task', 5, task(id: 5)),
+        BacklogChange.put(
+          'task_dependency',
+          1,
+          dependency(id: 1, taskId: 5, blockedById: 1),
+        ),
+      ]);
+
+      await tester.pumpWidget(screen());
+
+      final line = store
+          .bundle(Bundle.stalled, today: today)
+          .rows
+          .singleWhere((row) => row.id == 5);
+      expect(find.text(stallReason(line)!), findsOneWidget);
+    });
+
+    testWidgets('only the moving rows carry a time', (tester) async {
+      const moved = '2026-08-01T00:00:00Z';
+      store.applyPage([
+        BacklogChange.put(
+          'task',
+          1,
+          task(id: 1, status: 'in_progress', updatedAt: moved),
+        ),
+        BacklogChange.put('task', 2, task(id: 2, updatedAt: moved)),
+      ]);
+
+      await tester.pumpWidget(screen());
+
+      expect(
+        find.text(relativeTime(DateTime.parse(moved), now: today)),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('closed work is folded away until it is asked for', (
+      tester,
+    ) async {
+      store.applyPage([
+        BacklogChange.put(
+          'task',
+          1,
+          task(
+            id: 1,
+            title: 'ぜんぶ終わった',
+            status: 'done',
+            completedAt: '2026-08-08T00:00:00Z',
+          ),
+        ),
+      ]);
+
+      await tester.pumpWidget(screen());
+      expect(find.text(bundleHeading(Bundle.finished)), findsOneWidget);
+      expect(find.text('ぜんぶ終わった'), findsNothing);
+
+      await tester.tap(find.text(bundleHeading(Bundle.finished)));
+      await tester.pumpAndSettle();
+      expect(find.text('ぜんぶ終わった'), findsOneWidget);
+    });
+
+    testWidgets('past the window the bundle offers the rest', (tester) async {
+      store.applyPage([
+        for (var id = 1; id <= Windows.bundle + 3; id++)
+          BacklogChange.put('task', id, task(id: id)),
+      ]);
+
+      await tester.pumpWidget(screen());
+      await tester.scrollUntilVisible(find.text(NowScreen.more(3)), 200);
+
+      await tester.tap(find.text(NowScreen.more(3)));
+      expect(widened, [Bundle.next]);
+    });
+
+    testWidgets('a row opens the task it names', (tester) async {
+      store.applyPage([
+        BacklogChange.put('task', 42, task(id: 42, title: 'ひらく')),
+      ]);
+
+      await tester.pumpWidget(screen());
+      await tester.tap(find.text('ひらく'));
+      expect(opened, [42]);
+    });
+  });
+
+  group('projects narrow, they do not divide', () {
+    setUp(
+      () => store.applyPage([
+        BacklogChange.put('project', 16, project(id: 16, name: 'viewer')),
+        BacklogChange.put('project', 20, project(id: 20, name: 'nsys')),
+        BacklogChange.put('task', 1, task(id: 1, projectId: 16)),
+        BacklogChange.put('task', 2, task(id: 2, projectId: 20)),
+      ]),
+    );
+
+    testWidgets('everything is stacked together, and each row says where', (
+      tester,
+    ) async {
+      await tester.pumpWidget(screen());
+
+      expect(find.text(NowScreen.allProjects), findsOneWidget);
+      expect(find.byType(TaskRow), findsNWidgets(2));
+      expect(find.text('viewer'), findsOneWidget);
+      expect(find.text('nsys'), findsOneWidget);
+    });
+
+    testWidgets('choosing one narrows the list and stops repeating its name', (
+      tester,
+    ) async {
+      await tester.pumpWidget(screen());
+
+      await tester.tap(find.text(NowScreen.allProjects));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('viewer').last);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(TaskRow), findsOneWidget);
+      // Once only — the title. Repeating it down every row buys nothing and costs width.
+      expect(find.text('viewer'), findsOneWidget);
+    });
+
+    testWidgets('one project is a title, not a menu', (tester) async {
+      final alone = BacklogStore.openInMemory();
+      addTearDown(alone.close);
+      alone.applyPage([
+        BacklogChange.put('project', 16, project(id: 16, name: 'viewer')),
+        BacklogChange.put('task', 1, task(id: 1, projectId: 16)),
+      ]);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: NowScreen(
+            store: alone,
+            clock: () => today,
+            onOpen: (_) {},
+            onMore: (_) {},
+          ),
+        ),
+      );
+
+      expect(find.text('viewer'), findsOneWidget);
+      expect(find.byType(PopupMenuButton<int?>), findsNothing);
+    });
+  });
+
+  group('the floor is not swapped while it is being read', () {
+    testWidgets('rows that arrive on their own wait behind a pill', (
+      tester,
+    ) async {
+      store.applyPage([
+        BacklogChange.put(
+          'task',
+          1,
+          task(id: 1, title: 'よんでいる', updatedAt: '2026-08-09T09:00:00Z'),
+        ),
+      ]);
+      await tester.pumpWidget(screen());
+
+      store.applyPage([
+        BacklogChange.put(
+          'task',
+          2,
+          task(id: 2, title: 'あとから', updatedAt: '2026-08-09T09:05:00Z'),
+        ),
+      ]);
+      arrivals.tick();
+      await tester.pumpAndSettle();
+
+      expect(find.text('あとから'), findsNothing);
+      expect(
+        find.text(NowScreen.arrived(const Counted(1, false))),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text(NowScreen.arrived(const Counted(1, false))));
+      await tester.pumpAndSettle();
+      expect(find.text('あとから'), findsOneWidget);
+      expect(find.textContaining('New activity'), findsNothing);
+    });
+
+    testWidgets('a list with nothing in it fills as the rows land', (
+      tester,
+    ) async {
+      await tester.pumpWidget(screen());
+      expect(find.text(NowScreen.nothingYet), findsOneWidget);
+
+      store.applyPage([
+        BacklogChange.put('task', 1, task(id: 1, title: 'とどいた')),
+      ]);
+      arrivals.tick();
+      await tester.pumpAndSettle();
+
+      // Nobody is mid-read, and a first sync is meant to be watched arriving.
+      expect(find.text('とどいた'), findsOneWidget);
+      expect(find.textContaining('New activity'), findsNothing);
+    });
+
+    testWidgets('asking for it applies it there and then', (tester) async {
+      var takes = 0;
+      await tester.pumpWidget(
+        screen(
+          take: () async {
+            takes++;
+            store.applyPage([
+              BacklogChange.put('task', 1, task(id: 1, title: 'ひっぱった')),
+            ]);
+          },
+        ),
+      );
+
+      await tester.tap(find.byTooltip(NowScreen.refresh));
+      await tester.pumpAndSettle();
+
+      expect(takes, 1);
+      expect(find.text('ひっぱった'), findsOneWidget);
+      expect(find.textContaining('New activity'), findsNothing);
+    });
+
+    testWidgets('a fetch that failed leaves the picture it had', (
+      tester,
+    ) async {
+      store.applyPage([
+        BacklogChange.put('task', 1, task(id: 1, title: 'のこる')),
+      ]);
+      await tester.pumpWidget(screen(take: () async => throw Exception('off')));
+
+      await tester.tap(find.byTooltip(NowScreen.refresh));
+      await tester.pumpAndSettle();
+
+      expect(find.text('のこる'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  testWidgets('nothing overflows at the largest text a phone offers', (
+    tester,
+  ) async {
+    store.applyPage([
+      BacklogChange.put('project', 16, project(id: 16, name: 'viewer')),
+      BacklogChange.put('project', 20, project(id: 20, name: 'nsys')),
+      BacklogChange.put('task', 1, task(id: 1)),
+      BacklogChange.put(
+        'task',
+        5,
+        task(
+          id: 5,
+          title:
+              'a backlog title long enough that it cannot possibly fit on one '
+              'line even before anybody turns their text size up',
+          assigneeKind: 'ai',
+        ),
+      ),
+      BacklogChange.put(
+        'task_dependency',
+        1,
+        dependency(id: 1, taskId: 5, blockedById: 1),
+      ),
+      BacklogChange.put('task_comment', 1, comment(id: 1, taskId: 5)),
+    ]);
+
+    for (final scale in [1.0, 2.0, 3.2]) {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: viewerTheme(Brightness.light),
+          home: MediaQuery(
+            data: MediaQueryData(textScaler: TextScaler.linear(scale)),
+            child: NowScreen(
+              store: store,
+              clock: () => today,
+              onOpen: (_) {},
+              onMore: (_) {},
+            ),
+          ),
+        ),
+      );
+      expect(tester.takeException(), isNull, reason: 'nothing broke at $scale');
+    }
+  });
+}
+
+/// Stands in for whatever is fetching in the background — the app coming to the front, or a first
+/// sync still running.
+class _Arrivals extends ChangeNotifier {
+  void tick() => notifyListeners();
+}

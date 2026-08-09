@@ -153,7 +153,7 @@ class CommentLine {
   final String text;
 }
 
-/// A category value on a task — the chip in the detail, and one of the four inputs to the list
+/// A category value on a task — the chip in the detail, and one of the five inputs to the list
 /// face.
 class Chip {
   const Chip({
@@ -199,11 +199,11 @@ class DecisionEdgeLine {
   final String status;
 }
 
-/// What a list face was asked for. All four inputs are optional and they combine.
+/// What a list face was asked for. All five inputs are optional and they combine.
 ///
 /// One face answers every list in the app — search results, the rest of a bundle, the tasks under
-/// a category value, what changed since a moment — so the screens do not multiply with the ways
-/// of arriving at a list.
+/// a category value, what changed since a moment, one project — so the screens do not multiply
+/// with the ways of arriving at a list.
 class TaskQuery {
   const TaskQuery({
     this.text,
@@ -508,6 +508,30 @@ extension BacklogQueries on BacklogStore {
       .map((row) => (id: row['id'] as int, name: row['name'] as String))
       .toList(growable: false);
 
+  /// The newest change any task in view carries, as the PC stamped it.
+  ///
+  /// The front screen takes this when it draws and hands it back to [movedSince] later, so "what
+  /// arrived while you were reading" is decided on the PC's clock at both ends. The phone's own
+  /// clock never enters it, and a phone whose clock is wrong still counts correctly.
+  String? latestTaskChange({int? projectId}) {
+    final rows = db.select(
+      'SELECT MAX(t.updated_at) AS newest FROM task t '
+      'WHERE $_liveProject${projectId == null ? '' : ' AND t.project_id = ?'}',
+      [?projectId],
+    );
+    return rows.first['newest'] as String?;
+  }
+
+  /// How many tasks changed after [stamp] — the number on the pill that waits to be pressed.
+  ///
+  /// A null [stamp] is a screen that drew before anything had arrived, so everything counts.
+  Counted movedSince(String? stamp, {int? projectId}) => _count(
+    'SELECT 1 FROM task t WHERE $_liveProject'
+    '${stamp == null ? '' : ' AND t.updated_at > ?'}'
+    '${projectId == null ? '' : ' AND t.project_id = ?'}',
+    [?stamp, ?projectId],
+  );
+
   // ------------------------------------------------------------- internals
 
   List<CommentLine> _comments({
@@ -633,12 +657,24 @@ TaskLine _taskLine(Row row) => TaskLine(
       );
       args.add(_stamp(today.subtract(const Duration(days: 7))));
   }
+  clauses.add(_liveProject);
   if (projectId != null) {
     clauses.add('t.project_id = ?');
     args.add(projectId);
   }
   return (sql: clauses.join(' AND '), args: args);
 }
+
+/// A task a bundle may hold at all: its project is one the person still works in.
+///
+/// Archived is amenbo's word for a project nobody adds to any more, so nothing in it belongs in
+/// "what to do when I get back". Search still reaches it — remembering how something ended up is
+/// exactly what an archived project is kept for.
+///
+/// A task whose project row has not arrived yet counts as live: pages land in the order the place
+/// hands them over, and a row that is merely early must not disappear.
+const _liveProject =
+    'NOT EXISTS (SELECT 1 FROM project p WHERE p.id = t.project_id AND p.archived = 1)';
 
 String _bundleOrder(Bundle bundle, DateTime today) => switch (bundle) {
   // Movement is the subject here, so freshness outranks everything but priority.
