@@ -32,6 +32,22 @@ enum Bundle {
   finished,
 }
 
+/// The three things the "since you last looked" card counts.
+///
+/// They are the three shapes an overnight change comes in: work that ended, work that appeared,
+/// and somebody writing. Anything finer would be a report, and the card is read in the two seconds
+/// before the person decides whether to scroll.
+enum Moved {
+  /// Closed — `done` or `rejected`.
+  finished,
+
+  /// Filed on the PC since.
+  filed,
+
+  /// Written on a task since.
+  commented,
+}
+
 /// How many rows a face holds at once.
 class Windows {
   /// A bundle on the front screen. Past this it says "N more" and the rest is another face.
@@ -532,6 +548,40 @@ extension BacklogQueries on BacklogStore {
     [?stamp, ?projectId],
   );
 
+  /// What has happened since [stamp] — the three numbers on the card at the top of the screen.
+  ///
+  /// They are counted inside whatever narrowing the screen is holding. A card that counts the
+  /// whole machine while the bundles under it count one project would send the person, from a
+  /// number they pressed, to a list of a different length.
+  ///
+  /// [stamp] is the moment the app was last brought to the front, so this is deliberately not the
+  /// same question as [movedSince], which asks what arrived while the screen was being read.
+  Map<Moved, Counted> sinceLastLook(String stamp, {int? projectId}) {
+    final narrowed = projectId == null ? '' : ' AND t.project_id = ?';
+    final args = [stamp, ?projectId];
+    return {
+      Moved.finished: _count(
+        'SELECT 1 FROM task t WHERE $_liveProject '
+        "AND t.status IN ('done', 'rejected') "
+        'AND COALESCE(t.completed_at, t.status_changed_at, t.updated_at) > ?'
+        '$narrowed',
+        args,
+      ),
+      Moved.filed: _count(
+        'SELECT 1 FROM task t WHERE $_liveProject AND t.created_at > ?$narrowed',
+        args,
+      ),
+      // Left join, so a comment that arrived ahead of the task it belongs to is still counted
+      // while nothing is narrowed — pages land in the order the place hands them over, and a row
+      // that is merely early must not go missing. Narrowed, it cannot be placed, so it is out.
+      Moved.commented: _count(
+        'SELECT 1 FROM task_comment c LEFT JOIN task t ON t.id = c.task_id '
+        'WHERE $_liveProject AND c.created_at > ?$narrowed',
+        args,
+      ),
+    };
+  }
+
   // ------------------------------------------------------------- internals
 
   List<CommentLine> _comments({
@@ -655,7 +705,7 @@ TaskLine _taskLine(Row row) => TaskLine(
         "t.status IN ('done', 'rejected') "
         'AND COALESCE(t.completed_at, t.status_changed_at, t.updated_at) >= ?',
       );
-      args.add(_stamp(today.subtract(const Duration(days: 7))));
+      args.add(amenboStamp(today.subtract(const Duration(days: 7))));
   }
   clauses.add(_liveProject);
   if (projectId != null) {
@@ -709,7 +759,7 @@ List<Object?> _orderArgs(Bundle bundle, DateTime today) =>
   }
   if (query.changedSince != null) {
     clauses.add('t.updated_at > ?');
-    args.add(_stamp(query.changedSince!));
+    args.add(amenboStamp(query.changedSince!));
   }
   if (query.projectId != null) {
     clauses.add('t.project_id = ?');
@@ -775,5 +825,7 @@ String _day(DateTime when) {
       '${local.day.toString().padLeft(2, '0')}';
 }
 
-String _stamp(DateTime when) =>
+/// An instant in the shape amenbo writes them, for the one mark the device makes itself — when it
+/// was last looked at. Everything else compared against it came stamped from the PC.
+String amenboStamp(DateTime when) =>
     '${when.toUtc().toIso8601String().split('.').first}Z';
