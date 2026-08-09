@@ -171,6 +171,10 @@ func run(in input, args []string) int {
 		return do(push(in, args[1:]))
 	case "qr":
 		return do(qr(in, args[1:]))
+	case "phones":
+		return do(listPhones(in, args[1:]))
+	case "revoke":
+		return do(revoke(in, args[1:]))
 	case "help", "-h", "--help":
 		usage()
 		return 0
@@ -230,6 +234,9 @@ Usage (through amenbo, from the project the plugin is enabled for):
                                       --label <name>  what to call it, since cutting it off
                                                       later names it
                                       --terminal      draw the code here instead of opening it
+  amenbo plugin run %s phones    the phones that may read, and when each was paired
+  amenbo plugin run %s revoke <name>
+                                    cut one of them off. The others carry on reading
 
 'setup' asks you to press and to paste, and nothing else: it opens a Cloudflare token screen with
 the permissions already ticked, and you paste back the token it gives you. That token stands the
@@ -249,8 +256,10 @@ Settings — **none of them is yours to fill in.** 'setup' writes all three:
 Every phone gets its own read token, issued when you pair it, so losing one is one token to cut
 rather than every phone to pair again. 'qr' is how one is issued: the code it puts on screen is
 read by the camera and never goes over the network, which is what keeps the key out of the Worker.
+'revoke' is the other end of that — one phone stops reading and the rest never notice.
 
 **Writing to the iCloud folder is not built yet**, and the hook says so rather than pretending, so
 nothing can be built on top believing it worked.`,
-		pluginName, pluginName, pluginName, pluginName, configWorkerURL, configAuthToken, configEncryptionKey)
+		pluginName, pluginName, pluginName, pluginName, pluginName, pluginName,
+		configWorkerURL, configAuthToken, configEncryptionKey)
 }

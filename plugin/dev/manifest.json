@@ -76,6 +76,14 @@
         "does": "Encrypts the snapshot as it stands and sends it over every route that is configured"
       },
       {
+        "cmd": "phones",
+        "does": "Lists the phones that may read and when each was paired. Reads nothing over the network — the store compares hashes and does not answer what it holds"
+      },
+      {
+        "cmd": "revoke",
+        "does": "Cuts one phone off by the name it was paired under, at the store first and here after. The other phones carry on reading. Takes that name as its only argument"
+      },
+      {
         "cmd": "qr",
         "does": "Pairs one phone: issues its own read token, registers the hash, shows endpoint/token/key as a QR the camera reads — never over the network. --label names it; --terminal draws it here"
       }
