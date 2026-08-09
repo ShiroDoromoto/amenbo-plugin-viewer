@@ -21,6 +21,7 @@ library;
 import 'package:flutter/material.dart';
 
 import 'cloudflare_intake.dart';
+import 'settings.dart';
 import 'state_band.dart';
 import 'store/backlog_queries.dart';
 import 'store/backlog_store.dart';
@@ -33,11 +34,19 @@ import 'ui/touch.dart';
 /// "Stalled" and "Next" are the two the person is really scanning: one is what to unblock, the
 /// other is what to pick up. The words are plain rather than amenbo's own, because a status name
 /// answers "what is this row" and a heading has to answer "why am I being shown these".
-String bundleHeading(Bundle bundle) => switch (bundle) {
+///
+/// The finished one says its reach, because it is the one bundle that is not everything there is:
+/// a person who set it to a month and reads "7 days" would take the setting for broken. With no
+/// cut-off there is nothing to say, so it says nothing.
+String bundleHeading(
+  Bundle bundle, {
+  int? finishedDays = finishedDaysDefault,
+}) => switch (bundle) {
   Bundle.moving => 'In progress',
   Bundle.stalled => 'Stalled',
   Bundle.next => 'Next',
-  Bundle.finished => 'Finished (7 days)',
+  Bundle.finished =>
+    finishedDays == null ? 'Finished' : 'Finished ($finishedDays days)',
 };
 
 /// What the card calls each of its three numbers.
@@ -60,6 +69,7 @@ class NowScreen extends StatefulWidget {
     this.onOpenSettings,
     this.take,
     this.arrivals,
+    required this.doneWindow,
     this.clock = DateTime.now,
   });
 
@@ -69,10 +79,15 @@ class NowScreen extends StatefulWidget {
   final void Function(TaskLine line) onOpen;
 
   /// The rest of a bundle, past the window the screen holds.
-  final void Function(Bundle bundle) onMore;
+  ///
+  /// It hands over a query rather than a bundle because what the person is holding is the bundle
+  /// *and* whatever project they narrowed to, and a list that quietly widened back out would not
+  /// be the rest of what they were reading.
+  final void Function(TaskQuery narrowing) onMore;
 
-  /// One number on the card, opened into the list of just what it counted.
-  final void Function(Moved moved) onSince;
+  /// One number on the card, opened into the list of just what it counted — same face, and the
+  /// same narrowing, as everything else that leaves this screen.
+  final void Function(TaskQuery narrowing) onSince;
 
   /// How the last round of the intake ended, or null where it did not fail. It decides the band
   /// at the top; it never decides whether the list is drawn.
@@ -90,6 +105,11 @@ class NowScreen extends StatefulWidget {
 
   /// Ticks when a fetch the person did not ask for has written rows.
   final Listenable? arrivals;
+
+  /// How far back the finished bundle reaches. Handed in rather than read from the settings here,
+  /// and required rather than defaulted, because a screen that quietly kept its own week would
+  /// leave the person with a choice that changes nothing.
+  final DoneWindow doneWindow;
 
   /// Passed in rather than read here, so a row and the heading over it cannot disagree about what
   /// "today" was.
@@ -187,6 +207,9 @@ class _NowScreenState extends State<NowScreen> with WidgetsBindingObserver {
       old.arrivals?.removeListener(_rowsArrived);
       widget.arrivals?.addListener(_rowsArrived);
     }
+    // A choice made on the settings screen and come back from. Nothing is being pulled out from
+    // under anyone here: the person asked for this one, so it is applied rather than counted.
+    if (old.doneWindow != widget.doneWindow) _load();
   }
 
   @override
@@ -211,7 +234,12 @@ class _NowScreenState extends State<NowScreen> with WidgetsBindingObserver {
         Bundle.values.map(
           (bundle) => MapEntry(
             bundle,
-            widget.store.bundle(bundle, today: today, projectId: _projectId),
+            widget.store.bundle(
+              bundle,
+              today: today,
+              projectId: _projectId,
+              finishedDays: widget.doneWindow.days,
+            ),
           ),
         ),
       );
@@ -225,6 +253,24 @@ class _NowScreenState extends State<NowScreen> with WidgetsBindingObserver {
 
   /// Counted inside the narrowing the screen is holding, or a number the person presses opens a
   /// list that does not hold that many.
+  /// A number on the card, as the query that opens exactly what it counted.
+  ///
+  /// The instant is the one the card counted from, not "now": the card is read minutes after it
+  /// was drawn, and a list counted from a fresher moment would come back shorter than the number
+  /// that was pressed.
+  void _openSince(Moved moved) {
+    final since = DateTime.tryParse(_lastLooked ?? '');
+    if (since == null) return;
+    widget.onSince(
+      TaskQuery(
+        changedSince: since,
+        moved: moved,
+        projectId: _projectId,
+        finishedDays: widget.doneWindow.days,
+      ),
+    );
+  }
+
   void _countSinceLook() {
     final since = _lastLooked;
     _sinceCounts = since == null
@@ -401,7 +447,7 @@ class _NowScreenState extends State<NowScreen> with WidgetsBindingObserver {
       // Then the card, because the person who opens this in bed is asking what happened overnight
       // before they are asking anything else.
       if (_sinceCounts.isNotEmpty)
-        _SinceCard(counts: _sinceCounts, onOpen: widget.onSince),
+        _SinceCard(counts: _sinceCounts, onOpen: _openSince),
     ];
     for (final bundle in Bundle.values) {
       final held = _bundles[bundle]!;
@@ -410,7 +456,7 @@ class _NowScreenState extends State<NowScreen> with WidgetsBindingObserver {
       final folds = bundle == Bundle.finished;
       rows.add(
         BundleHeading(
-          title: bundleHeading(bundle),
+          title: bundleHeading(bundle, finishedDays: widget.doneWindow.days),
           count: countLabel(held.total),
           expanded: folds ? _finishedOpen : null,
           onToggle: folds
@@ -447,7 +493,15 @@ class _NowScreenState extends State<NowScreen> with WidgetsBindingObserver {
         rows.add(
           _MoreRow(
             label: NowScreen.more(rest, overflowed: held.total.overflowed),
-            onTap: () => widget.onMore(bundle),
+            onTap: () => widget.onMore(
+              TaskQuery(
+                bundle: bundle,
+                projectId: _projectId,
+                // The reach the person set, carried with the bundle: the rest of a list that
+                // stopped at a different day would not be the rest of this one.
+                finishedDays: widget.doneWindow.days,
+              ),
+            ),
           ),
         );
       }

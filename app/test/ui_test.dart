@@ -3,6 +3,7 @@
 
 import 'package:amenbo_viewer/main.dart';
 import 'package:amenbo_viewer/settings.dart';
+import 'package:amenbo_viewer/store/backlog_store.dart';
 import 'package:amenbo_viewer/ui/marks.dart';
 import 'package:amenbo_viewer/ui/refs.dart';
 import 'package:amenbo_viewer/ui/theme.dart';
@@ -10,6 +11,7 @@ import 'package:amenbo_viewer/ui/time.dart';
 import 'package:amenbo_viewer/ui/two_pane.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 final now = DateTime(2026, 8, 9, 12, 0);
@@ -300,8 +302,13 @@ void main() {
   });
 
   testWidgets('the app itself is drawn with this theme', (tester) async {
+    // The root asks the phone whether it is paired before it draws anything else.
+    FlutterSecureStorage.setMockInitialValues({});
     await tester.pumpWidget(
-      AmenboViewerApp(settings: SettingsController(UnkeptSettings())),
+      AmenboViewerApp(
+        store: BacklogStore.openInMemory(),
+        settings: SettingsController(UnkeptSettings()),
+      ),
     );
     final app = tester.widget<MaterialApp>(find.byType(MaterialApp));
     expect(

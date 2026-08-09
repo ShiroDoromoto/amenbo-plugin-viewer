@@ -28,9 +28,16 @@ enum Bundle {
   /// `todo` with every premise met.
   next,
 
-  /// Closed within the last week.
+  /// Closed within the reach the phone is set to — see [finishedDaysDefault].
   finished,
 }
+
+/// How far back the finished bundle reaches when nobody has said otherwise.
+///
+/// It is the settings screen's own starting choice, written here as well because the store answers
+/// callers that have no settings behind them. Null, wherever one of these is passed, is not a very
+/// large number of days but no cut-off at all.
+const finishedDaysDefault = 7;
 
 /// The three things the "since you last looked" card counts.
 ///
@@ -240,18 +247,31 @@ class TaskQuery {
     this.bundle,
     this.valueId,
     this.changedSince,
+    this.moved,
     this.projectId,
+    this.finishedDays = finishedDaysDefault,
   });
 
   /// What was typed. Matched through the index, never by walking every row.
   final String? text;
   final Bundle? bundle;
 
+  /// How far back [Bundle.finished] reaches, null being everything. The rest of that bundle is
+  /// read here, so it has to be asked the same question the front screen asked.
+  final int? finishedDays;
+
   /// A category value (`dimension_value.id`), from a chip in a detail.
   final int? valueId;
 
   /// Only what moved after this instant — what the "since you last looked" card opens into.
   final DateTime? changedSince;
+
+  /// Which of the three shapes of change [changedSince] means, or null for any change at all.
+  ///
+  /// The card counts three numbers and each one is its own way in, so a number pressed has to
+  /// land on the rows it counted. Without this they would all open the same list, and two of the
+  /// three would be lying about what they had counted.
+  final Moved? moved;
 
   /// Every project on the machine arrives, so every face has to be able to narrow to one.
   final int? projectId;
@@ -264,14 +284,18 @@ extension BacklogQueries on BacklogStore {
   ///
   /// [today] is passed in rather than read from the clock so that a bundle drawn at 23:59 and the
   /// count beside it cannot disagree about which day it is.
+  ///
+  /// [finishedDays] is how far back [Bundle.finished] reaches, null being everything. It counts
+  /// for the total as much as for the window, or the heading would offer a rest that is not there.
   ({List<TaskLine> rows, Counted total}) bundle(
     Bundle bundle, {
     required DateTime today,
     int? projectId,
+    int? finishedDays = finishedDaysDefault,
     int limit = Windows.bundle,
     int offset = 0,
   }) {
-    final where = _bundleWhere(bundle, today, projectId);
+    final where = _bundleWhere(bundle, today, projectId, finishedDays);
     final rows = db.select(
       'SELECT ${_taskColumns()} FROM task t WHERE ${where.sql} '
       'ORDER BY ${_bundleOrder(bundle, today)} LIMIT ? OFFSET ?',
@@ -751,6 +775,7 @@ TaskLine _taskLine(Row row) => TaskLine(
   Bundle bundle,
   DateTime today,
   int? projectId,
+  int? finishedDays,
 ) {
   final day = _day(today);
   final clauses = <String>[];
@@ -767,11 +792,15 @@ TaskLine _taskLine(Row row) => TaskLine(
       clauses.add("t.status = 'todo' AND ${_readySql()}");
       args.add(day);
     case Bundle.finished:
-      clauses.add(
-        "t.status IN ('done', 'rejected') "
-        'AND COALESCE(t.completed_at, t.status_changed_at, t.updated_at) >= ?',
-      );
-      args.add(amenboStamp(today.subtract(const Duration(days: 7))));
+      clauses.add("t.status IN ('done', 'rejected')");
+      // Everything asks for no cut-off, so the clause is left off rather than pushed far enough
+      // back to look like one.
+      if (finishedDays != null) {
+        clauses.add(
+          'COALESCE(t.completed_at, t.status_changed_at, t.updated_at) >= ?',
+        );
+        args.add(amenboStamp(today.subtract(Duration(days: finishedDays))));
+      }
   }
   clauses.add(_liveProject);
   if (projectId != null) {
@@ -812,7 +841,7 @@ List<Object?> _orderArgs(Bundle bundle, DateTime today) =>
   final clauses = <String>[];
   final args = <Object?>[];
   if (query.bundle != null) {
-    final bundle = _bundleWhere(query.bundle!, today, null);
+    final bundle = _bundleWhere(query.bundle!, today, null, query.finishedDays);
     clauses.add('(${bundle.sql})');
     args.addAll(bundle.args);
   }
@@ -824,7 +853,18 @@ List<Object?> _orderArgs(Bundle bundle, DateTime today) =>
     args.add(query.valueId);
   }
   if (query.changedSince != null) {
-    clauses.add('t.updated_at > ?');
+    // The card counts comments where this counts tasks: a task written on three times is three
+    // of the card's number and one row to open, which is the only row there could be.
+    clauses.add(switch (query.moved) {
+      null => 't.updated_at > ?',
+      Moved.finished =>
+        "(t.status IN ('done', 'rejected') "
+            'AND COALESCE(t.completed_at, t.status_changed_at, t.updated_at) > ?)',
+      Moved.filed => 't.created_at > ?',
+      Moved.commented =>
+        'EXISTS (SELECT 1 FROM task_comment c '
+            'WHERE c.task_id = t.id AND c.created_at > ?)',
+    });
     args.add(amenboStamp(query.changedSince!));
   }
   if (query.projectId != null) {

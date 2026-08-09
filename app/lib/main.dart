@@ -8,38 +8,57 @@
 /// Nothing here may depend on either one being present, and no state that follows from their
 /// absence is an error: an app nobody has paired yet is working correctly.
 ///
-/// Until a route exists, what it shows is [PairingGuideScreen] — the setup instructions, because
-/// a fresh install has nothing else it could truthfully show. **The root does not yet move off
-/// it.** A phone that pairs from the guide is paired, and the screens that would show it its
-/// backlog are built, but which one the root swaps to is a judgement nothing here makes yet.
+/// What it shows is decided in [ViewerHome]: the setup instructions on a phone with no way in,
+/// and the backlog on one that has.
 library;
+
+import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
 
-import 'pairing_guide.dart';
+import 'home.dart';
 import 'settings.dart';
 import 'store/backlog_store.dart';
 import 'ui/theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(AmenboViewerApp(settings: await openSettings()));
+  runApp(await openViewer());
 }
 
-/// The settings as this phone last left them.
+/// The app, assembled the one way it is assembled.
 ///
-/// Opening the local store is the only thing done before the first frame, and it is a file on the
-/// device — nothing is fetched here. Drawing the app in the wrong brightness and correcting it a
-/// moment later is a flash the person did not ask for, and the read costs less than the flash.
-Future<SettingsController> openSettings() async =>
-    SettingsController(StoredSettings(await BacklogStore.open()));
+/// The probe build starts from here too, so what it dumps on a real phone is this app rather than
+/// a second assembly of it that could drift.
+Future<AmenboViewerApp> openViewer() async {
+  final store = await BacklogStore.open();
+  return AmenboViewerApp(
+    store: store,
+    settings: SettingsController(StoredSettings(store)),
+    // Only the iPhone has a container to read. Asked here, so everything below it can be walked
+    // with either answer from any machine.
+    hasICloud: Platform.isIOS,
+  );
+}
 
 class AmenboViewerApp extends StatelessWidget {
-  const AmenboViewerApp({super.key, required this.settings});
+  const AmenboViewerApp({
+    super.key,
+    required this.store,
+    required this.settings,
+    this.hasICloud = false,
+  });
+
+  /// The phone's copy of the backlog. Opened before the first frame — it is a file on the device,
+  /// and drawing the app in the wrong brightness and correcting it a moment later is a flash the
+  /// person did not ask for.
+  final BacklogStore store;
 
   /// Held here rather than looked up, because the one setting the app itself obeys — how dark it
   /// is — is decided at this level and nowhere else.
   final SettingsController settings;
+
+  final bool hasICloud;
 
   /// The name the stores show, in both languages — it reads the same in each, so it is not
   /// translated per locale.
@@ -54,11 +73,11 @@ class AmenboViewerApp extends StatelessWidget {
         theme: viewerTheme(Brightness.light),
         darkTheme: viewerTheme(Brightness.dark),
         themeMode: settings.value.appearance.themeMode,
-        home: PairingGuideScreen(
+        home: ViewerHome(
+          store: store,
+          settings: settings,
           appName: title,
-          // The pairing is already on the phone by the time this is called — the scanning screen
-          // writes it. What is missing is the root deciding to show something else.
-          onPaired: (_) {},
+          hasICloud: hasICloud,
         ),
       ),
     );

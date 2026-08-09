@@ -5,8 +5,9 @@
 /// it is in: those are decided once, from what the app is for, and handing them over would leave
 /// the person tuning a reader instead of reading.
 ///
-/// It pops `true` when the phone was erased on the way through, so whoever pushed it knows there
-/// is no backlog left to go back to.
+/// Erasing the phone happens two screens in and undoes everything behind this one, so whoever put
+/// this screen there has to hear about it: [onErased] where it is a tab that cannot be popped, and
+/// otherwise by this screen popping `true`.
 library;
 
 import 'package:flutter/material.dart';
@@ -22,6 +23,7 @@ class SettingsScreen extends StatelessWidget {
     required this.settings,
     required this.connection,
     required this.appName,
+    this.onErased,
   });
 
   final SettingsController settings;
@@ -30,6 +32,10 @@ class SettingsScreen extends StatelessWidget {
   final ConnectionFacts connection;
 
   final String appName;
+
+  /// Called instead of popping, for the root that shows this as one of three tabs — a tab is not
+  /// a route, and popping one would take the whole app off the screen.
+  final VoidCallback? onErased;
 
   static const title = 'Settings';
   static const refreshHeading = 'Go and look';
@@ -43,7 +49,13 @@ class SettingsScreen extends StatelessWidget {
     final erased = await Navigator.of(context).push<bool>(
       MaterialPageRoute(builder: (_) => ConnectionScreen(facts: connection)),
     );
-    if (erased == true && context.mounted) Navigator.of(context).pop(true);
+    if (erased != true || !context.mounted) return;
+    final erasedHere = onErased;
+    if (erasedHere != null) {
+      erasedHere();
+      return;
+    }
+    Navigator.of(context).pop(true);
   }
 
   @override

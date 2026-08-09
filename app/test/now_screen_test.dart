@@ -3,6 +3,7 @@
 
 import 'package:amenbo_viewer/cloudflare_intake.dart';
 import 'package:amenbo_viewer/now_screen.dart';
+import 'package:amenbo_viewer/settings.dart';
 import 'package:amenbo_viewer/state_band.dart';
 import 'package:amenbo_viewer/store/backlog_queries.dart';
 import 'package:amenbo_viewer/store/backlog_store.dart';
@@ -21,8 +22,8 @@ void main() {
   late BacklogStore store;
   late _Arrivals arrivals;
   late List<int> opened;
-  late List<Bundle> widened;
-  late List<Moved> sinced;
+  late List<TaskQuery> widened;
+  late List<TaskQuery> sinced;
 
   setUp(() {
     store = BacklogStore.openInMemory();
@@ -36,20 +37,24 @@ void main() {
     store.close();
   });
 
-  Widget screen({Future<void> Function()? take, IntakeFailure? failure}) =>
-      MaterialApp(
-        theme: viewerTheme(Brightness.light),
-        home: NowScreen(
-          store: store,
-          take: take,
-          failure: failure,
-          arrivals: arrivals,
-          clock: () => today,
-          onOpen: (line) => opened.add(line.id),
-          onMore: widened.add,
-          onSince: sinced.add,
-        ),
-      );
+  Widget screen({
+    Future<void> Function()? take,
+    IntakeFailure? failure,
+    DoneWindow doneWindow = DoneWindow.sevenDays,
+  }) => MaterialApp(
+    theme: viewerTheme(Brightness.light),
+    home: NowScreen(
+      store: store,
+      take: take,
+      failure: failure,
+      arrivals: arrivals,
+      doneWindow: doneWindow,
+      clock: () => today,
+      onOpen: (line) => opened.add(line.id),
+      onMore: widened.add,
+      onSince: sinced.add,
+    ),
+  );
 
   group('how things stand sits above the picture, never in place of it', () {
     testWidgets('offline keeps every row readable', (tester) async {
@@ -174,6 +179,66 @@ void main() {
       expect(find.text('ぜんぶ終わった'), findsOneWidget);
     });
 
+    testWidgets('the finished bundle reaches as far as the setting says', (
+      tester,
+    ) async {
+      store.applyPage([
+        BacklogChange.put(
+          'task',
+          1,
+          task(
+            id: 1,
+            title: 'せんげつ終わった',
+            status: 'done',
+            completedAt: '2026-07-20T00:00:00Z',
+          ),
+        ),
+      ]);
+
+      // A week back does not reach it, so there is no bundle at all.
+      await tester.pumpWidget(screen());
+      expect(find.text(bundleHeading(Bundle.finished)), findsNothing);
+
+      await tester.pumpWidget(screen(doneWindow: DoneWindow.thirtyDays));
+      final heading = bundleHeading(Bundle.finished, finishedDays: 30);
+      // The heading says the reach it was read with, or the setting would look like it missed.
+      expect(find.text(heading), findsOneWidget);
+      await tester.tap(find.text(heading));
+      await tester.pumpAndSettle();
+      expect(find.text('せんげつ終わった'), findsOneWidget);
+    });
+
+    testWidgets('everything keeps the window and what is behind it', (
+      tester,
+    ) async {
+      store.applyPage([
+        for (var id = 1; id <= Windows.bundle + 3; id++)
+          BacklogChange.put(
+            'task',
+            id,
+            task(
+              id: id,
+              status: 'done',
+              // Long past any cut-off: only "everything" holds these.
+              completedAt: '2025-01-0${id % 9 + 1}T00:00:00Z',
+            ),
+          ),
+      ]);
+
+      await tester.pumpWidget(screen(doneWindow: DoneWindow.everything));
+      final heading = bundleHeading(Bundle.finished, finishedDays: null);
+      expect(find.text(heading), findsOneWidget);
+      await tester.tap(find.text(heading));
+      await tester.pumpAndSettle();
+
+      await tester.scrollUntilVisible(find.text(NowScreen.more(3)), 200);
+      await tester.tap(find.text(NowScreen.more(3)));
+      expect(widened.single.bundle, Bundle.finished);
+      // The reach travels with it: the rest of a list that stopped at a different day would not
+      // be the rest of this one.
+      expect(widened.single.finishedDays, isNull);
+    });
+
     testWidgets('past the window the bundle offers the rest', (tester) async {
       store.applyPage([
         for (var id = 1; id <= Windows.bundle + 3; id++)
@@ -184,7 +249,7 @@ void main() {
       await tester.scrollUntilVisible(find.text(NowScreen.more(3)), 200);
 
       await tester.tap(find.text(NowScreen.more(3)));
-      expect(widened, [Bundle.next]);
+      expect(widened.single.bundle, Bundle.next);
     });
 
     testWidgets('a row opens the task it names', (tester) async {
@@ -246,6 +311,7 @@ void main() {
         MaterialApp(
           home: NowScreen(
             store: alone,
+            doneWindow: DoneWindow.sevenDays,
             clock: () => today,
             onOpen: (_) {},
             onMore: (_) {},
@@ -424,7 +490,10 @@ void main() {
         find.text(NowScreen.moved(Moved.finished, const Counted(1, false))),
       );
 
-      expect(sinced, [Moved.finished]);
+      expect(sinced.single.moved, Moved.finished);
+      // Counted from the moment the card counted from, so the list is the length of the number
+      // that was pressed.
+      expect(sinced.single.changedSince, isNotNull);
     });
 
     testWidgets('it counts inside the narrowing the screen is holding', (
@@ -545,6 +614,7 @@ void main() {
             data: MediaQueryData(textScaler: TextScaler.linear(scale)),
             child: NowScreen(
               store: store,
+              doneWindow: DoneWindow.sevenDays,
               clock: () => today,
               onOpen: (_) {},
               onMore: (_) {},

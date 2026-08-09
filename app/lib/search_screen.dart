@@ -21,7 +21,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import 'now_screen.dart' show bundleHeading;
+import 'now_screen.dart' show bundleHeading, movedHeading;
 import 'store/backlog_queries.dart';
 import 'store/backlog_store.dart';
 import 'store/recents.dart';
@@ -77,6 +77,12 @@ class SearchScreen extends StatefulWidget {
   /// behind them.
   static const sinceYouLooked = 'Since you last looked';
 
+  /// The same narrowing, said with the number it came from — the card has three, and a chip that
+  /// said only "since you last looked" would not say which one was pressed.
+  static String since(Moved? moved) => moved == null
+      ? sinceYouLooked
+      : '${movedHeading(moved)} since you last looked';
+
   static String tab(String name, Counted count) => '$name ${countLabel(count)}';
 
   @override
@@ -96,7 +102,12 @@ class _SearchScreenState extends State<SearchScreen>
   Bundle? _bundle;
   int? _valueId;
   DateTime? _changedSince;
+  Moved? _moved;
   int? _projectId;
+
+  /// The reach the finished bundle was read with on the screen behind this one. It travels with
+  /// the narrowing, or "the rest" would be a different set of rows than the one it is the rest of.
+  int? _finishedDays;
 
   var _projects = const <({int id, String name})>[];
   var _names = const <int, String>{};
@@ -122,7 +133,9 @@ class _SearchScreenState extends State<SearchScreen>
     _bundle = widget.narrowing.bundle;
     _valueId = widget.narrowing.valueId;
     _changedSince = widget.narrowing.changedSince;
+    _moved = widget.narrowing.moved;
     _projectId = widget.narrowing.projectId;
+    _finishedDays = widget.narrowing.finishedDays;
     _text = widget.narrowing.text ?? '';
     _field.text = _text;
     // Archived projects included: a project nobody adds to any more is dropped from the bundles
@@ -145,7 +158,9 @@ class _SearchScreenState extends State<SearchScreen>
     bundle: _bundle,
     valueId: _valueId,
     changedSince: _changedSince,
+    moved: _moved,
     projectId: _projectId,
+    finishedDays: _finishedDays,
   );
 
   void _load() {
@@ -255,7 +270,7 @@ class _SearchScreenState extends State<SearchScreen>
   List<({String label, VoidCallback off})> get _narrowings => [
     if (_bundle != null)
       (
-        label: bundleHeading(_bundle!),
+        label: bundleHeading(_bundle!, finishedDays: _finishedDays),
         off: () => setState(() {
           _bundle = null;
           _load();
@@ -271,9 +286,10 @@ class _SearchScreenState extends State<SearchScreen>
       ),
     if (_changedSince != null)
       (
-        label: SearchScreen.sinceYouLooked,
+        label: SearchScreen.since(_moved),
         off: () => setState(() {
           _changedSince = null;
+          _moved = null;
           _load();
         }),
       ),
