@@ -69,6 +69,36 @@ String statusWords(String status) => switch (status) {
   _ => status,
 };
 
+/// A decision's own three states.
+///
+/// `proposed` is the one that carries weight: it is the thing the person has to answer when they
+/// get back to the PC, and everything linked to it is waiting on that answer. So it is the only
+/// one drawn in the accent colour, while the two that are settled stay quiet.
+class DecisionStatusMark extends StatelessWidget {
+  const DecisionStatusMark(this.status, {super.key});
+
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final (icon, colour) = switch (status) {
+      'proposed' => (Icons.help_outline, scheme.primary),
+      'accepted' => (Icons.check, scheme.onSurfaceVariant),
+      'rejected' => (Icons.close, scheme.onSurfaceVariant),
+      _ => (Icons.remove, scheme.onSurfaceVariant),
+    };
+    return _Mark(icon: icon, colour: colour, text: decisionStatusWords(status));
+  }
+}
+
+String decisionStatusWords(String status) => switch (status) {
+  'proposed' => 'Proposed',
+  'accepted' => 'Accepted',
+  'rejected' => 'Rejected',
+  _ => status,
+};
+
 /// A due day, saying in words when it has passed.
 ///
 /// Lateness is not a bundle of its own — it lifts a task to the top of the one it is already in —
@@ -173,6 +203,7 @@ String rowLabel({
   String? stallReason,
   String? project,
   String? when,
+  String? excerpt,
 }) => [
   if (unread) 'unread',
   ref,
@@ -187,6 +218,9 @@ String rowLabel({
   ?when,
   if (assigneeKind == 'ai') 'assigned to AI',
   if (comments == 1) '1 comment' else if (comments > 1) '$comments comments',
+  // Last, and read as part of the row: it is why the row is in a list of results, and it is the
+  // longest thing on it.
+  ?excerpt,
 ].join(', ');
 
 /// Reads [label] in place of whatever [child] would have said.

@@ -9,7 +9,9 @@
 /// absence is an error: an app nobody has paired yet is working correctly.
 ///
 /// Until a route exists, what it shows is [PairingGuideScreen] — the setup instructions, because
-/// a fresh install has nothing else it could truthfully show.
+/// a fresh install has nothing else it could truthfully show. **The root does not yet move off
+/// it.** A phone that pairs from the guide is paired, and the screens that would show it its
+/// backlog are built, but which one the root swaps to is a judgement nothing here makes yet.
 library;
 
 import 'package:flutter/material.dart';
@@ -52,7 +54,12 @@ class AmenboViewerApp extends StatelessWidget {
         theme: viewerTheme(Brightness.light),
         darkTheme: viewerTheme(Brightness.dark),
         themeMode: settings.value.appearance.themeMode,
-        home: const PairingGuideScreen(appName: title),
+        home: PairingGuideScreen(
+          appName: title,
+          // The pairing is already on the phone by the time this is called — the scanning screen
+          // writes it. What is missing is the root deciding to show something else.
+          onPaired: (_) {},
+        ),
       ),
     );
   }
