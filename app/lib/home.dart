@@ -12,7 +12,9 @@
 /// **When it goes and looks.** "Automatically" is the launch and the return to the front, and
 /// nothing else — the app does not sit in the background and has no interval to offer. What a
 /// round like that brings back is counted rather than applied, because nobody asked for it while
-/// they were reading.
+/// they were reading. Both routes come through here: which one a round takes is decided from what
+/// the phone holds, and everything downstream of it — the count, the pill, the band — is handed the
+/// same report either way.
 ///
 /// **Where the ways out go.** Three tabs across the bottom, because the thumb of a hand holding a
 /// phone reaches the bottom half and a menu at the top does not exist for someone standing on a
@@ -28,6 +30,7 @@ import 'connection.dart';
 import 'decision_detail.dart';
 import 'first_sync.dart';
 import 'icloud_container.dart';
+import 'icloud_intake.dart';
 import 'now_screen.dart';
 import 'pairing_guide.dart';
 import 'pairing_scan.dart';
@@ -54,6 +57,7 @@ class ViewerHome extends StatefulWidget {
     this.pairings = const PairingStore(),
     this.hasICloud = false,
     this.rounds,
+    this.folderRounds,
     this.clock = DateTime.now,
   });
 
@@ -67,6 +71,11 @@ class ViewerHome extends StatefulWidget {
   final bool hasICloud;
 
   final Rounds? rounds;
+
+  /// One round over the folder the Mac writes into. Handed in for the same reason [rounds] is —
+  /// the root has to be walkable on a machine with no container behind it.
+  final TakeTheBacklog? folderRounds;
+
   final DateTime Function() clock;
 
   @override
@@ -141,41 +150,69 @@ class _ViewerHomeState extends State<ViewerHome> with WidgetsBindingObserver {
 
   /// Goes and takes a round, for the pull on the front screen.
   ///
-  /// Null on a phone with no pairing: the iCloud route is read by nobody yet, and a pull that
+  /// Null on a phone with no route to take — nothing paired and no container to read. A pull that
   /// silently did nothing would be worse than a list that does not offer one.
-  Future<void> Function()? get _take {
-    if (_pairing == null) return null;
-    return () => _round(asked: true);
-  }
+  Future<void> Function()? get _take =>
+      _rounds == null ? null : () => _round(asked: true);
 
-  /// One round against the place.
+  /// One round on this phone's route.
   ///
   /// [asked] is whether the person pulled for it. A round they asked for is applied where they
   /// are looking, because they are expecting it; one that ran on its own is only counted, and the
   /// front screen offers it behind a pill.
   Future<void> _round({required bool asked}) async {
-    final pairing = _pairing;
-    if (pairing == null || _fetching) return;
+    final take = _rounds;
+    if (take == null || _fetching) return;
+    final folder = _pairing == null;
     _fetching = true;
     try {
-      final report = await _rounds(pairing)((_) {});
+      final report = await take((_) {});
       if (!mounted) return;
-      setState(() => _failure = null);
+      setState(() {
+        _failure = null;
+        // A round that read the folder is the container answering, whatever it said at launch.
+        if (folder) _iCloudAvailable = true;
+      });
       if (!asked && report.records > 0) _arrivals.tick();
     } on IntakeException catch (stopped) {
+      // Which of the two lines the band owes — signed out of iCloud, or simply not reached — is a
+      // fact about the container rather than about the round, and it can have changed since the
+      // launch asked. Both arrive here as the same failure, so the container is asked again.
+      final available = folder
+          ? (await ICloudContainer.status()).available
+          : null;
+      if (!mounted) return;
       // The list keeps what it had. Which line the band shows is decided from this.
-      if (mounted) setState(() => _failure = stopped.failure);
+      setState(() {
+        _failure = stopped.failure;
+        if (folder) _iCloudAvailable = available;
+      });
     } finally {
       _fetching = false;
     }
   }
 
-  TakeTheBacklog _rounds(Pairing pairing) =>
+  /// The round this phone's route takes, or null where it has no route: an Android phone nobody
+  /// has paired has neither a place to ask nor a folder to read.
+  ///
+  /// A pairing settles it — it is this phone having been pointed at a Worker on purpose — and the
+  /// same rule the connection screen reads by.
+  TakeTheBacklog? get _rounds {
+    final pairing = _pairing;
+    if (pairing != null) return _overTheNetwork(pairing);
+    return widget.hasICloud ? _overTheFolder : null;
+  }
+
+  TakeTheBacklog _overTheNetwork(Pairing pairing) =>
       widget.rounds?.call(pairing) ??
       (watching) => CloudflareIntake(
         pairing: pairing,
         store: widget.store,
       ).run(watching: watching);
+
+  TakeTheBacklog get _overTheFolder =>
+      widget.folderRounds ??
+      (watching) => ICloudIntake(store: widget.store).run(watching: watching);
 
   /// A code was read. The first round is the one wait long enough to be worth a screen, so it gets
   /// one, and what it comes back to is the backlog rather than a report that it arrived.
@@ -187,7 +224,7 @@ class _ViewerHomeState extends State<ViewerHome> with WidgetsBindingObserver {
     });
     await Navigator.of(context).push<IntakeReport>(
       MaterialPageRoute(
-        builder: (_) => FirstSyncScreen(take: _rounds(pairing)),
+        builder: (_) => FirstSyncScreen(take: _overTheNetwork(pairing)),
       ),
     );
     if (mounted) setState(() {});

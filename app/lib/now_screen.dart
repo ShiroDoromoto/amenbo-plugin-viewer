@@ -99,8 +99,9 @@ class NowScreen extends StatefulWidget {
   final VoidCallback? onPairAgain;
   final VoidCallback? onOpenSettings;
 
-  /// Goes and fetches. Null before anything is paired — the screen still draws what is on the
-  /// device, which is the whole point of it being a local store.
+  /// Goes and fetches, on whichever route this phone is on. Null where it has no route to take —
+  /// the screen still draws what is on the device, which is the whole point of it being a local
+  /// store.
   final Future<void> Function()? take;
 
   /// Ticks when a fetch the person did not ask for has written rows.

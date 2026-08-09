@@ -26,8 +26,9 @@ import 'ui/touch.dart';
 
 /// One round of the intake, reporting as it goes.
 ///
-/// This is `CloudflareIntake.run` with its `watching` named — the screen holds a function rather
-/// than an intake so it can be run against answers written by hand.
+/// This is `run` with its `watching` named — either route's, since both report the same shape.
+/// Whoever waits on it holds a function rather than an intake, so it can be run against answers
+/// written by hand.
 typedef TakeTheBacklog =
     Future<IntakeReport> Function(
       void Function(IntakeProgress reached) watching,
