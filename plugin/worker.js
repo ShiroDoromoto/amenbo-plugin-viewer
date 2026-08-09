@@ -3,7 +3,9 @@ var __defProp = Object.defineProperty;
 var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
 
 // src/index.ts
-var NOT_BUILT_YET = "not built yet \u2014 this endpoint has no handler behind it";
+var SPEC_V = 1;
+var PER_PAGE = 200;
+var PER_WRITE = 500;
 var index_default = {
   async fetch(request, env) {
     if (!env.WRITE_TOKEN) {
@@ -13,7 +15,8 @@ var index_default = {
     if (!carrying) {
       return problem(401, "a bearer token is required", { "WWW-Authenticate": "Bearer" });
     }
-    const { pathname } = new URL(request.url);
+    const url = new URL(request.url);
+    const { pathname } = url;
     const labelled = pathname.match(LABELLED_TOKEN);
     const allowed = labelled ? TOKEN_METHODS : ROUTES[pathname];
     if (!allowed) {
@@ -29,14 +32,21 @@ var index_default = {
     if (labelled) {
       return revoke(env, decodeURIComponent(labelled[1]));
     }
-    if (pathname === "/tokens") {
-      return issue(env, request);
+    switch (pathname) {
+      case "/records":
+        return request.method === "PUT" ? place(env, request, "add") : read(env, url);
+      case "/reset":
+        return place(env, request, "replace");
+      case "/meta":
+        return meta(env);
+      default:
+        return issue(env, request);
     }
-    return problem(501, NOT_BUILT_YET);
   }
 };
 var ROUTES = {
-  "/snapshot": { PUT: "write", GET: "read", HEAD: "read" },
+  "/records": { PUT: "write", GET: "read", HEAD: "read" },
+  "/reset": { PUT: "write" },
   "/meta": { GET: "read", HEAD: "read" },
   "/tokens": { PUT: "write" }
 };
@@ -78,6 +88,119 @@ async function sha256(text) {
   return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 __name(sha256, "sha256");
+async function standing(env) {
+  const row = await env.RECORDS.prepare("SELECT version, seq, updated_at FROM store WHERE id = 1").first();
+  return row;
+}
+__name(standing, "standing");
+async function meta(env) {
+  const now = await standing(env);
+  return Response.json({ spec_v: SPEC_V, version: now.version, seq: now.seq, updated_at: now.updated_at });
+}
+__name(meta, "meta");
+async function read(env, url) {
+  const asked = url.searchParams.get("since") ?? "0";
+  if (!/^\d+$/.test(asked)) {
+    return problem(400, "since has to be a whole number \u2014 the point in the order to read on from");
+  }
+  const since = Number(asked);
+  const now = await standing(env);
+  if (since > now.seq) {
+    return problem(
+      409,
+      `the order here has reached ${now.seq}, and you asked to read on from ${since} \u2014 this store is not the one that cursor came from, so read again from the beginning`
+    );
+  }
+  const { results } = await env.RECORDS.prepare(
+    "SELECT seq, k, op, nonce, ciphertext FROM records WHERE seq > ? ORDER BY seq LIMIT ?"
+  ).bind(since, PER_PAGE + 1).all();
+  const more = results.length > PER_PAGE;
+  const page = more ? results.slice(0, PER_PAGE) : results;
+  return Response.json({
+    spec_v: SPEC_V,
+    version: now.version,
+    seq: page.length ? page[page.length - 1].seq : since,
+    more,
+    records: page.map(travelling)
+  });
+}
+__name(read, "read");
+function travelling(row) {
+  if (row.op === "del") {
+    return { k: row.k, op: row.op };
+  }
+  return { k: row.k, op: row.op, n: row.nonce ?? "", c: row.ciphertext ?? "" };
+}
+__name(travelling, "travelling");
+async function place(env, request, placing) {
+  let asked;
+  try {
+    asked = await request.json();
+  } catch {
+    return problem(400, "the body has to be a JSON object");
+  }
+  const { spec_v, version, records } = asked ?? {};
+  if (spec_v !== SPEC_V) {
+    return problem(400, `this Worker reads spec_v ${SPEC_V}, and was sent ${JSON.stringify(spec_v) ?? "nothing"}`);
+  }
+  if (typeof version !== "number" || !Number.isSafeInteger(version)) {
+    return problem(400, "version has to be a whole number \u2014 the backlog's own version, so a repeat can be recognised");
+  }
+  if (!Array.isArray(records)) {
+    return problem(400, "records has to be a list, empty or otherwise");
+  }
+  if (records.length > PER_WRITE) {
+    return problem(
+      413,
+      `one write takes ${PER_WRITE} records at most, and this one carried ${records.length} \u2014 send it in parts`
+    );
+  }
+  const carrying = [];
+  for (const record of records) {
+    const checked = checkedRecord(record ?? {});
+    if (typeof checked === "string") {
+      return problem(400, checked);
+    }
+    carrying.push(checked);
+  }
+  const now = await standing(env);
+  if (placing === "add" && now.version === version) {
+    return Response.json({ seq: now.seq });
+  }
+  const upsert = env.RECORDS.prepare(
+    "INSERT INTO records (k, seq, op, nonce, ciphertext) VALUES (?, (SELECT seq FROM store WHERE id = 1) + ?, ?, ?, ?) ON CONFLICT (k) DO UPDATE SET seq = excluded.seq, op = excluded.op, nonce = excluded.nonce, ciphertext = excluded.ciphertext"
+  );
+  const statements = [
+    ...placing === "replace" ? [env.RECORDS.prepare("DELETE FROM records")] : [],
+    ...carrying.map((record, at) => upsert.bind(record.k, at + 1, record.op, record.nonce, record.ciphertext)),
+    env.RECORDS.prepare("UPDATE store SET seq = seq + ?, version = ?, updated_at = ? WHERE id = 1").bind(
+      carrying.length,
+      version,
+      (/* @__PURE__ */ new Date()).toISOString()
+    ),
+    env.RECORDS.prepare("SELECT seq FROM store WHERE id = 1")
+  ];
+  const done = await env.RECORDS.batch(statements);
+  return Response.json({ seq: done[done.length - 1].results[0].seq });
+}
+__name(place, "place");
+function checkedRecord(record) {
+  const { k, op, n, c } = record;
+  if (typeof k !== "string" || k === "") {
+    return "every record needs a key \u2014 the string it is filed under";
+  }
+  if (op !== "put" && op !== "del") {
+    return `a record is either a put or a del, and ${JSON.stringify(k)} said ${JSON.stringify(op) ?? "nothing"}`;
+  }
+  if (op === "del") {
+    return { k, op, nonce: null, ciphertext: null };
+  }
+  if (typeof n !== "string" || n === "" || typeof c !== "string" || c === "") {
+    return `a put carries a nonce and a ciphertext, and ${JSON.stringify(k)} carried neither or half`;
+  }
+  return { k, op, nonce: n, ciphertext: c };
+}
+__name(checkedRecord, "checkedRecord");
 var HASH = /^[0-9a-f]{64}$/i;
 async function issue(env, request) {
   let asked;
