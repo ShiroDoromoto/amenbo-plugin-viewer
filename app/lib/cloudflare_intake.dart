@@ -88,6 +88,36 @@ class IntakeReport {
   bool get alreadyLevel => pages == 0;
 }
 
+/// How far a round has got, handed out as each page lands.
+///
+/// The first sync is the one time anybody watches this, and it is watched because it is long.
+/// What it can honestly say is two different things, so it says both: [records] is exact and only
+/// climbs, and [through] is where the round stands in an order whose end is known.
+///
+/// **[records] is not a countdown.** How many rows the place holds is not a question `GET /meta`
+/// answers, and [target] counts writes rather than rows — a row rewritten since it was first
+/// placed took two of them. Reading [target] as "how many are coming" would overcount every
+/// backlog that has ever been edited.
+class IntakeProgress {
+  const IntakeProgress({
+    required this.records,
+    required this.seq,
+    required this.target,
+  });
+
+  /// Records written in this round so far.
+  final int records;
+
+  /// The point in the order the device now stands at.
+  final int seq;
+
+  /// The point the place stands at — where this round ends.
+  final int target;
+
+  /// How far along the order the round is, 0 to 1.
+  double get through => target <= 0 ? 1 : (seq / target).clamp(0, 1).toDouble();
+}
+
 /// Where the place stands, as `GET /meta` answers it.
 class PlaceStanding {
   const PlaceStanding({
@@ -150,7 +180,12 @@ class CloudflareIntake {
   ///
   /// Throws [IntakeException] if the round could not be finished. Whatever pages landed before
   /// that stay landed, cursor and all: the next round asks from there rather than starting again.
-  Future<IntakeReport> run() async {
+  ///
+  /// [watching] is called once the place has said where it stands, and again after each page is
+  /// written — after, so what it reports is what is on the phone rather than what is expected.
+  Future<IntakeReport> run({
+    void Function(IntakeProgress reached)? watching,
+  }) async {
     var standing = await readStanding();
 
     var since = store.seq;
@@ -167,6 +202,10 @@ class CloudflareIntake {
     var records = 0;
     var pages = 0;
     var more = since < standing.seq;
+    void reached() => watching?.call(
+      IntakeProgress(records: records, seq: since, target: standing.seq),
+    );
+    reached();
     while (more) {
       final RecordPage page;
       try {
@@ -181,6 +220,7 @@ class CloudflareIntake {
         startedOver = true;
         standing = await readStanding();
         more = standing.seq > 0;
+        reached();
         continue;
       }
       // A page that promises more and does not move is one this device would ask for again, and
@@ -195,6 +235,7 @@ class CloudflareIntake {
       pages += 1;
       since = page.seq;
       more = page.more;
+      reached();
     }
 
     store.setMeta(MetaKey.specVersion, '$contractVersion');

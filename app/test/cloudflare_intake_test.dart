@@ -313,6 +313,47 @@ void main() {
     });
   });
 
+  group('what a round says while it runs', () {
+    // The first sync is long enough to be watched, and what is reported has to be what is on the
+    // phone — a page counted before it was written would tell someone a row is there to read
+    // when the app died in the middle of writing it.
+    test('reports after each page, never before', () async {
+      final place = Place(seq: 2)
+        ..page(
+          0,
+          seq: 1,
+          more: true,
+          records: [await sealed('task/1', task(id: 1))],
+        )
+        ..page(
+          1,
+          seq: 2,
+          more: false,
+          records: [await sealed('task/2', task(id: 2))],
+        );
+
+      final reached = <IntakeProgress>[];
+      await intakeFrom(place).run(watching: reached.add);
+
+      // One before the first page — the place has answered, so the end of the order is known —
+      // and one after each page that landed.
+      expect(reached.map((at) => at.records), [0, 1, 2]);
+      expect(reached.map((at) => at.seq), [0, 1, 2]);
+      expect(reached.every((at) => at.target == 2), isTrue);
+      expect(reached.map((at) => at.through), [0.0, 0.5, 1.0]);
+    });
+
+    test('a device already level is all the way through', () async {
+      final place = Place(seq: 0);
+
+      final reached = <IntakeProgress>[];
+      await intakeFrom(place).run(watching: reached.add);
+
+      // Nothing to fetch is not nothing to say: a bar at zero would read as stuck.
+      expect(reached.single.through, 1);
+    });
+  });
+
   group('a place this cursor did not come from', () {
     // The order never rewinds, so one standing behind this device was built again from nothing.
     // Reading on from here would hand it other records under numbers it recognises.
