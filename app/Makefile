@@ -8,7 +8,7 @@
 
 FLUTTER := flutter
 
-.PHONY: build test analyze apk ipa clean
+.PHONY: build test analyze apk ipa screen-android screen-ios clean
 
 build: analyze
 
@@ -26,6 +26,15 @@ apk:
 # iOS. Needs Xcode and a Mac. Unsigned — signing is the release's business, not the build's.
 ipa:
 	$(FLUTTER) build ios --no-codesign
+
+# What is on a phone's screen, read with nobody holding the phone. Needs that phone on a cable.
+# Neither one is part of `build` or `test`: they talk to hardware, and a machine without it would
+# fail for reasons that say nothing about the code.
+screen-android:
+	tool/device-screen.sh android
+
+screen-ios:
+	tool/device-screen.sh ios
 
 clean:
 	$(FLUTTER) clean
