@@ -4,6 +4,7 @@
 import 'package:amenbo_viewer/store/backlog_queries.dart';
 import 'package:amenbo_viewer/store/backlog_store.dart';
 import 'package:amenbo_viewer/task_detail.dart';
+import 'package:amenbo_viewer/ui/marks.dart';
 import 'package:amenbo_viewer/ui/refs.dart';
 import 'package:amenbo_viewer/ui/theme.dart';
 import 'package:flutter/material.dart';
@@ -110,7 +111,7 @@ void main() {
     expect(find.text(TaskDetailScreen.waitedOn), findsOneWidget);
     // Whether the other one is finished is the whole of what waiting means.
     expect(find.textContaining('Done'), findsOneWidget);
-    expect(find.textContaining(decisionWords('proposed')), findsWidgets);
+    expect(find.textContaining(decisionStatusWords('proposed')), findsWidgets);
 
     await tester.tap(find.text('さきに'));
     expect(openedTasks, [9]);

@@ -76,6 +76,37 @@ Map<String, Object?> decision({
   'decided_by': null,
 };
 
+Map<String, Object?> decisionComment({
+  required int id,
+  required int decisionId,
+  String text = 'こめんと',
+  String authorKind = 'ai',
+  String createdAt = '2026-08-01T00:00:00Z',
+}) => {
+  'id': id,
+  'decision_id': decisionId,
+  'text': text,
+  'author_kind': authorKind,
+  'created_at': createdAt,
+  'updated_at': createdAt,
+  'edited_at': null,
+};
+
+Map<String, Object?> decisionEdge({
+  required int id,
+  required int decisionId,
+  required int targetDecisionId,
+  String kind = 'builds_on',
+}) => {
+  'id': id,
+  'decision_id': decisionId,
+  'target_decision_id': targetDecisionId,
+  'kind': kind,
+  'created_at': '2026-08-01T00:00:00Z',
+  'updated_at': '2026-08-01T00:00:00Z',
+  'created_by_kind': 'ai',
+};
+
 Map<String, Object?> dependency({
   required int id,
   required int taskId,

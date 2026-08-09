@@ -21,6 +21,7 @@ library;
 import 'package:flutter/material.dart';
 
 import 'cloudflare_intake.dart';
+import 'settings.dart';
 import 'state_band.dart';
 import 'store/backlog_queries.dart';
 import 'store/backlog_store.dart';
@@ -33,11 +34,19 @@ import 'ui/touch.dart';
 /// "Stalled" and "Next" are the two the person is really scanning: one is what to unblock, the
 /// other is what to pick up. The words are plain rather than amenbo's own, because a status name
 /// answers "what is this row" and a heading has to answer "why am I being shown these".
-String bundleHeading(Bundle bundle) => switch (bundle) {
+///
+/// The finished one says its reach, because it is the one bundle that is not everything there is:
+/// a person who set it to a month and reads "7 days" would take the setting for broken. With no
+/// cut-off there is nothing to say, so it says nothing.
+String bundleHeading(
+  Bundle bundle, {
+  int? finishedDays = finishedDaysDefault,
+}) => switch (bundle) {
   Bundle.moving => 'In progress',
   Bundle.stalled => 'Stalled',
   Bundle.next => 'Next',
-  Bundle.finished => 'Finished (7 days)',
+  Bundle.finished =>
+    finishedDays == null ? 'Finished' : 'Finished ($finishedDays days)',
 };
 
 /// What the card calls each of its three numbers.
@@ -60,6 +69,7 @@ class NowScreen extends StatefulWidget {
     this.onOpenSettings,
     this.take,
     this.arrivals,
+    required this.doneWindow,
     this.clock = DateTime.now,
   });
 
@@ -95,6 +105,11 @@ class NowScreen extends StatefulWidget {
 
   /// Ticks when a fetch the person did not ask for has written rows.
   final Listenable? arrivals;
+
+  /// How far back the finished bundle reaches. Handed in rather than read from the settings here,
+  /// and required rather than defaulted, because a screen that quietly kept its own week would
+  /// leave the person with a choice that changes nothing.
+  final DoneWindow doneWindow;
 
   /// Passed in rather than read here, so a row and the heading over it cannot disagree about what
   /// "today" was.
@@ -192,6 +207,9 @@ class _NowScreenState extends State<NowScreen> with WidgetsBindingObserver {
       old.arrivals?.removeListener(_rowsArrived);
       widget.arrivals?.addListener(_rowsArrived);
     }
+    // A choice made on the settings screen and come back from. Nothing is being pulled out from
+    // under anyone here: the person asked for this one, so it is applied rather than counted.
+    if (old.doneWindow != widget.doneWindow) _load();
   }
 
   @override
@@ -216,7 +234,12 @@ class _NowScreenState extends State<NowScreen> with WidgetsBindingObserver {
         Bundle.values.map(
           (bundle) => MapEntry(
             bundle,
-            widget.store.bundle(bundle, today: today, projectId: _projectId),
+            widget.store.bundle(
+              bundle,
+              today: today,
+              projectId: _projectId,
+              finishedDays: widget.doneWindow.days,
+            ),
           ),
         ),
       );
@@ -427,7 +450,7 @@ class _NowScreenState extends State<NowScreen> with WidgetsBindingObserver {
       final folds = bundle == Bundle.finished;
       rows.add(
         BundleHeading(
-          title: bundleHeading(bundle),
+          title: bundleHeading(bundle, finishedDays: widget.doneWindow.days),
           count: countLabel(held.total),
           expanded: folds ? _finishedOpen : null,
           onToggle: folds

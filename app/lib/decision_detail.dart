@@ -1,0 +1,448 @@
+/// One decision, and what stands on it.
+///
+/// The same skeleton as a task's detail — number, project, title, state, body, ties, comments —
+/// because the two are read the same way and a second layout would only be a second thing to
+/// learn. What differs is what a decision has instead of a deadline: whether anybody has ruled on
+/// it, and what is not moving until somebody does.
+///
+/// **An undecided one is the whole point of this screen.** A decision nobody has answered is work
+/// the person owes their own backlog, and everything linked to it reads `ready:no` until they do,
+/// so it says so at the top rather than leaving the state to a word beside the title.
+library;
+
+import 'package:flutter/material.dart';
+
+import 'store/backlog_queries.dart';
+import 'store/backlog_store.dart';
+import 'task_detail.dart';
+import 'ui/markdown.dart';
+import 'ui/marks.dart';
+import 'ui/refs.dart';
+import 'ui/task_row.dart';
+import 'ui/time.dart';
+
+class DecisionDetailScreen extends StatefulWidget {
+  const DecisionDetailScreen({
+    super.key,
+    required this.store,
+    required this.decisionId,
+    required this.onOpenTask,
+    required this.onOpenDecision,
+    this.projectName,
+    this.onProject,
+    this.onLink,
+    this.onShare = shareHandoff,
+    this.clock = DateTime.now,
+  });
+
+  final BacklogStore store;
+  final int decisionId;
+
+  final void Function(int taskId) onOpenTask;
+
+  /// The decision this one stands on, or replaces. Walking that chain backwards is how a rule
+  /// that looks arbitrary turns out to have been argued somewhere.
+  final void Function(int decisionId) onOpenDecision;
+
+  final String? projectName;
+  final void Function(int projectId)? onProject;
+  final void Function(String url)? onLink;
+  final Future<void> Function(String text) onShare;
+  final DateTime Function() clock;
+
+  static const gone = 'This decision is not on the phone';
+  static const share = 'Share';
+
+  /// Said plainly, because it is the one thing on this screen that is asking for something.
+  static const waiting = 'Waiting on your answer';
+
+  static String held(int tasks) =>
+      '$tasks ${tasks == 1 ? 'task is' : 'tasks are'} held by it';
+
+  static const ties = 'Ties';
+  static const tasks = 'Tasks';
+  static const comments = 'Comments';
+  static const earlier = 'Read earlier comments';
+  static const attachments = 'Attachments';
+
+  @override
+  State<DecisionDetailScreen> createState() => _DecisionDetailScreenState();
+}
+
+class _DecisionDetailScreenState extends State<DecisionDetailScreen> {
+  DecisionLine? _decision;
+  String _body = '';
+  var _edges = const <DecisionEdgeLine>[];
+  var _tasks = const <TaskLine>[];
+  var _attachments = const <AttachmentLine>[];
+  var _comments = const <CommentLine>[];
+  late Counted _commentCount;
+  String? _lastLooked;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void didUpdateWidget(DecisionDetailScreen old) {
+    super.didUpdateWidget(old);
+    if (old.decisionId != widget.decisionId) setState(_load);
+  }
+
+  void _load() {
+    final store = widget.store;
+    final id = widget.decisionId;
+    _decision = store.decision(id);
+    _body = store.record('decision', id)?['body'] as String? ?? '';
+    _edges = store.edgesFor(id);
+    _tasks = store.tasksFor(id);
+    _attachments = store.attachments('decision', id);
+    _commentCount = store.decisionCommentCount(id);
+    _lastLooked = store.meta(MetaKey.lastOpenedAt);
+    _comments = _openingComments(store, id);
+  }
+
+  /// The newest few, opened back far enough to reach what has not been read — the same window a
+  /// task's timeline uses, for the same reason: a conversation is read forwards.
+  List<CommentLine> _openingComments(BacklogStore store, int id) {
+    final first = store.decisionComments(id);
+    if (first.isEmpty || !_unread(first.first.createdAt)) return first;
+    return store.decisionComments(
+      id,
+      limit: Windows.comments + Windows.commentPage,
+    );
+  }
+
+  void _readEarlier() {
+    final oldest = _comments.isEmpty ? null : _comments.first.id;
+    final more = widget.store.decisionComments(
+      widget.decisionId,
+      limit: Windows.commentPage,
+      before: oldest,
+    );
+    if (more.isEmpty) return;
+    setState(() => _comments = [...more, ..._comments]);
+  }
+
+  bool _unread(String stamp) {
+    final since = _lastLooked;
+    return since != null && stamp.compareTo(since) > 0;
+  }
+
+  /// What is actually stopped by it — a task that is already finished was not waiting.
+  int get _heldTasks => _tasks
+      .where((task) => task.status != 'done' && task.status != 'rejected')
+      .length;
+
+  @override
+  Widget build(BuildContext context) {
+    final decision = _decision;
+    final today = widget.clock();
+    return Scaffold(
+      appBar: AppBar(
+        actions: [
+          if (decision != null)
+            IconButton(
+              icon: const Icon(Icons.share),
+              tooltip: DecisionDetailScreen.share,
+              onPressed: () => widget.onShare(
+                handoffText(
+                  ref: decisionRef(decision.id),
+                  title: decision.title,
+                  state: decisionStatusWords(decision.status),
+                ),
+              ),
+            ),
+        ],
+      ),
+      body: decision == null
+          ? Center(child: Text(DecisionDetailScreen.gone))
+          : ListView(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+              children: [
+                _header(context, decision, today),
+                ..._undecided(context, decision),
+                if (_body.trim().isNotEmpty)
+                  MarkdownSections(source: _body, onLink: widget.onLink),
+                ..._tiesSection(context),
+                ..._tasksSection(context, today),
+                ..._attachmentsSection(context),
+                ..._commentsSection(context, today),
+              ],
+            ),
+    );
+  }
+
+  Widget _header(BuildContext context, DecisionLine decision, DateTime today) {
+    final theme = Theme.of(context);
+    final project = widget.projectName;
+    // Decided when it was ruled on, raised when nobody has — either way the date on the screen is
+    // the date the person would remember it by.
+    final when = DateTime.tryParse(decision.decidedAt ?? decision.createdAt);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        RefChip(decisionRef(decision.id)),
+        if (project != null)
+          InkWell(
+            onTap: widget.onProject == null
+                ? null
+                : () => widget.onProject!(decision.projectId),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    project,
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                  if (widget.onProject != null)
+                    Icon(
+                      Icons.chevron_right,
+                      size: (theme.textTheme.labelLarge?.fontSize ?? 14) * 1.2,
+                      color: theme.colorScheme.primary,
+                    ),
+                ],
+              ),
+            ),
+          ),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Text(decision.title, style: theme.textTheme.headlineSmall),
+        ),
+        Wrap(
+          spacing: 12,
+          runSpacing: 4,
+          children: [
+            DecisionStatusMark(decision.status),
+            if (when != null)
+              TimeOnHold(
+                when: when,
+                child: Text(
+                  relativeTime(when, now: today),
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+          ],
+        ),
+        const Divider(height: 24),
+      ],
+    );
+  }
+
+  /// The line that says this one is the person's to answer.
+  ///
+  /// It stands where a task's reason for being stuck stands, and for the same reason: finding out
+  /// at the bottom of the body that nothing can move is finding out too late.
+  List<Widget> _undecided(BuildContext context, DecisionLine decision) {
+    if (decision.status != 'proposed') return const [];
+    final theme = Theme.of(context);
+    final held = _heldTasks;
+    final line = held == 0
+        ? DecisionDetailScreen.waiting
+        : '${DecisionDetailScreen.waiting} · ${DecisionDetailScreen.held(held)}';
+    return [
+      Container(
+        padding: const EdgeInsets.all(12),
+        margin: const EdgeInsets.only(bottom: 16),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.help_outline, color: theme.colorScheme.primary),
+            const SizedBox(width: 8),
+            Expanded(child: Text(line, style: theme.textTheme.bodyMedium)),
+          ],
+        ),
+      ),
+    ];
+  }
+
+  List<Widget> _tiesSection(BuildContext context) {
+    if (_edges.isEmpty) return const [];
+    return [
+      _sectionHeading(context, DecisionDetailScreen.ties),
+      for (final edge in _edges)
+        _tie(
+          context,
+          lead: edgeWords(edge.kind),
+          ref: decisionRef(edge.targetId),
+          title: edge.title,
+          state: decisionStatusWords(edge.status),
+          onTap: () => widget.onOpenDecision(edge.targetId),
+        ),
+      const SizedBox(height: 8),
+    ];
+  }
+
+  Widget _tie(
+    BuildContext context, {
+    required String lead,
+    required String ref,
+    required String title,
+    required String state,
+    required VoidCallback onTap,
+  }) {
+    final theme = Theme.of(context);
+    return SpokenAsOne(
+      label: '$lead, $ref, $title, $state',
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 110,
+                child: Text(
+                  lead,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('$ref  $state', style: theme.textTheme.labelMedium),
+                    Text(title, maxLines: 2, overflow: TextOverflow.ellipsis),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right, color: theme.colorScheme.primary),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// The work this decision produced. It is the way back out: a decision reached from a search is
+  /// otherwise a dead end, however much it explains.
+  List<Widget> _tasksSection(BuildContext context, DateTime today) {
+    if (_tasks.isEmpty) return const [];
+    return [
+      _sectionHeading(context, DecisionDetailScreen.tasks),
+      for (final task in _tasks)
+        TaskRow(
+          line: task,
+          today: today,
+          onOpen: () => widget.onOpenTask(task.id),
+        ),
+      const SizedBox(height: 8),
+    ];
+  }
+
+  List<Widget> _attachmentsSection(BuildContext context) {
+    if (_attachments.isEmpty) return const [];
+    final theme = Theme.of(context);
+    return [
+      _sectionHeading(context, DecisionDetailScreen.attachments),
+      Text(
+        TaskDetailScreen.attachmentsStayOnThePc,
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+      ),
+      for (final file in _attachments)
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Row(
+            children: [
+              Icon(
+                Icons.attach_file,
+                size: (theme.textTheme.bodyMedium?.fontSize ?? 14) * 1.2,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 8),
+              Expanded(child: Text(file.filename)),
+              Text(
+                fileSize(file.bytes),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+      const SizedBox(height: 8),
+    ];
+  }
+
+  List<Widget> _commentsSection(BuildContext context, DateTime today) {
+    if (_commentCount.value == 0) return const [];
+    final theme = Theme.of(context);
+    return [
+      _sectionHeading(
+        context,
+        '${DecisionDetailScreen.comments} ${countLabel(_commentCount)}',
+      ),
+      if (_comments.length < _commentCount.value)
+        TextButton(
+          onPressed: _readEarlier,
+          child: Text(DecisionDetailScreen.earlier),
+        ),
+      for (final one in _comments)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  UnreadDot(unread: _unread(one.createdAt)),
+                  Text(
+                    one.authorKind == 'ai' ? 'AI' : 'You',
+                    style: theme.textTheme.labelMedium,
+                  ),
+                  const SizedBox(width: 8),
+                  TimeOnHold(
+                    when: DateTime.parse(one.createdAt),
+                    child: Text(
+                      relativeTime(DateTime.parse(one.createdAt), now: today),
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              MarkdownBody(
+                blocks: parseMarkdown(one.text),
+                onLink: widget.onLink,
+              ),
+            ],
+          ),
+        ),
+    ];
+  }
+
+  Widget _sectionHeading(BuildContext context, String title) => Padding(
+    padding: const EdgeInsets.only(top: 8, bottom: 4),
+    child: Semantics(
+      header: true,
+      child: Text(title, style: Theme.of(context).textTheme.titleSmall),
+    ),
+  );
+}
+
+/// amenbo's own words for one decision standing on another.
+///
+/// The edge is drawn from this decision outwards, so every one of these reads as something this
+/// decision did to an older one.
+String edgeWords(String kind) => switch (kind) {
+  'builds_on' => 'Builds on',
+  'supersedes' => 'Supersedes',
+  'amends' => 'Amends',
+  _ => kind,
+};

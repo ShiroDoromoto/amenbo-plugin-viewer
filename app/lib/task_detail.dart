@@ -320,7 +320,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           lead: TaskDetailScreen.decisions,
           ref: decisionRef(one.id),
           title: one.title,
-          state: decisionWords(one.status),
+          state: decisionStatusWords(one.status),
           onTap: () => widget.onOpenDecision(one.id),
         ),
       const SizedBox(height: 8),
@@ -521,14 +521,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     ),
   );
 }
-
-/// amenbo's decision statuses, in the words the screen uses.
-String decisionWords(String status) => switch (status) {
-  'proposed' => 'Undecided',
-  'accepted' => 'Accepted',
-  'rejected' => 'Rejected',
-  _ => status,
-};
 
 /// A file's size, near enough. The row exists to say the file is there and roughly how big — a
 /// figure to the byte would be precision about something nobody can open.
