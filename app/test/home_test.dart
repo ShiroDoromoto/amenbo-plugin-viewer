@@ -16,6 +16,7 @@ import 'package:amenbo_viewer/pairing_store.dart';
 import 'package:amenbo_viewer/search_screen.dart';
 import 'package:amenbo_viewer/settings.dart';
 import 'package:amenbo_viewer/settings_screen.dart';
+import 'package:amenbo_viewer/state_band.dart';
 import 'package:amenbo_viewer/store/backlog_queries.dart';
 import 'package:amenbo_viewer/store/backlog_store.dart';
 import 'package:amenbo_viewer/task_detail.dart';
@@ -63,6 +64,8 @@ void main() {
   Widget home({
     Size size = const Size(400, 800),
     Rounds? rounds,
+    TakeTheBacklog? folderRounds,
+    bool hasICloud = false,
     SettingsController? settings,
   }) => MaterialApp(
     theme: viewerTheme(Brightness.light),
@@ -73,7 +76,9 @@ void main() {
         settings: settings ?? SettingsController(UnkeptSettings()),
         appName: 'amenbo Viewer',
         clock: () => today,
+        hasICloud: hasICloud,
         rounds: rounds ?? nothingToTake,
+        folderRounds: folderRounds,
       ),
     ),
   );
@@ -429,6 +434,136 @@ void main() {
       await tester.tap(find.textContaining('New activity'));
       await tester.pumpAndSettle();
       expect(find.text('とどいた 4'), findsOneWidget);
+    });
+  });
+
+  group('the route a round takes', () {
+    /// The phone's side of the container, answering whatever the test is holding at the time.
+    void containerAnswers(bool Function() available) =>
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(
+              const MethodChannel('work.amenbo.viewer/icloud_container'),
+              (call) async => {'available': available(), 'path': '/dev/null'},
+            );
+
+    setUp(() {
+      containerAnswers(() => true);
+      // Rows the Mac left there, so what is drawn is the backlog rather than the guide.
+      store.applyPage([BacklogChange.put('task', 1, task(id: 1))]);
+    });
+
+    tearDown(
+      () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+            const MethodChannel('work.amenbo.viewer/icloud_container'),
+            null,
+          ),
+    );
+
+    /// A round over the folder that lands nothing and counts its callers.
+    ({List<int> ran, TakeTheBacklog rounds}) folder() {
+      final ran = <int>[];
+      return (
+        ran: ran,
+        rounds: (watching) async {
+          ran.add(ran.length);
+          return const IntakeReport(
+            records: 0,
+            pages: 0,
+            seq: 0,
+            startedOver: false,
+          );
+        },
+      );
+    }
+
+    testWidgets('a phone with a container and no pairing reads the folder', (
+      tester,
+    ) async {
+      final round = folder();
+      await tester.pumpWidget(
+        home(
+          hasICloud: true,
+          folderRounds: round.rounds,
+          settings: asked(Refresh.automatic),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // The launch, and then the return to the front — the same two moments the other route has.
+      expect(round.ran, hasLength(1));
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pumpAndSettle();
+      expect(round.ran, hasLength(2));
+    });
+
+    testWidgets('and the pull is offered on it, the same as on the other', (
+      tester,
+    ) async {
+      final round = folder();
+      await tester.pumpWidget(
+        home(
+          hasICloud: true,
+          folderRounds: round.rounds,
+          settings: asked(Refresh.manualOnly),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(round.ran, isEmpty);
+
+      await tester.tap(find.byTooltip(NowScreen.refresh));
+      await tester.pumpAndSettle();
+
+      expect(round.ran, hasLength(1));
+    });
+
+    testWidgets('a phone with neither takes no round at all', (tester) async {
+      final round = folder();
+      await tester.pumpWidget(
+        home(folderRounds: round.rounds, settings: asked(Refresh.automatic)),
+      );
+      await tester.pumpAndSettle();
+
+      // Android, nothing paired: there is no place to ask and no folder to read.
+      expect(round.ran, isEmpty);
+    });
+
+    testWidgets('signing out of iCloud is told apart from being unreachable', (
+      tester,
+    ) async {
+      var signedIn = true;
+      containerAnswers(() => signedIn);
+      await tester.pumpWidget(
+        home(
+          hasICloud: true,
+          folderRounds: (watching) async {
+            if (signedIn) {
+              return const IntakeReport(
+                records: 0,
+                pages: 0,
+                seq: 0,
+                startedOver: false,
+              );
+            }
+            throw const IntakeException(
+              IntakeFailure.unreachable,
+              'iCloud is not available on this device',
+            );
+          },
+          settings: asked(Refresh.automatic),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text(standingWords(Standing.noICloud)), findsNothing);
+
+      signedIn = false;
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pumpAndSettle();
+
+      // Not "Offline": the container was asked again rather than believed from the launch, and
+      // being signed out is the one of the two with something to do about it.
+      expect(find.text(standingWords(Standing.noICloud)), findsOneWidget);
+      expect(find.text(standingWords(Standing.offline)), findsNothing);
     });
   });
 }
