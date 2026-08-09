@@ -5,27 +5,25 @@
  * there and then hands over ownership. Nothing about it is hosted by anyone else, which is why
  * it is written to know as little as possible:
  *
- * - **It does not understand what it stores.** One opaque blob, encrypted on the PC and
- *   decrypted on the phone. Give it a schema and every schema change becomes a redeploy across
- *   every user's account, with no way to roll anyone forward centrally.
+ * - **It does not understand what it stores.** A key it was handed and bytes it cannot read,
+ *   sealed on the PC and opened on the phone. Give it a schema and every schema change becomes
+ *   a redeploy across every user's account, with no way to roll anyone forward centrally.
  * - **It never sees the key.** That reaches the phone by QR, off the network. An account
  *   someone takes over still yields nothing but ciphertext.
  * - **It is written to, and read from, and nothing else.** No accounts, no sessions, no
- *   listing. One long random token decides who may do either.
+ *   listing. A token decides who may do either.
  *
  * ## Skeleton
  *
- * The shape is here; the handlers are not. What a snapshot looks like inside — where its
- * version number sits, which the `PUT` has to read to refuse a rollback and `GET /meta` has to
- * answer with — is the shared contract in `spec/`, and it is not written yet. So the routing,
- * the method handling and the token gate are real and tested, and the three handlers answer
- * 501 rather than guessing at a format three other parts have to live with.
+ * The storage is here; the handlers are not. The routing, the method handling and the token gate
+ * are real and tested, and the endpoints answer 501 rather than pretending — so nothing can be
+ * built on top of them believing a record landed.
  */
 
 /**
- * The bindings, extending what `wrangler types` reads out of wrangler.jsonc — so the KV
- * namespace is declared in one place and a binding added to the config arrives here rather than
- * being spelled a second time.
+ * The bindings, extending what `wrangler types` reads out of wrangler.jsonc — so the database is
+ * declared in one place and a binding added to the config arrives here rather than being spelled
+ * a second time.
  *
  * The Secret is the part wrangler cannot know: it is set on the deployed Worker and never
  * appears in the config, so it is declared by hand.
@@ -39,12 +37,8 @@ export interface Env extends Cloudflare.Env {
 	AUTH_TOKEN: string;
 }
 
-/** The key the snapshot is written under. Always this one, always overwritten. */
-export const SNAPSHOT_KEY = "snapshot";
-
-/** What every handler answers with while the shared contract is unwritten. */
-const WAITING_ON_SPEC =
-	"not built yet — this endpoint waits on the shared contract in spec/ (the snapshot format and its version number)";
+/** What every endpoint answers with until it is written. */
+const NOT_BUILT_YET = "not built yet — this endpoint has no handler behind it";
 
 export default {
 	async fetch(request: Request, env: Env): Promise<Response> {
@@ -69,7 +63,7 @@ export default {
 		if (!allowed.includes(request.method)) {
 			return problem(405, `${request.method} is not allowed here`, { Allow: allowed.join(", ") });
 		}
-		return problem(501, WAITING_ON_SPEC);
+		return problem(501, NOT_BUILT_YET);
 	},
 } satisfies ExportedHandler<Env>;
 
@@ -82,7 +76,7 @@ export default {
  * |---|---|
  * | `PUT /snapshot`  | takes the ciphertext and overwrites the one key. Refuses a version at or behind the stored one, so a replayed send cannot roll the phone back |
  * | `GET /snapshot`  | hands the ciphertext back |
- * | `GET /meta`      | the version and when it landed — what the phone asks before spending bytes on the snapshot itself |
+ * | `GET /meta`      | the version and when it landed — what the phone asks before spending bytes on the records themselves |
  */
 const ROUTES: Record<string, string[]> = {
 	"/snapshot": ["PUT", "GET", "HEAD"],

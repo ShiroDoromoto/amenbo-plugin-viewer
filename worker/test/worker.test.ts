@@ -70,7 +70,7 @@ describe("the routes", () => {
 		const response = await signed(path, { method, body: method === "PUT" ? "…" : undefined });
 
 		expect(response.status).toBe(501);
-		expect(await response.json()).toMatchObject({ error: expect.stringContaining("spec/") });
+		expect(await response.json()).toMatchObject({ error: expect.stringContaining("not built yet") });
 	});
 
 	it("has nothing else", async () => {

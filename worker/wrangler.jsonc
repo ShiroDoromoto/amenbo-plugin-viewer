@@ -4,16 +4,20 @@
 	"main": "src/index.ts",
 	"compatibility_date": "2026-08-01",
 
-	// The snapshot lives under ONE key that is overwritten every time. KV caches absence as
-	// well as presence, so a fresh key name would show the phone a 404 for up to a minute
-	// after every send; overwriting shows it the previous snapshot instead. Nothing here is
-	// ever listed or iterated, so one namespace with one key is the whole storage design.
+	// The records live in a database, one row each. A key-value store cannot answer either of
+	// the two questions this one is asked — "what has changed since this point in the order"
+	// and "forget this row" — so what a phone reads is a range, and what the PC sends is the
+	// handful of rows that moved rather than everything it holds.
 	//
-	// No `id`: this Worker is deployed into the USER's account, not ours, and the namespace is
-	// created there. Leaving it out is what lets `wrangler deploy` provision one — and the
+	// No `database_id`: this Worker is deployed into the USER's account, not ours, and the
+	// database is created there. Leaving it out is what lets a deploy provision one — and the
 	// plugin, which sets this up over the API, fills the same slot.
-	"kv_namespaces": [
-		{ "binding": "SNAPSHOT" }
+	"d1_databases": [
+		{
+			"binding": "RECORDS",
+			"database_name": "amenbo-viewer",
+			"migrations_dir": "migrations"
+		}
 	],
 
 	// AUTH_TOKEN is the one credential, and it is a Secret rather than a var — the difference
