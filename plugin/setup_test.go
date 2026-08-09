@@ -330,6 +330,28 @@ func TestSetupKeepsTheKeyThePhonesAreAlreadyPairedWith(t *testing.T) {
 	}
 }
 
+// A store that has just been stood up holds nothing, whatever this plugin remembers sending to
+// the last one. Left remembered, the memory would say "the phone is level" over an empty store,
+// and the next edit would be all that ever reached it.
+func TestSetupForgetsWhatWasSentToTheStoreBeforeIt(t *testing.T) {
+	account := oneAccount()
+	watched(t, account)
+	remembering(t)
+	if err := writeState(state{Version: 12345, Cursor: 42}); err != nil {
+		t.Fatal(err)
+	}
+
+	var code int
+	capture(t, func() { code = run(input{}, []string{"setup"}) })
+
+	if code != 0 {
+		t.Fatalf("exit %d", code)
+	}
+	if _, found, err := readState(); err != nil || found {
+		t.Errorf("the send still remembers a store that is not there any more (found %v, err %v)", found, err)
+	}
+}
+
 // A database that is already laid out is left alone. Laying the schema down twice fails on the
 // first table, and a setup that could only ever be run once would be no use for repairing one.
 func TestSetupLeavesADatabaseThatAlreadyHasItsTables(t *testing.T) {

@@ -71,6 +71,27 @@ func readState() (state, bool, error) {
 	return remembered, true, nil
 }
 
+// forgetState throws away what was remembered, so the next send places the whole store again.
+//
+// **What this plugin remembers is what it sent, not what a store holds**, and the two part company
+// whenever the store is stood up anew: an empty one behind a memory that says "level" would be
+// handed the next edit and nothing else. Nothing can ask the store which it is — the write token
+// is refused at the reading door on purpose — so the moment of standing one up is the only place
+// this can be settled.
+//
+// Nothing remembered is the state a first run is in, so this costs one whole placement and no
+// correctness.
+func forgetState() error {
+	dir, err := pluginDir()
+	if err != nil {
+		return err
+	}
+	if err := os.Remove(filepath.Join(dir, stateName)); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("the sync state cannot be cleared: %w", err)
+	}
+	return nil
+}
+
 // writeState records what was placed, by writing a whole new file and moving it into place. A
 // half-written state would be read back as a cursor pointing where nothing was sent, and the
 // records between there and the truth would never be carried.

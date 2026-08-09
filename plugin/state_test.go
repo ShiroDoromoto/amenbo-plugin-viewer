@@ -50,6 +50,33 @@ func TestWhatWasPlacedIsReadBack(t *testing.T) {
 	}
 }
 
+// Forgetting puts the plugin back where a first run stands. It is asked for when a store is
+// stood up anew, and what it costs is one whole placement.
+func TestForgettingLeavesNothingRemembered(t *testing.T) {
+	remembering(t)
+	if err := writeState(state{Version: 12345, Cursor: 42}); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := forgetState(); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, found, err := readState(); err != nil || found {
+		t.Errorf("found %v, err %v", found, err)
+	}
+}
+
+// Forgetting what was never remembered is not a fault: a first setup has nothing to clear, and
+// refusing there would fail a run that did everything right.
+func TestForgettingWhatWasNeverRememberedIsNotAFailure(t *testing.T) {
+	remembering(t)
+
+	if err := forgetState(); err != nil {
+		t.Errorf("clearing a memory that was not there failed: %v", err)
+	}
+}
+
 // A file this build does not read is treated as nothing remembered. Placing the whole store
 // again is always correct; guessing at a shape written by something else is not.
 func TestAMemoryThisBuildCannotReadIsNoMemory(t *testing.T) {
