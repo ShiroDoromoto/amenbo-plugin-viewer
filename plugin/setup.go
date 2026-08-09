@@ -161,6 +161,14 @@ func setup(_ input, args []string) error {
 		return err
 	}
 
+	// A route that has just been stood up is one nothing has been sent to, whatever this plugin
+	// remembers sending to the last one. Forgetting here is what makes the next send place the
+	// whole store rather than the next edit alone — and it is the only place it can be settled,
+	// since the write token is refused at the store's reading door.
+	if err := forgetState(); err != nil {
+		return err
+	}
+
 	logf("%s: the Cloudflare route is up at %s", pluginName, endpoint)
 	if keptKey {
 		logf("%s: the encryption key already in the settings was kept, so the phones paired with it still read.", pluginName)
