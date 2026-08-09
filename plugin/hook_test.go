@@ -11,15 +11,24 @@ func fired(event string, settings map[string]any) input {
 	return input{V: contractVersion, Event: event, ID: 42, Actor: "ai", Config: settings}
 }
 
-// The iCloud folder is a route the user pointed somewhere and nothing arriving at the other end.
-// That is the one state worth a line: their question is "why is my phone not updating?", and the
-// execution log is where it gets answered.
+// withICloud answers for the mac route, whose real switch is a directory no test may create.
+func withICloud(t *testing.T, live bool) {
+	t.Helper()
+	was := icloudRouteIsLive
+	icloudRouteIsLive = func() bool { return live }
+	t.Cleanup(func() { icloudRouteIsLive = was })
+}
+
+// The iCloud folder is there and nothing is arriving at the other end. That is the one state
+// worth a line: the user's question is "why is my phone not updating?", and the execution log is
+// where it gets answered.
 func TestTheHookSaysWhyNothingIsReachingTheICloudFolder(t *testing.T) {
 	t.Setenv(envAuthToken, "")
 	t.Setenv(envEncryptionKey, "")
+	withICloud(t, true)
 
 	stdout, stderr := capture(t, func() {
-		hook(fired("task.done", map[string]any{configICloudFolder: "/somewhere/in/iCloud Drive"}))
+		hook(fired("task.done", nil))
 	})
 
 	if stdout != "" {
@@ -35,6 +44,7 @@ func TestTheHookSaysWhyNothingIsReachingTheICloudFolder(t *testing.T) {
 func TestTheHookSaysWhyTheSendToTheWorkerFailed(t *testing.T) {
 	t.Setenv(envAuthToken, "a-throwaway-token")
 	t.Setenv(envEncryptionKey, "")
+	withICloud(t, false)
 
 	stdout, stderr := capture(t, func() {
 		hook(fired("task.done", map[string]any{configWorkerURL: "https://viewer.example.workers.dev"}))
@@ -52,27 +62,34 @@ func TestTheHookSaysWhyTheSendToTheWorkerFailed(t *testing.T) {
 // log with something nobody asked for — and none of these is a fault to report.
 func TestTheHookIsQuietWhenThereIsNothingToSay(t *testing.T) {
 	for name, test := range map[string]struct {
-		in    input
-		token string
+		in     input
+		token  string
+		icloud bool
 	}{
-		"no route is pointed anywhere": {
+		// Every install starts here: no Worker stood up, and no iCloud folder because the app
+		// has not been opened on a phone yet. Neither is a fault, and a line about either would
+		// be a complaint about the user not having got to it.
+		"nothing has been set up yet": {
 			in: fired("task.done", nil),
 		},
 		"the Worker has a URL but no token": {
 			in: fired("task.done", map[string]any{configWorkerURL: "https://viewer.example.workers.dev"}),
 		},
 		"the document announces a contract this build does not read": {
-			in:    input{V: contractVersion + 1, Event: "task.done", Config: map[string]any{configICloudFolder: "/tmp/x"}},
-			token: "a-throwaway-token",
+			in:     input{V: contractVersion + 1, Event: "task.done"},
+			token:  "a-throwaway-token",
+			icloud: true,
 		},
 		"nothing fired at all": {
-			in:    input{V: contractVersion, Config: map[string]any{configICloudFolder: "/tmp/x"}},
-			token: "a-throwaway-token",
+			in:     input{V: contractVersion},
+			token:  "a-throwaway-token",
+			icloud: true,
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Setenv(envAuthToken, test.token)
 			t.Setenv(envEncryptionKey, "")
+			withICloud(t, test.icloud)
 
 			stdout, stderr := capture(t, func() { hook(test.in) })
 
@@ -104,12 +121,10 @@ func TestHalfOfTheCloudflareRouteIsNotARoute(t *testing.T) {
 func TestBothRoutesAreReportedOnIndependently(t *testing.T) {
 	t.Setenv(envAuthToken, "a-throwaway-token")
 	t.Setenv(envEncryptionKey, "")
+	withICloud(t, true)
 
 	_, stderr := capture(t, func() {
-		hook(fired("task.done", map[string]any{
-			configICloudFolder: "/somewhere/in/iCloud Drive",
-			configWorkerURL:    "https://viewer.example.workers.dev",
-		}))
+		hook(fired("task.done", map[string]any{configWorkerURL: "https://viewer.example.workers.dev"}))
 	})
 
 	if !strings.Contains(stderr, "iCloud Drive folder") {

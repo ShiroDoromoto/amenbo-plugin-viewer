@@ -141,13 +141,13 @@ func TestNoArgumentsIsTheHookAndAlwaysSucceeds(t *testing.T) {
 }
 
 func TestReadInputTakesTheDocumentAmenboWrites(t *testing.T) {
-	in := readInput(fed(t, `{"v":1,"event":"task.done","id":42,"actor":"ai","config":{"icloud_folder":"/tmp/x"}}`))
+	in := readInput(fed(t, `{"v":1,"event":"task.done","id":42,"actor":"ai","config":{"worker_url":"https://viewer.example.workers.dev"}}`))
 
 	if in.V != 1 || in.Event != "task.done" || in.ID != 42 || in.Actor != "ai" {
 		t.Fatalf("%+v", in)
 	}
-	if got := in.setting(configICloudFolder); got != "/tmp/x" {
-		t.Errorf("setting %s = %q", configICloudFolder, got)
+	if got := in.setting(configWorkerURL); got != "https://viewer.example.workers.dev" {
+		t.Errorf("setting %s = %q", configWorkerURL, got)
 	}
 }
 

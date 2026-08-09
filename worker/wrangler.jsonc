@@ -20,10 +20,11 @@
 		}
 	],
 
-	// AUTH_TOKEN is the one credential, and it is a Secret rather than a var — the difference
-	// is that it never comes back out of the dashboard or the API once set.
+	// WRITE_TOKEN is what the PC writes with, and it is a Secret rather than a var — the
+	// difference is that it never comes back out of the dashboard or the API once set. The
+	// tokens the phones read with are not here at all: they are rows, one per phone.
 	//
-	//   wrangler secret put AUTH_TOKEN     (paste the token the plugin generated)
+	//   wrangler secret put WRITE_TOKEN     (paste the token the plugin generated)
 	//
 	// Locally it comes from .dev.vars instead; see .dev.vars.example.
 

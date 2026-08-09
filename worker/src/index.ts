@@ -27,10 +27,15 @@
  * compares, it keeps the hashes rather than the tokens, and a copy of the table is not a set of
  * credentials.
  *
- * ## Skeleton
+ * ## The order is the whole protocol
  *
- * The storage, the gate and the token endpoints are here. The record endpoints answer 501 rather
- * than pretending, so nothing can be built on top of them believing a record landed.
+ * Every record placed takes the next number in one ever-climbing order, and a phone remembers the
+ * number it got to. Reading is "everything after this point", which is what makes a phone that
+ * was away for a week cost the same as one that was away for a minute: what it is handed is what
+ * moved, not what exists.
+ *
+ * The number is kept on the store row rather than counted off the records, because a reset
+ * empties the records and the order has to survive it — see the migration that adds it.
  */
 
 /**
@@ -50,8 +55,28 @@ export interface Env extends Cloudflare.Env {
 	WRITE_TOKEN: string;
 }
 
-/** What an endpoint that has no handler behind it yet answers with. */
-const NOT_BUILT_YET = "not built yet — this endpoint has no handler behind it";
+/**
+ * The version of the shared contract this Worker speaks. It is not amenbo's format version: this
+ * one moves when the four parts change what they say to each other, and it travels on everything
+ * this Worker sends so a phone can refuse a version it does not read rather than guess.
+ */
+const SPEC_V = 1;
+
+/**
+ * How many records one read hands back before saying there are more.
+ *
+ * A phone reads a page, writes it, and comes back for the next — so this bounds what has to be
+ * held in memory at either end, on a first sync as much as on a small one.
+ */
+const PER_PAGE = 200;
+
+/**
+ * How many records one write may carry.
+ *
+ * The point is that too much is refused at the door with a sentence saying so, rather than
+ * failing somewhere inside the database where the sender learns only that it did not work.
+ */
+const PER_WRITE = 500;
 
 /** Which kind of token a request has to be carrying. */
 type Kind = "write" | "read";
@@ -74,7 +99,8 @@ export default {
 			return problem(401, "a bearer token is required", { "WWW-Authenticate": "Bearer" });
 		}
 
-		const { pathname } = new URL(request.url);
+		const url = new URL(request.url);
+		const { pathname } = url;
 		const labelled = pathname.match(LABELLED_TOKEN);
 		const allowed = labelled ? TOKEN_METHODS : ROUTES[pathname];
 		if (!allowed) {
@@ -93,10 +119,18 @@ export default {
 		if (labelled) {
 			return revoke(env, decodeURIComponent(labelled[1]));
 		}
-		if (pathname === "/tokens") {
-			return issue(env, request);
+		switch (pathname) {
+			case "/records":
+				return request.method === "PUT" ? place(env, request, "add") : read(env, url);
+			case "/reset":
+				return place(env, request, "replace");
+			case "/meta":
+				return meta(env);
+			default:
+				// The routes are the four above and `/tokens`, and anything else was turned away
+				// as a missing endpoint before it got here.
+				return issue(env, request);
 		}
-		return problem(501, NOT_BUILT_YET);
 	},
 } satisfies ExportedHandler<Env>;
 
@@ -107,13 +141,15 @@ export default {
  *
  * | | |
  * |---|---|
- * | `PUT /snapshot`  | takes the ciphertext. Refuses a version at or behind the stored one, so a replayed send cannot roll the phone back |
- * | `GET /snapshot`  | hands the ciphertext back |
- * | `GET /meta`      | the version and when it landed — what the phone asks before spending bytes on the records themselves |
- * | `PUT /tokens`    | lets one more phone read |
+ * | `PUT /records` | takes the records that moved, deletions among them, and answers with where the order now stands |
+ * | `GET /records` | hands back everything after a point in the order, a page at a time |
+ * | `GET /meta`    | the version, the order and when it last moved — what the phone asks before spending bytes on the records themselves |
+ * | `PUT /reset`   | empties the store and takes the whole of it again |
+ * | `PUT /tokens`  | lets one more phone read |
  */
 const ROUTES: Record<string, Record<string, Kind>> = {
-	"/snapshot": { PUT: "write", GET: "read", HEAD: "read" },
+	"/records": { PUT: "write", GET: "read", HEAD: "read" },
+	"/reset": { PUT: "write" },
 	"/meta": { GET: "read", HEAD: "read" },
 	"/tokens": { PUT: "write" },
 };
@@ -173,6 +209,221 @@ function sameSecret(offered: string, expected: string): boolean {
 async function sha256(text: string): Promise<string> {
 	const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
 	return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+/**
+ * Where the store as a whole stands: the version of the backlog its records came from, how far
+ * the order has got, and when it last moved. One row, so this is a read of it and not a search.
+ */
+interface Standing {
+	version: number | null;
+	seq: number;
+	updated_at: string | null;
+}
+
+/** Reads that row. It is there from the first migration, so there is no "no store yet" to handle. */
+async function standing(env: Env): Promise<Standing> {
+	const row = await env.RECORDS.prepare("SELECT version, seq, updated_at FROM store WHERE id = 1").first<Standing>();
+	return row!;
+}
+
+/**
+ * `GET /meta` — the cheap question, asked before the expensive one.
+ *
+ * A phone that is level with the store learns so for the price of one small answer, which is what
+ * lets it ask often. `seq` is the point the records have reached, so a phone compares it with the
+ * one it holds rather than fetching to find out.
+ */
+async function meta(env: Env): Promise<Response> {
+	const now = await standing(env);
+	return Response.json({ spec_v: SPEC_V, version: now.version, seq: now.seq, updated_at: now.updated_at });
+}
+
+/** A record as the table holds it, but for the place in the order the store hands it. */
+interface Landing {
+	k: string;
+	op: "put" | "del";
+	nonce: string | null;
+	ciphertext: string | null;
+}
+
+/** One that has its place. */
+interface Stored extends Landing {
+	seq: number;
+}
+
+/**
+ * `GET /records?since=<seq>` — everything after a point in the order, a page at a time.
+ *
+ * The page carries the point it reached, which is what the phone remembers and asks from next
+ * time. `more` is how it knows to come straight back rather than wait for the next write: the
+ * version only becomes the phone's once `more` is false, since until then it holds half a turn.
+ *
+ * **A cursor past the end is refused rather than answered.** The order never rewinds, so being
+ * ahead of it means these are not the records that cursor was counted against — a store rebuilt
+ * from nothing under a phone that was paired with the old one. Answering the tail would hand it
+ * somebody else's rows under numbers it recognises.
+ */
+async function read(env: Env, url: URL): Promise<Response> {
+	const asked = url.searchParams.get("since") ?? "0";
+	if (!/^\d+$/.test(asked)) {
+		return problem(400, "since has to be a whole number — the point in the order to read on from");
+	}
+	const since = Number(asked);
+
+	const now = await standing(env);
+	if (since > now.seq) {
+		return problem(
+			409,
+			`the order here has reached ${now.seq}, and you asked to read on from ${since}` +
+				" — this store is not the one that cursor came from, so read again from the beginning",
+		);
+	}
+
+	// One more than a page is asked for, so whether there is a next page is answered by the same
+	// read rather than by a second one counting what is left.
+	const { results } = await env.RECORDS.prepare(
+		"SELECT seq, k, op, nonce, ciphertext FROM records WHERE seq > ? ORDER BY seq LIMIT ?",
+	)
+		.bind(since, PER_PAGE + 1)
+		.all<Stored>();
+
+	const more = results.length > PER_PAGE;
+	const page = more ? results.slice(0, PER_PAGE) : results;
+	return Response.json({
+		spec_v: SPEC_V,
+		version: now.version,
+		seq: page.length ? page[page.length - 1].seq : since,
+		more,
+		records: page.map(travelling),
+	});
+}
+
+/**
+ * One record on its way back to a phone, in the shape it was sent in: the key, what happened to
+ * it, and the envelope for everything but a deletion. The order it belongs to is the page's, not
+ * the record's, so it does not travel per row.
+ */
+function travelling(row: Stored): Record<string, string> {
+	if (row.op === "del") {
+		return { k: row.k, op: row.op };
+	}
+	return { k: row.k, op: row.op, n: row.nonce ?? "", c: row.ciphertext ?? "" };
+}
+
+/** What a write does to what is already there: takes its place beside it, or takes its place. */
+type Placing = "add" | "replace";
+
+/** One record as it arrives, before anything has been checked about it. */
+interface Offered {
+	k?: unknown;
+	op?: unknown;
+	n?: unknown;
+	c?: unknown;
+}
+
+/**
+ * `PUT /records` and `PUT /reset` — the two ways records land here, which differ in one line.
+ *
+ * `/records` carries what moved; `/reset` carries the whole store and empties what is here first,
+ * which is what a first run, a restore and a sender that lost its place all come down to.
+ *
+ * **The version is what makes a repeat harmless.** A sender that did not hear the answer sends
+ * again, and the same version means the same records: `/records` lets that through untouched
+ * rather than moving every one of them to the front of the order for nothing. `/reset` is the
+ * repair path and always does the work — the version is what a phone reads, so a store that
+ * somehow disagrees with it has to be able to be put right.
+ */
+async function place(env: Env, request: Request, placing: Placing): Promise<Response> {
+	let asked: unknown;
+	try {
+		asked = await request.json();
+	} catch {
+		return problem(400, "the body has to be a JSON object");
+	}
+	const { spec_v, version, records } = (asked ?? {}) as { spec_v?: unknown; version?: unknown; records?: unknown };
+
+	if (spec_v !== SPEC_V) {
+		return problem(400, `this Worker reads spec_v ${SPEC_V}, and was sent ${JSON.stringify(spec_v) ?? "nothing"}`);
+	}
+	if (typeof version !== "number" || !Number.isSafeInteger(version)) {
+		return problem(400, "version has to be a whole number — the backlog's own version, so a repeat can be recognised");
+	}
+	if (!Array.isArray(records)) {
+		return problem(400, "records has to be a list, empty or otherwise");
+	}
+	if (records.length > PER_WRITE) {
+		return problem(
+			413,
+			`one write takes ${PER_WRITE} records at most, and this one carried ${records.length} — send it in parts`,
+		);
+	}
+	const carrying: Landing[] = [];
+	for (const record of records as Offered[]) {
+		const checked = checkedRecord(record ?? {});
+		if (typeof checked === "string") {
+			return problem(400, checked);
+		}
+		carrying.push(checked);
+	}
+
+	const now = await standing(env);
+	if (placing === "add" && now.version === version) {
+		return Response.json({ seq: now.seq });
+	}
+
+	// Every statement in one batch, so a write either lands whole or not at all: half a turn in
+	// the table would be a phone reading records the version says nothing about.
+	//
+	// The numbers are not worked out here but in the statements themselves, counting up from
+	// where the store row says the order stands. Two sends arriving together therefore cannot be
+	// handed the same number — the second one reads the row the first one already moved.
+	const upsert = env.RECORDS.prepare(
+		"INSERT INTO records (k, seq, op, nonce, ciphertext)" +
+			" VALUES (?, (SELECT seq FROM store WHERE id = 1) + ?, ?, ?, ?)" +
+			" ON CONFLICT (k) DO UPDATE SET" +
+			" seq = excluded.seq, op = excluded.op, nonce = excluded.nonce, ciphertext = excluded.ciphertext",
+	);
+	const statements = [
+		...(placing === "replace" ? [env.RECORDS.prepare("DELETE FROM records")] : []),
+		...carrying.map((record, at) => upsert.bind(record.k, at + 1, record.op, record.nonce, record.ciphertext)),
+		env.RECORDS.prepare("UPDATE store SET seq = seq + ?, version = ?, updated_at = ? WHERE id = 1").bind(
+			carrying.length,
+			version,
+			new Date().toISOString(),
+		),
+		env.RECORDS.prepare("SELECT seq FROM store WHERE id = 1"),
+	];
+	const done = await env.RECORDS.batch<{ seq: number }>(statements);
+
+	return Response.json({ seq: done[done.length - 1].results[0].seq });
+}
+
+/**
+ * Checks one arriving record, and hands back either the row to write or the sentence saying what
+ * is wrong with it.
+ *
+ * **What is checked is the shape and nothing else.** The key is a string this Worker files under
+ * and the envelope is bytes it cannot open, so reading either of them for sense would be reading
+ * what it was built not to.
+ */
+function checkedRecord(record: Offered): Landing | string {
+	const { k, op, n, c } = record;
+	if (typeof k !== "string" || k === "") {
+		return "every record needs a key — the string it is filed under";
+	}
+	if (op !== "put" && op !== "del") {
+		return `a record is either a put or a del, and ${JSON.stringify(k)} said ${JSON.stringify(op) ?? "nothing"}`;
+	}
+	if (op === "del") {
+		// A deletion is a row with an empty envelope: that emptiness is the only thing telling
+		// the two apart in the table, so whatever it arrived with is dropped rather than kept.
+		return { k, op, nonce: null, ciphertext: null };
+	}
+	if (typeof n !== "string" || n === "" || typeof c !== "string" || c === "") {
+		return `a put carries a nonce and a ciphertext, and ${JSON.stringify(k)} carried neither or half`;
+	}
+	return { k, op, nonce: n, ciphertext: c };
 }
 
 /** A hash as it may be written down: SHA-256 is 32 bytes, so 64 hex characters and nothing else. */

@@ -51,15 +51,16 @@ const contractVersion = 1
 // built, the manifest names the thing that is installed.
 const pluginName = "viewer"
 
-// The settings this plugin keeps. The user fills in at most one of them by hand — where in
-// their iCloud Drive the snapshot should land. The other three are what `setup` generates and
-// writes back, and they are declared secret, so amenbo hands them over in the environment
-// rather than in the `config` object on stdin.
+// The settings this plugin keeps. **There is nothing for the user to fill in**: all three are
+// what `setup` generates and writes back. Two of them are declared secret, so amenbo hands those
+// over in the environment rather than in the `config` object on stdin.
+//
+// The mac route has no setting at all — it writes into the app's own container, and the
+// directory being there is what turns it on.
 const (
-	configICloudFolder = "icloud_folder"
-	configWorkerURL    = "worker_url"
-	envAuthToken       = "AMENBO_CONFIG_AUTH_TOKEN"
-	envEncryptionKey   = "AMENBO_CONFIG_ENCRYPTION_KEY"
+	configWorkerURL  = "worker_url"
+	envAuthToken     = "AMENBO_CONFIG_AUTH_TOKEN"
+	envEncryptionKey = "AMENBO_CONFIG_ENCRYPTION_KEY"
 )
 
 // out and errOut are the plugin's two channels, indirected so the tests can read what was
@@ -240,13 +241,15 @@ func qr(input, []string) error {
 func usage() {
 	logf(`%s — amenbo's official plugin: read your backlog on your phone
 
-The plugin encrypts a snapshot of the project and carries it to a place YOU own. amenbo Viewer
-on the phone reads it there. Nothing is hosted by anyone else, and nothing is written back.
+The plugin encrypts your backlog a record at a time and carries it to a place YOU own. amenbo
+Viewer on the phone reads it there. Nothing is hosted by anyone else, and nothing is written back.
 
-Two routes carry the same bytes:
+Two routes carry the same records:
 
-  mac      a folder in your iCloud Drive. Nothing to set up, no account, no key to hand over.
-  anywhere your own Cloudflare Worker + KV, over HTTPS.
+  mac      the app's own iCloud folder. Nothing to set up, no account, no key to hand over.
+           It turns itself on once you have opened the app on your phone — that is what makes
+           the folder exist, and until then there is nothing to do here.
+  anywhere your own Cloudflare Worker, over HTTPS. 'setup' stands it up in your account.
 
 Usage (through amenbo, from the project the plugin is enabled for):
   amenbo plugin run %s setup     stand up the Worker and its database in your own account
@@ -258,15 +261,12 @@ which is what tells it the phone is now behind. It carries what moved on its own
 for what was left behind — a send that failed while the network was down, or a phone that has
 fallen behind for a reason nobody can see.
 
-Settings:
-  %s   where in your iCloud Drive to write (mac only; the route is off while it is empty)
-  %s       the endpoint 'setup' deployed
-  auth_token      the token 'setup' generated (secret)
-  encryption_key  the key 'setup' generated (secret). It reaches the phone by QR, never by network
+Settings — **none of them is yours to fill in.** 'setup' writes all three:
+  %s       the endpoint it deployed
+  auth_token      the token it generated (secret)
+  encryption_key  the key it generated (secret). It reaches the phone by QR, never by network
 
-Only the first is yours to fill in. 'setup' writes the rest.
-
-**'setup' and 'qr' are not built yet**, and neither is writing to the iCloud Drive folder. They
-refuse rather than pretend, so nothing can be built on top believing it worked.`,
-		pluginName, pluginName, pluginName, pluginName, configICloudFolder, configWorkerURL)
+**'setup' and 'qr' are not built yet**, and neither is writing to the iCloud folder. They refuse
+rather than pretend, so nothing can be built on top believing it worked.`,
+		pluginName, pluginName, pluginName, pluginName, configWorkerURL)
 }

@@ -85,18 +85,27 @@ func TestEveryAdvertisedCommandIsDispatched(t *testing.T) {
 	}
 }
 
-// The two settings the code reads off the stdin document are declared, and declared open: a
-// secret never appears there, so marking either one would put it in the environment and leave
-// the read looking at an empty config.
-func TestTheOpenSettingsTheCodeReadsAreDeclaredOpen(t *testing.T) {
-	for _, key := range []string{configICloudFolder, configWorkerURL} {
-		declared := setting(t, key)
+// The setting the code reads off the stdin document is declared, and declared open: a secret
+// never appears there, so marking it would put it in the environment and leave the read looking
+// at an empty config.
+func TestTheOpenSettingTheCodeReadsIsDeclaredOpen(t *testing.T) {
+	declared := setting(t, configWorkerURL)
 
-		if declared.Secret {
-			t.Errorf("%s is read off the stdin document, which never carries a secret", key)
-		}
-		if declared.Label == "" {
-			t.Errorf("%s has nothing for the user to read", key)
+	if declared.Secret {
+		t.Errorf("%s is read off the stdin document, which never carries a secret", configWorkerURL)
+	}
+	if declared.Label == "" {
+		t.Errorf("%s has nothing for the user to read", configWorkerURL)
+	}
+}
+
+// The mac route is not a setting, and declaring one would put a folder picker back in front of a
+// user who has nothing to choose: the app's container is the one place both ends already know
+// how to find, and the directory being there is the switch.
+func TestTheMacRouteIsNotOfferedAsASetting(t *testing.T) {
+	for _, declared := range read(t).Config {
+		if declared.Key == "icloud_folder" {
+			t.Error("the manifest still asks the user where in iCloud Drive to write")
 		}
 	}
 }

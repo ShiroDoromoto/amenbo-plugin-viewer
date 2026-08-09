@@ -34,11 +34,6 @@
   "payload_v": 1,
   "config": [
     {
-      "key": "icloud_folder",
-      "label": "iCloud Drive folder to write the snapshot into (macOS only)",
-      "required": false
-    },
-    {
       "key": "worker_url",
       "label": "Your Cloudflare Worker's URL (filled in by setup)",
       "required": false
