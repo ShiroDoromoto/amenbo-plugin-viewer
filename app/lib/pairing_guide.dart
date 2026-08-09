@@ -67,7 +67,9 @@ class PairingRoute {
 
   /// What the phone in hand can actually do.
   static List<PairingRoute> forPlatform(TargetPlatform platform) =>
-      platform == TargetPlatform.iOS ? const [iCloud, cloudflare] : const [cloudflare];
+      platform == TargetPlatform.iOS
+      ? const [iCloud, cloudflare]
+      : const [cloudflare];
 }
 
 class PairingGuideScreen extends StatelessWidget {
@@ -133,8 +135,9 @@ class _RouteCard extends StatelessWidget {
             Text(route.who, style: theme.textTheme.bodyMedium),
             Text(
               route.cost,
-              style: theme.textTheme.bodyMedium
-                  ?.copyWith(color: theme.colorScheme.primary),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.primary,
+              ),
             ),
             const SizedBox(height: 16),
             for (var i = 0; i < route.steps.length; i++)
@@ -163,9 +166,12 @@ class _Step extends StatelessWidget {
         children: [
           SizedBox(
             width: 26,
-            child: Text('$number.',
-                style: theme.textTheme.bodyMedium
-                    ?.copyWith(color: theme.colorScheme.outline)),
+            child: Text(
+              '$number.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.outline,
+              ),
+            ),
           ),
           Expanded(child: Text(text, style: theme.textTheme.bodyMedium)),
         ],
@@ -192,7 +198,9 @@ class _Assurance extends StatelessWidget {
           child: Text(
             'Either way, the snapshot goes to a place you own and nowhere else. '
             'This app only reads it, and never writes anything back.',
-            style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.outline,
+            ),
           ),
         ),
       ],
