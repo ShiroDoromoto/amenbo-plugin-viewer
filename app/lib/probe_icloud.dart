@@ -32,7 +32,10 @@ class ProbeApp extends StatelessWidget {
     return MaterialApp(
       title: 'iCloud folder probe',
       theme: ThemeData(colorSchemeSeed: Colors.teal),
-      darkTheme: ThemeData(colorSchemeSeed: Colors.teal, brightness: Brightness.dark),
+      darkTheme: ThemeData(
+        colorSchemeSeed: Colors.teal,
+        brightness: Brightness.dark,
+      ),
       home: const ProbeScreen(),
     );
   }
@@ -82,35 +85,36 @@ class _ProbeScreenState extends State<ProbeScreen> {
   }
 
   Future<void> _pick() => _run('pick', () async {
-        final picked = await ICloudFolder.pick();
-        if (picked == null) return 'cancelled';
-        setState(() => _status = picked);
-        return picked.path ?? '(no path)';
-      });
+    final picked = await ICloudFolder.pick();
+    if (picked == null) return 'cancelled';
+    setState(() => _status = picked);
+    return picked.path ?? '(no path)';
+  });
 
   Future<void> _list() => _run('list', () async {
-        final entries = await ICloudFolder.list();
-        setState(() => _entries = entries);
-        final absent =
-            entries.where((e) => e.status == DownloadStatus.notDownloaded).length;
-        return '${entries.length} entries, $absent not downloaded';
-      });
+    final entries = await ICloudFolder.list();
+    setState(() => _entries = entries);
+    final absent = entries
+        .where((e) => e.status == DownloadStatus.notDownloaded)
+        .length;
+    return '${entries.length} entries, $absent not downloaded';
+  });
 
   Future<void> _read(FolderEntry entry) => _run('read ${entry.name}', () async {
-        final read = await ICloudFolder.read(entry.name);
-        return '${read.bytes} bytes, '
-            '${read.statusBefore.name} → ${read.statusAfter.name}, '
-            'head "${read.head.trim()}"';
-      });
+    final read = await ICloudFolder.read(entry.name);
+    return '${read.bytes} bytes, '
+        '${read.statusBefore.name} → ${read.statusAfter.name}, '
+        'head "${read.head.trim()}"';
+  });
 
   Future<void> _forget() => _run('forget', () async {
-        await ICloudFolder.forget();
-        setState(() {
-          _status = FolderStatus.none;
-          _entries = const [];
-        });
-        return 'bookmark dropped';
-      });
+    await ICloudFolder.forget();
+    setState(() {
+      _status = FolderStatus.none;
+      _entries = const [];
+    });
+    return 'bookmark dropped';
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -133,10 +137,18 @@ class _ProbeScreenState extends State<ProbeScreen> {
             spacing: 8,
             runSpacing: 8,
             children: [
-              FilledButton(onPressed: _busy ? null : _pick, child: const Text('Pick folder')),
+              FilledButton(
+                onPressed: _busy ? null : _pick,
+                child: const Text('Pick folder'),
+              ),
               FilledButton.tonal(
-                  onPressed: _busy ? null : _list, child: const Text('List')),
-              TextButton(onPressed: _busy ? null : _forget, child: const Text('Forget')),
+                onPressed: _busy ? null : _list,
+                child: const Text('List'),
+              ),
+              TextButton(
+                onPressed: _busy ? null : _forget,
+                child: const Text('Forget'),
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -145,10 +157,14 @@ class _ProbeScreenState extends State<ProbeScreen> {
             for (final entry in _entries)
               ListTile(
                 dense: true,
-                leading: Icon(entry.isDirectory ? Icons.folder : Icons.description),
+                leading: Icon(
+                  entry.isDirectory ? Icons.folder : Icons.description,
+                ),
                 title: Text(entry.name),
-                subtitle: Text('${entry.bytes} B · ${entry.status.name}'
-                    '${entry.ubiquitous ? '' : ' · not an iCloud item'}'),
+                subtitle: Text(
+                  '${entry.bytes} B · ${entry.status.name}'
+                  '${entry.ubiquitous ? '' : ' · not an iCloud item'}',
+                ),
                 onTap: entry.isDirectory || _busy ? null : () => _read(entry),
               ),
             const SizedBox(height: 16),
@@ -157,8 +173,10 @@ class _ProbeScreenState extends State<ProbeScreen> {
           for (final line in _log)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
-              child: SelectableText(line,
-                  style: const TextStyle(fontFamily: 'Menlo', fontSize: 12)),
+              child: SelectableText(
+                line,
+                style: const TextStyle(fontFamily: 'Menlo', fontSize: 12),
+              ),
             ),
         ],
       ),
@@ -186,7 +204,9 @@ class _StatusCard extends StatelessWidget {
             if (status.saved) ...[
               const SizedBox(height: 8),
               SelectableText(status.path ?? '(no path)'),
-              Text('reachable ${status.reachable} · rewritten stale ${status.wasStale}'),
+              Text(
+                'reachable ${status.reachable} · rewritten stale ${status.wasStale}',
+              ),
             ],
           ],
         ),
