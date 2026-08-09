@@ -11,10 +11,10 @@ void main() {
   // 32 bytes, base64url without padding — the size the records are sealed with.
   const key = 'AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8';
 
-  test('a code from the PC becomes the three things a pairing is', () {
+  test('a code from the PC becomes a pairing, name and all', () {
     final pairing = readPairingCode(
       '{"v":1,"url":"https://viewer.example.workers.dev",'
-      '"t":"cmVhZC10b2tlbg","k":"$key"}',
+      '"t":"cmVhZC10b2tlbg","k":"$key","l":"iPhone"}',
     );
 
     expect(pairing.url, Uri.parse('https://viewer.example.workers.dev'));
@@ -22,13 +22,26 @@ void main() {
     expect(pairing.encryptionKey, key);
     // The key came back usable, not merely present.
     expect(pairing.cipher(), isNotNull);
+    // And the name the PC would cut this phone off by.
+    expect(pairing.label, 'iPhone');
+  });
+
+  test('a code with no name on it still pairs', () {
+    // The name arrived on the code after the three secrets did. Refusing the older code would be
+    // refusing a pairing that works, over a line the phone only displays.
+    final pairing = readPairingCode(
+      '{"v":1,"url":"https://viewer.example.workers.dev","t":"tok","k":"$key"}',
+    );
+
+    expect(pairing.readToken, 'tok');
+    expect(pairing.label, isNull);
   });
 
   test('a field this build does not know is ignored', () {
     // Room to add to the code without every phone already out there refusing it.
     final pairing = readPairingCode(
       '{"v":1,"url":"https://viewer.example.workers.dev","t":"tok","k":"$key",'
-      '"label":"iPhone"}',
+      '"issued_at":"2026-08-09T09:00:00Z"}',
     );
 
     expect(pairing.readToken, 'tok');

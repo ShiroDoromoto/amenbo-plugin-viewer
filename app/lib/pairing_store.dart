@@ -21,6 +21,7 @@ class Pairing {
     required this.url,
     required this.readToken,
     required this.encryptionKey,
+    this.label,
   });
 
   /// The owner's own Worker.
@@ -33,6 +34,11 @@ class Pairing {
   /// The key, base64url as issued. Shared by every device the owner pairs.
   final String encryptionKey;
 
+  /// What the PC calls this phone — the name its token was issued under, and the name revoking it
+  /// takes. Null on a pairing made before the code carried one: an unnamed phone still reads, it
+  /// just cannot say which row on the PC is itself.
+  final String? label;
+
   /// Builds the cipher this pairing's records open with.
   ///
   /// Throws [EnvelopeException] if the stored key is not a 256-bit key.
@@ -42,6 +48,7 @@ class Pairing {
     'url': url.toString(),
     't': readToken,
     'k': encryptionKey,
+    'l': ?label,
   };
 
   static Pairing? _fromJson(Object? decoded) {
@@ -52,10 +59,14 @@ class Pairing {
     if (url == null || readToken is! String || encryptionKey is! String) {
       return null;
     }
+    final label = decoded['l'];
     return Pairing(
       url: url,
       readToken: readToken,
       encryptionKey: encryptionKey,
+      // A name is the one field an entry can be missing and still be a pairing, so anything that
+      // is not a name is read as not having one rather than as a broken entry.
+      label: label is String && label.isNotEmpty ? label : null,
     );
   }
 }
