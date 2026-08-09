@@ -9,6 +9,11 @@
 /// given or rows that already arrived, gets its backlog. Pairing runs straight into the first
 /// sync and comes out on the front screen; erasing goes back to the guide.
 ///
+/// **When it goes and looks.** "Automatically" is the launch and the return to the front, and
+/// nothing else — the app does not sit in the background and has no interval to offer. What a
+/// round like that brings back is counted rather than applied, because nobody asked for it while
+/// they were reading.
+///
 /// **Where the ways out go.** Three tabs across the bottom, because the thumb of a hand holding a
 /// phone reaches the bottom half and a menu at the top does not exist for someone standing on a
 /// train. Everything that opens a list opens the one list face; everything that opens a task opens
@@ -68,7 +73,7 @@ class ViewerHome extends StatefulWidget {
   State<ViewerHome> createState() => _ViewerHomeState();
 }
 
-class _ViewerHomeState extends State<ViewerHome> {
+class _ViewerHomeState extends State<ViewerHome> with WidgetsBindingObserver {
   Pairing? _pairing;
 
   /// Whether the container answers, on a phone that has one and was never paired. Null everywhere
@@ -81,10 +86,41 @@ class _ViewerHomeState extends State<ViewerHome> {
   /// How the last round ended, for the band at the top of the front screen.
   IntakeFailure? _failure;
 
+  /// Ticks when a round nobody asked for has written rows. The front screen turns that into a
+  /// pill and waits to be pressed.
+  final _arrivals = _Arrivals();
+
+  /// Whether a round is already running. The launch and the return to the front can land close
+  /// together, and two rounds at once would read the same pages twice.
+  bool _fetching = false;
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _look();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _arrivals.dispose();
+    super.dispose();
+  }
+
+  /// One of the two moments "automatically" means. The other is the launch, at the end of [_look].
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _goAndLook();
+  }
+
+  /// Goes and looks, if that is what the person asked for.
+  ///
+  /// The other choice is not "never" but "only when I pull": the list still fetches under the
+  /// thumb that asks for it, and this is the only thing the setting turns off.
+  void _goAndLook() {
+    if (widget.settings.value.refresh != Refresh.automatic) return;
+    _round(asked: false);
   }
 
   Future<void> _look() async {
@@ -100,6 +136,7 @@ class _ViewerHomeState extends State<ViewerHome> {
       _iCloudAvailable = available;
       _looked = true;
     });
+    _goAndLook();
   }
 
   /// Goes and takes a round, for the pull on the front screen.
@@ -107,17 +144,30 @@ class _ViewerHomeState extends State<ViewerHome> {
   /// Null on a phone with no pairing: the iCloud route is read by nobody yet, and a pull that
   /// silently did nothing would be worse than a list that does not offer one.
   Future<void> Function()? get _take {
+    if (_pairing == null) return null;
+    return () => _round(asked: true);
+  }
+
+  /// One round against the place.
+  ///
+  /// [asked] is whether the person pulled for it. A round they asked for is applied where they
+  /// are looking, because they are expecting it; one that ran on its own is only counted, and the
+  /// front screen offers it behind a pill.
+  Future<void> _round({required bool asked}) async {
     final pairing = _pairing;
-    if (pairing == null) return null;
-    return () async {
-      try {
-        await _rounds(pairing)((_) {});
-        if (mounted) setState(() => _failure = null);
-      } on IntakeException catch (stopped) {
-        // The list keeps what it had. Which line the band shows is decided from this.
-        if (mounted) setState(() => _failure = stopped.failure);
-      }
-    };
+    if (pairing == null || _fetching) return;
+    _fetching = true;
+    try {
+      final report = await _rounds(pairing)((_) {});
+      if (!mounted) return;
+      setState(() => _failure = null);
+      if (!asked && report.records > 0) _arrivals.tick();
+    } on IntakeException catch (stopped) {
+      // The list keeps what it had. Which line the band shows is decided from this.
+      if (mounted) setState(() => _failure = stopped.failure);
+    } finally {
+      _fetching = false;
+    }
   }
 
   TakeTheBacklog _rounds(Pairing pairing) =>
@@ -184,6 +234,7 @@ class _ViewerHomeState extends State<ViewerHome> {
       ),
       appName: widget.appName,
       take: _take,
+      arrivals: _arrivals,
       failure: _failure,
       iCloudAvailable: _iCloudAvailable,
       onPairAgain: _pairAgain,
@@ -202,6 +253,7 @@ class HomeShell extends StatefulWidget {
     required this.connection,
     required this.appName,
     this.take,
+    this.arrivals,
     this.failure,
     this.iCloudAvailable,
     this.onPairAgain,
@@ -214,6 +266,10 @@ class HomeShell extends StatefulWidget {
   final ConnectionFacts connection;
   final String appName;
   final Future<void> Function()? take;
+
+  /// Ticks when rows landed without being asked for.
+  final Listenable? arrivals;
+
   final IntakeFailure? failure;
   final bool? iCloudAvailable;
   final VoidCallback? onPairAgain;
@@ -346,6 +402,7 @@ class _HomeShellState extends State<HomeShell> {
             clock: widget.clock,
             doneWindow: widget.settings.value.doneWindow,
             take: widget.take,
+            arrivals: widget.arrivals,
             failure: widget.failure,
             iCloudAvailable: widget.iCloudAvailable,
             onOpen: (line) => _open(line.id),
@@ -394,4 +451,9 @@ class _HomeShellState extends State<HomeShell> {
       ],
     ),
   );
+}
+
+/// Says that rows arrived. Nothing about which — the screen that cares reads the store itself.
+class _Arrivals extends ChangeNotifier {
+  void tick() => notifyListeners();
 }

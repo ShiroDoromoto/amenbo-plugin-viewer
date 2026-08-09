@@ -436,6 +436,7 @@ class _NowScreenState extends State<NowScreen> with WidgetsBindingObserver {
     onPairAgain: widget.onPairAgain,
     onOpenSettings: widget.onOpenSettings,
     whole: whole,
+    clock: widget.clock,
   );
 
   Widget _scroll(DateTime today, Standing standing) {

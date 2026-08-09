@@ -48,7 +48,7 @@ class PairingCodeException implements Exception {
   String toString() => 'PairingCodeException: $message';
 }
 
-/// Reads what a code carries into the three things a pairing is.
+/// Reads what a code carries into the three things a pairing is, and the name it goes by.
 ///
 /// The version is settled before anything else is looked at: a later contract may well have moved
 /// the other fields, and "this code is missing its URL" would then be a wrong answer to a right
@@ -116,10 +116,16 @@ Pairing readPairingCode(String text) {
     );
   }
 
+  // The name is not one of the three things a pairing is, so a code without one still pairs. It
+  // was added to the code after the three were, and a phone that refused the older code would be
+  // refusing a pairing that works over a line it only displays.
+  final label = decoded['l'];
+
   final pairing = Pairing(
     url: url,
     readToken: readToken,
     encryptionKey: encryptionKey,
+    label: label is String && label.isNotEmpty ? label : null,
   );
 
   // The key is tried here rather than at the first sync. A key of the wrong size fails the same

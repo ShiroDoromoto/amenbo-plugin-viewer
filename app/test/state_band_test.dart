@@ -90,6 +90,10 @@ void main() {
   });
 
   group('the band itself', () {
+    // A fixed today, so a line that names a day says the same thing whatever day the test is run
+    // on.
+    final today = DateTime(2026, 8, 10, 18, 0);
+
     Widget band(
       Standing standing, {
       DateTime? taken,
@@ -105,6 +109,7 @@ void main() {
           whole: whole,
           onPairAgain: onPairAgain,
           onOpenSettings: onOpenSettings,
+          clock: () => today,
         ),
       ),
     );
@@ -117,14 +122,35 @@ void main() {
     testWidgets('offline says when the picture under it was taken', (
       tester,
     ) async {
-      final taken = DateTime(2026, 8, 9, 12, 34);
+      final taken = DateTime(2026, 8, 10, 12, 34);
       await tester.pumpWidget(band(Standing.offline, taken: taken));
 
       expect(find.text(standingWords(Standing.offline)), findsOneWidget);
       // The clock, not "3 h ago": a phone whose clock is out can still name the hour.
-      expect(find.text(StateBand.takenAt(taken)), findsOneWidget);
+      expect(find.text('Taken 12:34'), findsOneWidget);
       // No dialog, no retry to press — another round happens on its own.
       expect(find.byType(TextButton), findsNothing);
+    });
+
+    testWidgets('a picture from another day is dated, not just clocked', (
+      tester,
+    ) async {
+      // The line is all a phone out of signal has to judge what it is reading by, and an hour on
+      // its own reads as this morning's however many nights ago it was taken.
+      await tester.pumpWidget(
+        band(Standing.offline, taken: DateTime(2026, 8, 9, 9, 14)),
+      );
+      expect(find.text('Taken yesterday 09:14'), findsOneWidget);
+
+      await tester.pumpWidget(
+        band(Standing.offline, taken: DateTime(2026, 8, 2, 9, 14)),
+      );
+      expect(find.text('Taken 2 Aug 09:14'), findsOneWidget);
+
+      await tester.pumpWidget(
+        band(Standing.offline, taken: DateTime(2025, 12, 30, 9, 14)),
+      );
+      expect(find.text('Taken 30 Dec 2025 09:14'), findsOneWidget);
     });
 
     testWidgets('a key that does not open offers the way out', (tester) async {

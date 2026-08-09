@@ -51,6 +51,15 @@ enum IntakeFailure {
   unreadable,
 }
 
+/// Whether another round could end any differently.
+///
+/// Two of them cannot: a refusal stands until the PC hands out a fresh code, and a contract this
+/// build does not read stands until the store hands out a newer app. Both are settled somewhere
+/// else, so a button that repeats them is a button that fails identically every time it is
+/// pressed — and the sentence beside it has already said where to go instead.
+bool worthAnotherRound(IntakeFailure failure) =>
+    failure != IntakeFailure.refused && failure != IntakeFailure.tooNew;
+
 /// A round of the intake did not finish, and why.
 class IntakeException implements Exception {
   const IntakeException(this.failure, this.message);

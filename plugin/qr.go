@@ -35,16 +35,24 @@ import (
 // pairing is what the code carries, and nothing else is on it. The keys are one letter each: not
 // for the code's capacity, which is ample, but for the camera — fewer modules is a read that
 // catches sooner.
+//
+// The name rides along with the three secrets because this is the only moment the phone can be
+// told it. Cutting a phone off is done here by that name, and a phone that cannot show the name
+// it was paired under leaves the person guessing which of the rows on the PC is the one in their
+// hand.
 type pairing struct {
 	V   int    `json:"v"`
 	URL string `json:"url"`
 	T   string `json:"t"`
 	K   string `json:"k"`
+	L   string `json:"l"`
 }
 
-// codeScale is how many image pixels one module of the code becomes. The code carries about 150
-// characters, so it lands around version 7 — some 45 modules a side, which at this scale is an
-// image a phone reads from a comfortable distance without filling the screen.
+// codeScale is how many image pixels one module of the code becomes. The code carries about 180
+// characters, so it lands around version 9 — some 53 modules a side, which at this scale is an
+// image a phone reads from a comfortable distance without filling the screen. A name written in
+// something other than ASCII costs one version more, and that is the whole of how this grows:
+// what is on the code is four short fields and a name, not anything that gets longer with use.
 const codeScale = 10
 
 func qr(in input, args []string) error {
@@ -89,7 +97,7 @@ func qr(in input, args []string) error {
 		return err
 	}
 
-	carried, err := json.Marshal(pairing{V: specVersion, URL: where.url, T: token, K: key})
+	carried, err := json.Marshal(pairing{V: specVersion, URL: where.url, T: token, K: key, L: named})
 	if err != nil {
 		return err
 	}

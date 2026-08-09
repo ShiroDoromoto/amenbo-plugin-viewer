@@ -60,20 +60,27 @@ void main() {
   });
   tearDown(() => store.close());
 
-  Widget home({Size size = const Size(400, 800), Rounds? rounds}) =>
-      MaterialApp(
-        theme: viewerTheme(Brightness.light),
-        home: MediaQuery(
-          data: MediaQueryData(size: size),
-          child: ViewerHome(
-            store: store,
-            settings: SettingsController(UnkeptSettings()),
-            appName: 'amenbo Viewer',
-            clock: () => today,
-            rounds: rounds ?? nothingToTake,
-          ),
-        ),
-      );
+  Widget home({
+    Size size = const Size(400, 800),
+    Rounds? rounds,
+    SettingsController? settings,
+  }) => MaterialApp(
+    theme: viewerTheme(Brightness.light),
+    home: MediaQuery(
+      data: MediaQueryData(size: size),
+      child: ViewerHome(
+        store: store,
+        settings: settings ?? SettingsController(UnkeptSettings()),
+        appName: 'amenbo Viewer',
+        clock: () => today,
+        rounds: rounds ?? nothingToTake,
+      ),
+    ),
+  );
+
+  /// Settings as this phone left them, with the one choice this group is about already made.
+  SettingsController asked(Refresh refresh) =>
+      SettingsController(UnkeptSettings())..setRefresh(refresh);
 
   group('what the app opens on', () {
     testWidgets('a phone with no way in is told how to make one', (
@@ -285,6 +292,109 @@ void main() {
       // Beside it, not on top of it: the list is still there to go on reading.
       expect(find.byType(TaskDetailScreen), findsOneWidget);
       expect(find.byType(NowScreen), findsOneWidget);
+    });
+  });
+
+  group('when it goes and looks', () {
+    setUp(() async {
+      await const PairingStore().save(aPairing);
+      store.applyPage([BacklogChange.put('task', 1, task(id: 1))]);
+    });
+
+    /// A round that counts its callers and lands one record.
+    ({List<int> ran, Rounds rounds}) counted() {
+      final ran = <int>[];
+      return (
+        ran: ran,
+        rounds: (pairing) => (watching) async {
+          ran.add(ran.length);
+          // A different row each round, so which round put it there is readable.
+          final id = 2 + ran.length;
+          store.applyPage([
+            BacklogChange.put(
+              'task',
+              id,
+              task(
+                id: id,
+                title: 'とどいた $id',
+                // Stamped by the PC, and later each round: what arrived while the screen was
+                // being read is decided by comparing these.
+                updatedAt: '2026-08-09T11:0${ran.length}:00Z',
+              ),
+            ),
+          ]);
+          return const IntakeReport(
+            records: 1,
+            pages: 1,
+            seq: 2,
+            startedOver: false,
+          );
+        },
+      );
+    }
+
+    testWidgets('automatically means the launch', (tester) async {
+      final round = counted();
+      await tester.pumpWidget(
+        home(rounds: round.rounds, settings: asked(Refresh.automatic)),
+      );
+      await tester.pumpAndSettle();
+
+      expect(round.ran, hasLength(1));
+    });
+
+    testWidgets('and the return to the front', (tester) async {
+      final round = counted();
+      await tester.pumpWidget(
+        home(rounds: round.rounds, settings: asked(Refresh.automatic)),
+      );
+      await tester.pumpAndSettle();
+
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pumpAndSettle();
+
+      expect(round.ran, hasLength(2));
+    });
+
+    testWidgets('only when I pull means neither of them', (tester) async {
+      final round = counted();
+      await tester.pumpWidget(
+        home(rounds: round.rounds, settings: asked(Refresh.manualOnly)),
+      );
+      await tester.pumpAndSettle();
+
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pumpAndSettle();
+
+      expect(round.ran, isEmpty);
+
+      // The thumb still fetches: what the setting turns off is the app going on its own.
+      await tester.tap(find.byTooltip(NowScreen.refresh));
+      await tester.pumpAndSettle();
+      expect(round.ran, hasLength(1));
+    });
+
+    testWidgets('what a round nobody asked for brought back waits', (
+      tester,
+    ) async {
+      final round = counted();
+      await tester.pumpWidget(
+        home(rounds: round.rounds, settings: asked(Refresh.automatic)),
+      );
+      await tester.pumpAndSettle();
+      // The launch round landed before there was anything to interrupt.
+      expect(find.text('とどいた 3'), findsOneWidget);
+
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pumpAndSettle();
+
+      // This one arrived under someone already reading, so it is counted, not applied.
+      expect(find.text('とどいた 4'), findsNothing);
+      expect(find.textContaining('New activity'), findsOneWidget);
+
+      await tester.tap(find.textContaining('New activity'));
+      await tester.pumpAndSettle();
+      expect(find.text('とどいた 4'), findsOneWidget);
     });
   });
 }

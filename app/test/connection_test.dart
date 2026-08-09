@@ -11,6 +11,7 @@ final pairing = Pairing(
   url: Uri.parse('https://amenbo.example.workers.dev/read'),
   readToken: 'cmVhZC10b2tlbg',
   encryptionKey: 'AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8',
+  label: 'iPhone',
 );
 
 void main() {
@@ -34,6 +35,8 @@ void main() {
     // and a screen is a thing people photograph and hand over to be looked at.
     expect(connection.host, 'amenbo.example.workers.dev');
     expect(connection.canPairAgain, isTrue);
+    // The name the PC issued this phone's token under, which is what revoking it takes.
+    expect(connection.label, 'iPhone');
   });
 
   test('a phone with no pairing is on the iCloud route', () async {
@@ -43,6 +46,8 @@ void main() {
     expect(connection.route, ConnectionRoute.iCloud);
     expect(connection.iCloudAvailable, isFalse);
     expect(connection.canPairAgain, isFalse);
+    // The container was never named, and there is no token on it to cut off by a name.
+    expect(connection.label, isNull);
   });
 
   test('what was last taken comes off the store', () async {
