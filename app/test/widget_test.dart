@@ -11,6 +11,8 @@ import 'package:amenbo_viewer/pairing_guide.dart';
 import 'package:amenbo_viewer/pairing_scan.dart';
 import 'package:amenbo_viewer/pairing_store.dart';
 import 'package:amenbo_viewer/settings.dart';
+import 'package:amenbo_viewer/store/backlog_store.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 /// Settings with nothing behind them. The app boots the same way whether the choices came off the
 /// device or are the defaults, and the boot is what is being checked here.
@@ -47,8 +49,19 @@ Widget guide({
 );
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  /// The whole app, on a phone that has never been paired and holds nothing.
+  Widget app(SettingsController settings) {
+    FlutterSecureStorage.setMockInitialValues({});
+    final store = BacklogStore.openInMemory();
+    addTearDown(store.close);
+    return AmenboViewerApp(store: store, settings: settings);
+  }
+
   testWidgets('the app boots with nothing else present', (tester) async {
-    await tester.pumpWidget(AmenboViewerApp(settings: unkeptSettings()));
+    await tester.pumpWidget(app(unkeptSettings()));
+    await tester.pumpAndSettle();
 
     expect(find.byType(MaterialApp), findsOneWidget);
     expect(find.text(AmenboViewerApp.title), findsOneWidget);
@@ -57,7 +70,8 @@ void main() {
   testWidgets('an unpaired app explains itself instead of failing', (
     tester,
   ) async {
-    await tester.pumpWidget(AmenboViewerApp(settings: unkeptSettings()));
+    await tester.pumpWidget(app(unkeptSettings()));
+    await tester.pumpAndSettle();
 
     // Not an error, not a spinner, not a plausible empty backlog — a screen that looked
     // finished would make "no tasks" and "not set up yet" the same picture.
@@ -68,7 +82,8 @@ void main() {
 
   testWidgets('the app wears the brightness that was chosen', (tester) async {
     final settings = unkeptSettings();
-    await tester.pumpWidget(AmenboViewerApp(settings: settings));
+    await tester.pumpWidget(app(settings));
+    await tester.pumpAndSettle();
     expect(
       tester.widget<MaterialApp>(find.byType(MaterialApp)).themeMode,
       ThemeMode.system,

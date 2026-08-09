@@ -154,8 +154,25 @@ void main() {
     round.stop(IntakeFailure.refused, 'the place refused this device');
     await tester.pumpAndSettle();
 
-    // Retrying a refusal is the one case where trying again cannot work — the way out is the PC.
+    // Retrying a refusal cannot work — the way out is the PC, so there is no button offering it.
     expect(find.textContaining('fresh code from the PC'), findsOneWidget);
+    expect(find.text(FirstSyncScreen.tryAgain), findsNothing);
+    // And nothing is left saying it carries on, because it does not carry on until the PC hands
+    // out a new code.
+    expect(find.text(FirstSyncScreen.carriesOn), findsNothing);
+  });
+
+  testWidgets('an app the place has outgrown is not offered a retry either', (
+    tester,
+  ) async {
+    final round = Round();
+    await open(tester, round.take);
+
+    round.stop(IntakeFailure.tooNew, 'the place writes a newer contract');
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Update this app'), findsOneWidget);
+    expect(find.text(FirstSyncScreen.tryAgain), findsNothing);
   });
 
   testWidgets('trying again carries on rather than counting back down', (

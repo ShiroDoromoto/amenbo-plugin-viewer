@@ -74,6 +74,25 @@ bool _sameDay(DateTime a, DateTime b) =>
 String clockTime(DateTime when) =>
     '${when.hour.toString().padLeft(2, '0')}:${when.minute.toString().padLeft(2, '0')}';
 
+/// The wall clock with its day in front of it once today stops being the answer.
+///
+/// `14:02` / `yesterday 14:02` / `2 Aug 14:02` / `2 Aug 2025 14:02`.
+///
+/// Still the clock rather than a count of hours, for the same reason [clockTime] is — but an hour
+/// on its own only names a moment while it is today's. A phone that spent the night out of signal
+/// would otherwise say `09:14` about a picture two days old.
+String clockOnDay(DateTime when, {required DateTime now}) {
+  final local = when.toLocal();
+  final time = clockTime(local);
+  if (_sameDay(local, now)) return time;
+  if (_sameDay(local, now.subtract(const Duration(days: 1)))) {
+    return 'yesterday $time';
+  }
+  return local.year == now.year
+      ? '${_date(local)} $time'
+      : '${_date(local)} ${local.year} $time';
+}
+
 const _months = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', //
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',

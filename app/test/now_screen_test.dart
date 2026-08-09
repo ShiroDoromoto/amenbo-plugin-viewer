@@ -22,8 +22,8 @@ void main() {
   late BacklogStore store;
   late _Arrivals arrivals;
   late List<int> opened;
-  late List<Bundle> widened;
-  late List<Moved> sinced;
+  late List<TaskQuery> widened;
+  late List<TaskQuery> sinced;
 
   setUp(() {
     store = BacklogStore.openInMemory();
@@ -233,7 +233,10 @@ void main() {
 
       await tester.scrollUntilVisible(find.text(NowScreen.more(3)), 200);
       await tester.tap(find.text(NowScreen.more(3)));
-      expect(widened, [Bundle.finished]);
+      expect(widened.single.bundle, Bundle.finished);
+      // The reach travels with it: the rest of a list that stopped at a different day would not
+      // be the rest of this one.
+      expect(widened.single.finishedDays, isNull);
     });
 
     testWidgets('past the window the bundle offers the rest', (tester) async {
@@ -246,7 +249,7 @@ void main() {
       await tester.scrollUntilVisible(find.text(NowScreen.more(3)), 200);
 
       await tester.tap(find.text(NowScreen.more(3)));
-      expect(widened, [Bundle.next]);
+      expect(widened.single.bundle, Bundle.next);
     });
 
     testWidgets('a row opens the task it names', (tester) async {
@@ -487,7 +490,10 @@ void main() {
         find.text(NowScreen.moved(Moved.finished, const Counted(1, false))),
       );
 
-      expect(sinced, [Moved.finished]);
+      expect(sinced.single.moved, Moved.finished);
+      // Counted from the moment the card counted from, so the list is the length of the number
+      // that was pressed.
+      expect(sinced.single.changedSince, isNotNull);
     });
 
     testWidgets('it counts inside the narrowing the screen is holding', (
