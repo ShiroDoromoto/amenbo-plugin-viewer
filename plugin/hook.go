@@ -13,11 +13,15 @@ func hook(in input) {
 	if in.V != contractVersion || in.Event == "" {
 		return
 	}
-	// The iCloud route is a setting the user filled in and nothing arriving at the other end.
-	// That is worth one line, because their question in that state — "why is my phone not
+	// The iCloud route has somewhere to write and nothing arriving at the other end. That is
+	// worth one line, because the user's question in that state — "why is my phone not
 	// updating?" — is answered in `amenbo plugin log viewer` and nowhere else.
-	if in.setting(configICloudFolder) != "" {
-		logf("%s: %s — the iCloud Drive folder is configured, but writing to it is not built yet.", pluginName, in.Event)
+	//
+	// The drop not being there yet is the opposite: it is what every install looks like until
+	// the app is opened once, and a line on every write would be a complaint about the user not
+	// having got to it.
+	if icloudRouteIsLive() {
+		logf("%s: %s — the iCloud Drive folder is there, but writing to it is not built yet.", pluginName, in.Event)
 	}
 	// No Cloudflare route is not a fault: the plugin is installed and enabled, and the user has
 	// simply not run setup. Saying so on every write would fill the execution log with a line
