@@ -69,7 +69,7 @@
     "commands": [
       {
         "cmd": "setup",
-        "does": "Stands up the Worker and KV in the user's own Cloudflare account, and generates the token and key"
+        "does": "Stands up the Worker and its database in the user's own Cloudflare account, and generates the token and key. Asks for a Cloudflare API token on the terminal, or reads CLOUDFLARE_API_TOKEN"
       },
       {
         "cmd": "push",

@@ -73,3 +73,12 @@ npm run dev        # ローカル。.dev.vars.example を .dev.vars に写す
 通らない移行は誰かのアカウントではなくここで落ちる。
 
 `npm run deploy` は手で触るとき用。ルートの `Makefile` からは届かない位置に置いてある。
+
+## プラグインが焼き込んで運ぶ
+
+利用者のアカウントへ立てるのはプラグインで、利用者の PC に Node は無い。だから
+**ここをビルドしたものがプラグインのバイナリに入る**。`make build` も `make test` も
+`plugin/worker.js`（esbuild が吐いた本体）と `plugin/schema.sql`（`migrations/` を連ねたもの）を
+焼き直すので、`src/` や `migrations/` を触ったら**一緒にコミットする**。
+
+**この2つは生成物。手で書き換えない。**

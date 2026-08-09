@@ -24,10 +24,10 @@
 //
 // # What is built
 //
-// The send is: `push` and the hook both carry what the store holds to the Cloudflare route,
-// encrypted a record at a time. Standing up that route (`setup`) and handing the key to a phone
-// (`qr`) are not written yet, and each refuses rather than pretending, so nothing can be built on
-// top of them believing it worked.
+// Standing the Cloudflare route up (`setup`) and the send are: `push` and the hook both carry
+// what the store holds to that route, encrypted a record at a time. Handing the key to a phone
+// (`qr`) is not written yet, and it refuses rather than pretending, so nothing can be built on
+// top of it believing it worked.
 package main
 
 import (
@@ -53,14 +53,18 @@ const pluginName = "viewer"
 
 // The settings this plugin keeps. **There is nothing for the user to fill in**: all three are
 // what `setup` generates and writes back. Two of them are declared secret, so amenbo hands those
-// over in the environment rather than in the `config` object on stdin.
+// over in the environment rather than in the `config` object on stdin — which is why those two
+// are spelled twice, once as the key `setup` writes them under and once as the variable they come
+// back in.
 //
 // The mac route has no setting at all — it writes into the app's own container, and the
 // directory being there is what turns it on.
 const (
-	configWorkerURL  = "worker_url"
-	envAuthToken     = "AMENBO_CONFIG_AUTH_TOKEN"
-	envEncryptionKey = "AMENBO_CONFIG_ENCRYPTION_KEY"
+	configWorkerURL     = "worker_url"
+	configAuthToken     = "auth_token"
+	configEncryptionKey = "encryption_key"
+	envAuthToken        = "AMENBO_CONFIG_AUTH_TOKEN"
+	envEncryptionKey    = "AMENBO_CONFIG_ENCRYPTION_KEY"
 )
 
 // out and errOut are the plugin's two channels, indirected so the tests can read what was
@@ -200,15 +204,6 @@ func errNotBuilt(what string) error {
 	return fmt.Errorf("%s: %w. See the repository README for what is", what, errUnbuilt)
 }
 
-// setup stands up the Cloudflare route in the user's own account: the database, the Worker, and
-// the two secrets that are generated rather than chosen. What is left for the user is to press
-// and to paste — never to judge which permissions a token should carry.
-//
-// The iCloud route has no setup at all, which is the whole reason it is the default one on mac.
-func setup(input, []string) error {
-	return errNotBuilt("setup")
-}
-
 // push carries what the store holds to the Cloudflare route, by hand.
 //
 // The hook does this on its own whenever a write moves the store version, so this is the way to
@@ -253,8 +248,14 @@ Two routes carry the same records:
 
 Usage (through amenbo, from the project the plugin is enabled for):
   amenbo plugin run %s setup     stand up the Worker and its database in your own account
+                                      --account <id>  when your token reaches more than one
   amenbo plugin run %s push      carry what has not reached the phone yet, by hand
   amenbo plugin run %s qr        show the pairing QR for the phone's camera to read
+
+'setup' asks you to press and to paste, and nothing else: it opens a Cloudflare token screen with
+the permissions already ticked, and you paste back the token it gives you. That token stands the
+Worker and the database up and is not kept. What it leaves in your account is yours — uninstalling
+this plugin does not take it away.
 
 With no arguments the plugin is an observation hook: amenbo fires it when the project changed,
 which is what tells it the phone is now behind. It carries what moved on its own, so 'push' is
@@ -263,10 +264,10 @@ fallen behind for a reason nobody can see.
 
 Settings — **none of them is yours to fill in.** 'setup' writes all three:
   %s       the endpoint it deployed
-  auth_token      the token it generated (secret)
-  encryption_key  the key it generated (secret). It reaches the phone by QR, never by network
+  %s      the token it generated (secret)
+  %s  the key it generated (secret). It reaches the phone by QR, never by network
 
-**'setup' and 'qr' are not built yet**, and neither is writing to the iCloud folder. They refuse
-rather than pretend, so nothing can be built on top believing it worked.`,
-		pluginName, pluginName, pluginName, pluginName, configWorkerURL)
+**'qr' is not built yet**, and neither is writing to the iCloud folder. They refuse rather than
+pretend, so nothing can be built on top believing it worked.`,
+		pluginName, pluginName, pluginName, pluginName, configWorkerURL, configAuthToken, configEncryptionKey)
 }

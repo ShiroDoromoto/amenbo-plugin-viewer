@@ -8,6 +8,19 @@ import (
 	"testing"
 )
 
+// TestMain fills in what no test may be allowed to reach for.
+//
+// `setup` reads the pasted token from the terminal, so a test that let it get that far would sit
+// waiting for somebody to type — on a machine that has a terminal to wait on, which is most of
+// them. A token in the environment is read first, and a stand-in pointed at a door nothing is
+// listening behind turns any run of it into a quick failure. A test that wants a real answer
+// points the stand-in somewhere of its own.
+func TestMain(m *testing.M) {
+	os.Setenv(envCloudflareToken, "a-throwaway-api-token")
+	os.Setenv(envStandIn, "http://127.0.0.1:1")
+	os.Exit(m.Run())
+}
+
 // capture redirects the plugin's two channels for one invocation and hands back what each got.
 // The split is the contract, so a test that only looked at one of them would miss the failure
 // that matters most here — a diagnostic written where a caller reads its return value.
@@ -39,7 +52,11 @@ func fed(t *testing.T, text string) *os.File {
 
 // The commands that are still unwritten. The exit code is what says so — the point of refusing
 // rather than printing a note and exiting 0.
-var unbuiltCommands = []string{"setup", "qr"}
+//
+// **Nothing here may reach `setup`.** It reads the pasted token from the terminal, so a test that
+// ran it with nothing in the environment would sit waiting for someone to type on a machine where
+// there is a terminal to wait on.
+var unbuiltCommands = []string{"qr"}
 
 // An unbuilt command fails, and fails visibly. A caller that reads only the exit code has to be
 // able to tell this from one that did the work.
