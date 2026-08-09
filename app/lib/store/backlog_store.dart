@@ -87,11 +87,24 @@ class MetaKey {
   /// How far back the finished ones reach on the list.
   static const doneWindow = 'done_window';
 
+  /// The last few words typed into the search face.
+  static const recentTerms = 'recent_terms';
+
+  /// The last few records opened from it.
+  static const recentlyViewed = 'recently_viewed';
+
   /// The keys that are the device's own rather than the place's, and so the ones a wipe leaves
   /// alone. Everything else in `meta` describes the copy being thrown away; these describe the
-  /// person holding the phone, who has not changed their mind just because the PC re-uploaded
-  /// everything.
-  static const deviceOwn = {lastOpenedAt, refresh, appearance, doneWindow};
+  /// person holding the phone, who has not changed their mind — nor forgotten what they were
+  /// looking for — just because the PC re-uploaded everything.
+  static const deviceOwn = {
+    lastOpenedAt,
+    refresh,
+    appearance,
+    doneWindow,
+    recentTerms,
+    recentlyViewed,
+  };
 }
 
 class BacklogStore {
