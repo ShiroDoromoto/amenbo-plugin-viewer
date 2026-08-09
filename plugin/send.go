@@ -18,9 +18,12 @@ import (
 // question answers "is there anything to do", and the ledger answers "what" — which is why the
 // whole window is taken only on a first run, on a reset, and after a gap.
 //
-// **What is placed is what the store holds, one record per row, encrypted here.** The store the
-// records land in is one the user rents, so it is treated as somewhere that can read what it is
-// given: it gets ciphertext and an ordering, and nothing that says what any of it means.
+// **What is placed is what the store holds, one record per row.** How much of it a route may read
+// is the route's own answer, and the two differ because the places do: the Worker runs somewhere
+// the user merely rents, so it is handed ciphertext and an ordering and nothing that says what any
+// of it means. The iCloud folder is the user's own device and their own account, guarded the way
+// the desktop store is — so it holds the rows as they are, and needs no key to be issued before a
+// mac and an iPhone can talk.
 
 // specVersion is the version of the shared contract these records are written to. It is not
 // amenbo's format version: this one moves when the four parts change what they say to each
@@ -49,13 +52,18 @@ const (
 	opDeleted = "del"
 )
 
-// outgoing is one record as it travels: the key it is filed under, what happened to it, and —
-// for everything but a delete — the envelope holding it.
+// outgoing is one record as it travels: the key it is filed under, what happened to it, and — for
+// everything but a delete — the row itself, either sealed in an envelope or written as it is.
+//
+// A record is built open and stays that way until a route that cannot be trusted with it puts it
+// in an envelope (see `store.sealed`). Exactly one of `Row` and the `Nonce`/`Cipher` pair is ever
+// on the wire.
 type outgoing struct {
-	Key    string `json:"k"`
-	Op     string `json:"op"`
-	Nonce  string `json:"n,omitempty"`
-	Cipher string `json:"c,omitempty"`
+	Key    string          `json:"k"`
+	Op     string          `json:"op"`
+	Row    json.RawMessage `json:"r,omitempty"`
+	Nonce  string          `json:"n,omitempty"`
+	Cipher string          `json:"c,omitempty"`
 }
 
 // placement is the body of a send. The version travels with it so the store can recognise a
@@ -80,25 +88,23 @@ func recordKey(dataset string, id int64) string {
 // plugin refuses them on its own account, rather than resting on amenbo keeping them back.
 var neverCarried = map[string]bool{"plugin_secret": true}
 
-// sealRows turns the rows of one dataset into records to place. A row with no id is dropped
+// carryRows turns the rows of one dataset into records to place. A row with no id is dropped
 // rather than filed under a key that names nothing.
-func sealRows(seal *sealer, dataset string, rows []json.RawMessage) ([]outgoing, error) {
+func carryRows(dataset string, rows []json.RawMessage) ([]outgoing, error) {
 	placed := make([]outgoing, 0, len(rows))
 	for _, raw := range rows {
 		id, err := rowID(raw)
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", dataset, err)
 		}
-		key := recordKey(dataset, id)
-		nonce, cipher := seal.seal(key, raw)
-		placed = append(placed, outgoing{Key: key, Op: opPlaced, Nonce: nonce, Cipher: cipher})
+		placed = append(placed, outgoing{Key: recordKey(dataset, id), Op: opPlaced, Row: raw})
 	}
 	return placed, nil
 }
 
-// sealWindow turns a whole picture of the store into the records that replace what is there.
+// carryWindow turns a whole picture of the store into the records that replace what is there.
 // The datasets are walked in name order so that two runs over one window place the same thing.
-func sealWindow(seal *sealer, whole window) ([]outgoing, error) {
+func carryWindow(whole window) ([]outgoing, error) {
 	datasets := make([]string, 0, len(whole.Tables))
 	for dataset := range whole.Tables {
 		datasets = append(datasets, dataset)
@@ -110,11 +116,11 @@ func sealWindow(seal *sealer, whole window) ([]outgoing, error) {
 		if neverCarried[dataset] {
 			continue
 		}
-		sealed, err := sealRows(seal, dataset, whole.Tables[dataset])
+		carried, err := carryRows(dataset, whole.Tables[dataset])
 		if err != nil {
 			return nil, err
 		}
-		placed = append(placed, sealed...)
+		placed = append(placed, carried...)
 	}
 	return placed, nil
 }
@@ -162,7 +168,7 @@ func collapse(changes []change) (read map[string][]int64, dropped []string) {
 // in a running plugin is always rowsIn.
 type readBack func(dataset string, ids []int64) ([]json.RawMessage, error)
 
-// sealChanged reads back what moved and seals it, alongside the deletes that need no read.
+// changedRecords reads back what moved, alongside the deletes that need no read.
 //
 // An id that comes back absent is one that went away between the ledger naming it and this read
 // — it is left out rather than guessed at, because the change that says so is still ahead of the
@@ -172,7 +178,7 @@ type readBack func(dataset string, ids []int64) ([]json.RawMessage, error)
 // dataset amenbo holds and the read-back road carries fewer, so a stretch touching one of the
 // others would otherwise stop every send after it — the phone would fall behind for good over a
 // row it was never going to receive.
-func sealChanged(seal *sealer, changes []change, rows readBack) ([]outgoing, error) {
+func changedRecords(changes []change, rows readBack) ([]outgoing, error) {
 	read, dropped := collapse(changes)
 
 	datasets := make([]string, 0, len(read))
@@ -195,11 +201,11 @@ func sealChanged(seal *sealer, changes []change, rows readBack) ([]outgoing, err
 			if err != nil {
 				return nil, err
 			}
-			sealed, err := sealRows(seal, dataset, read)
+			carried, err := carryRows(dataset, read)
 			if err != nil {
 				return nil, err
 			}
-			placed = append(placed, sealed...)
+			placed = append(placed, carried...)
 		}
 	}
 	for _, key := range dropped {
@@ -234,7 +240,16 @@ func routesFor(in input) []route {
 		open = append(open, there)
 	}
 	if where, err := storeFor(in); err == nil {
-		open = append(open, where)
+		// The key is what the Worker route is allowed to send with, and only it: the folder is
+		// this machine's own. A route standing without one is worth a line — the send goes on to
+		// the other one, and silence here would read as the Worker being up to date.
+		seal, err := newSealer(secret(envEncryptionKey))
+		if err != nil {
+			logf("%s: the Cloudflare route is standing but nothing can be sent to it — %s", pluginName, err)
+		} else {
+			where.seal = seal
+			open = append(open, where)
+		}
 	}
 	return open
 }
@@ -259,11 +274,12 @@ func carryTo(routes []route, body placement, whole bool) error {
 	return errors.Join(refusals...)
 }
 
-// store is the place the records are put: the user's own Worker, and the token that opens its
-// writing door.
+// store is the place the records are put: the user's own Worker, the token that opens its writing
+// door, and the key nothing there is written without.
 type store struct {
 	url   string
 	token string
+	seal  *sealer
 }
 
 // String names the route in a diagnostic.
@@ -276,18 +292,51 @@ func (s store) holdsNothing() bool { return false }
 
 // place puts what moved into the store.
 func (s store) place(body placement) error {
-	_, err := s.put("/records", body)
+	sealed, err := s.sealed(body)
+	if err != nil {
+		return err
+	}
+	_, err = s.put("/records", sealed)
 	return err
 }
 
 // replace empties the store and places everything.
 func (s store) replace(body placement) error {
-	_, err := s.put("/reset", body)
+	sealed, err := s.sealed(body)
+	if err != nil {
+		return err
+	}
+	_, err = s.put("/reset", sealed)
 	return err
 }
 
-// storeFor names the Cloudflare route, or says it is not one. Half a route is not a route — a
+// sealed puts every row in this body into an envelope, which is what makes it fit to leave the
+// machine.
+//
+// **This is the last thing done before the bytes go out**, and it is done here rather than where
+// the records are built, because the folder on this same device has no reason to be handed a
+// ciphertext it would need a key to read.
+func (s store) sealed(body placement) (placement, error) {
+	if s.seal == nil {
+		return placement{}, errNoKey
+	}
+	records := make([]outgoing, 0, len(body.Records))
+	for _, record := range body.Records {
+		if record.Row != nil {
+			nonce, cipher := s.seal.seal(record.Key, record.Row)
+			record = outgoing{Key: record.Key, Op: record.Op, Nonce: nonce, Cipher: cipher}
+		}
+		records = append(records, record)
+	}
+	body.Records = records
+	return body, nil
+}
+
+// storeFor names the Cloudflare door, or says there is not one. Half a route is not a route — a
 // URL with no token is refused at the door on every send, so it is nothing to keep retrying.
+//
+// What comes back can be spoken to but not sent to: the key belongs to the sending, and revoking a
+// phone or issuing a token needs none.
 func storeFor(in input) (store, error) {
 	url := strings.TrimRight(in.setting(configWorkerURL), "/")
 	token := secret(envAuthToken)
@@ -346,11 +395,6 @@ func carry(in input, force bool) (int, error) {
 	if len(routes) == 0 {
 		return 0, errNoRoute
 	}
-	seal, err := newSealer(secret(envEncryptionKey))
-	if err != nil {
-		return 0, err
-	}
-
 	version := in.Version
 	if version == nil {
 		asked, err := storeVersion()
@@ -369,7 +413,7 @@ func carry(in input, force bool) (int, error) {
 		if !force && remembered.Version == *version {
 			return 0, nil
 		}
-		placed, cursor, err := carryChanged(routes, seal, remembered.Cursor, *version)
+		placed, cursor, err := carryChanged(routes, remembered.Cursor, *version)
 		if !errors.Is(err, errSyncGap) {
 			if err != nil {
 				return 0, err
@@ -379,7 +423,7 @@ func carry(in input, force bool) (int, error) {
 		logf("%s: the ledger no longer reaches back to where this plugin left off — placing the whole store again", pluginName)
 	}
 
-	placed, cursor, err := carryWhole(routes, seal, *version)
+	placed, cursor, err := carryWhole(routes, *version)
 	if err != nil {
 		return 0, err
 	}
@@ -405,12 +449,12 @@ func anyRouteHoldsNothing(routes []route) bool {
 //
 // A stretch that turns out to hold nothing to carry is still a turn: the cursor moves, so the
 // next one does not read it again.
-func carryChanged(routes []route, seal *sealer, cursor, version int64) (int, int64, error) {
+func carryChanged(routes []route, cursor, version int64) (int, int64, error) {
 	changes, moved, err := changesSince(cursor)
 	if err != nil {
 		return 0, 0, err
 	}
-	records, err := sealChanged(seal, changes, rowsIn)
+	records, err := changedRecords(changes, rowsIn)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -430,12 +474,12 @@ func carryChanged(routes []route, seal *sealer, cursor, version int64) (int, int
 // the remembered version one turn stale, which costs a turn that finds nothing. Remembering a
 // version newer than the picture would instead skip whatever landed in that gap, and the phone
 // would never learn of it.
-func carryWhole(routes []route, seal *sealer, version int64) (int, int64, error) {
+func carryWhole(routes []route, version int64) (int, int64, error) {
 	whole, err := wholeWindow()
 	if err != nil {
 		return 0, 0, err
 	}
-	records, err := sealWindow(seal, whole)
+	records, err := carryWindow(whole)
 	if err != nil {
 		return 0, 0, err
 	}

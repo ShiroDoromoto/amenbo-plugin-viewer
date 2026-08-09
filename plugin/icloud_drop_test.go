@@ -39,7 +39,7 @@ func filesIn(t *testing.T, where drop) []string {
 }
 
 func placed(key string) outgoing {
-	return outgoing{Key: key, Op: opPlaced, Nonce: "a-nonce", Cipher: "a-ciphertext"}
+	return outgoing{Key: key, Op: opPlaced, Row: json.RawMessage(`{"id":12,"title":"よむもの"}`)}
 }
 
 // One record is one file, filed under the key the contract gives it. iCloud syncs a file at a
@@ -59,9 +59,10 @@ func TestARecordIsOneFileUnderItsKey(t *testing.T) {
 	}
 }
 
-// What lands in the file is the record as it travels — the same document the other route carries,
-// so the phone opens one shape whichever route it read from.
-func TestTheFileHoldsTheRecordAsItTravels(t *testing.T) {
+// What lands in the file is the record with its row as it is. This folder is the user's own
+// device and their own account, so nothing here is put in an envelope — the phone reads it with
+// no key, which is the whole of what a mac and an iPhone have to agree on.
+func TestTheFileHoldsTheRowAsItIs(t *testing.T) {
 	where := standingDrop(t)
 
 	if err := where.place(placement{SpecV: specVersion, Version: 7, Records: []outgoing{placed("task/12")}}); err != nil {
@@ -76,8 +77,15 @@ func TestTheFileHoldsTheRecordAsItTravels(t *testing.T) {
 	if err := json.Unmarshal(raw, &read); err != nil {
 		t.Fatal(err)
 	}
-	if read != placed("task/12") {
+	want := placed("task/12")
+	if read.Key != want.Key || read.Op != want.Op {
 		t.Errorf("the file holds %+v", read)
+	}
+	if string(read.Row) != string(want.Row) {
+		t.Errorf("the row landed as %s", read.Row)
+	}
+	if read.Nonce != "" || read.Cipher != "" {
+		t.Error("the record was sealed on the way into the folder")
 	}
 }
 

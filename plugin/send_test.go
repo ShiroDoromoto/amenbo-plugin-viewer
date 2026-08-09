@@ -90,7 +90,7 @@ func TestASecretIsNeverCarried(t *testing.T) {
 		t.Errorf("the rest of the stretch went with it: %v", read)
 	}
 
-	records, err := sealWindow(sealerForTest(t), window{Tables: map[string][]json.RawMessage{
+	records, err := carryWindow(window{Tables: map[string][]json.RawMessage{
 		"plugin_secret": {json.RawMessage(`{"id":1,"value":"a-throwaway-token"}`)},
 		"task":          {json.RawMessage(`{"id":1}`)},
 	}})
@@ -120,7 +120,7 @@ func TestADatasetThatDoesNotTravelIsLeftBehindRatherThanFatal(t *testing.T) {
 	var records []outgoing
 	_, stderr := capture(t, func() {
 		var err error
-		records, err = sealChanged(sealerForTest(t), changes, rows)
+		records, err = changedRecords(changes, rows)
 		if err != nil {
 			t.Error(err)
 		}
@@ -141,20 +141,21 @@ func TestAReadThatFailsForAnyOtherReasonStopsTheSend(t *testing.T) {
 		return nil, refused{call: "records", code: "store_unreadable", message: "the store cannot be opened"}
 	}
 
-	if _, err := sealChanged(sealerForTest(t), []change{{Dataset: "task", RecordID: 1, Op: "insert"}}, rows); err == nil {
+	if _, err := changedRecords([]change{{Dataset: "task", RecordID: 1, Op: "insert"}}, rows); err == nil {
 		t.Error("a failed read was taken for a record that does not travel")
 	}
 }
 
 // A whole window becomes one record per row, filed under the dataset and the id — the only two
-// things about a row this plugin reads.
-func TestSealingAWholeWindowMakesOneRecordPerRow(t *testing.T) {
+// things about a row this plugin reads. What is built carries the row as it is; the envelope is
+// put on at the door of the route that needs one.
+func TestCarryingAWholeWindowMakesOneRecordPerRow(t *testing.T) {
 	whole := window{Tables: map[string][]json.RawMessage{
 		"task":     {json.RawMessage(`{"id":2,"title":"二件目"}`), json.RawMessage(`{"id":1,"title":"最初の一件"}`)},
 		"decision": {json.RawMessage(`{"id":5}`)},
 	}}
 
-	records, err := sealWindow(sealerForTest(t), whole)
+	records, err := carryWindow(whole)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -165,9 +166,46 @@ func TestSealingAWholeWindowMakesOneRecordPerRow(t *testing.T) {
 		t.Errorf("records = %v, want %v", got, want)
 	}
 	for _, record := range records {
-		if record.Nonce == "" || record.Cipher == "" {
-			t.Errorf("%s went out without an envelope", record.Key)
+		if len(record.Row) == 0 {
+			t.Errorf("%s was built without its row", record.Key)
 		}
+		if record.Nonce != "" || record.Cipher != "" {
+			t.Errorf("%s was sealed before any route asked for it", record.Key)
+		}
+	}
+}
+
+// The Worker is somewhere the user merely rents, so nothing reaches it that it could read. The
+// sealing happens at that door and nowhere earlier, which is what lets the folder on this machine
+// hold the same records open.
+func TestTheCloudflareDoorSealsEveryRowOnItsWayOut(t *testing.T) {
+	body := placement{SpecV: specVersion, Version: 1, Records: []outgoing{
+		{Key: "task/1", Op: opPlaced, Row: json.RawMessage(`{"id":1,"title":"ひみつ"}`)},
+		{Key: "task/2", Op: opDeleted},
+	}}
+
+	sent, err := store{url: "https://example.invalid", token: "a-throwaway-token", seal: sealerForTest(t)}.sealed(body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(sent.Records) != 2 {
+		t.Fatalf("records = %d", len(sent.Records))
+	}
+	placed := sent.Records[0]
+	if placed.Nonce == "" || placed.Cipher == "" {
+		t.Error("a row went to the Worker without an envelope")
+	}
+	if len(placed.Row) != 0 {
+		t.Error("the row itself went along with the envelope")
+	}
+	if raw, _ := json.Marshal(sent); strings.Contains(string(raw), "ひみつ") {
+		t.Error("what the row said is readable in what was sent")
+	}
+	// A deletion is the key and no more, so there is nothing there to seal.
+	gone := sent.Records[1]
+	if gone.Key != "task/2" || gone.Op != opDeleted || gone.Nonce != "" || gone.Cipher != "" {
+		t.Errorf("a deletion came out as %+v", gone)
 	}
 }
 
@@ -176,7 +214,7 @@ func TestSealingAWholeWindowMakesOneRecordPerRow(t *testing.T) {
 func TestARowWithNoIdIsRefused(t *testing.T) {
 	whole := window{Tables: map[string][]json.RawMessage{"task": {json.RawMessage(`{"title":"no id"}`)}}}
 
-	if _, err := sealWindow(sealerForTest(t), whole); err == nil {
+	if _, err := carryWindow(whole); err == nil {
 		t.Error("a row with no id was filed anyway")
 	}
 }

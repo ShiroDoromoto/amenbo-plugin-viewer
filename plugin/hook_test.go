@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"os"
 	"path/filepath"
 	"strings"
@@ -33,27 +34,34 @@ func withICloud(t *testing.T, live bool) string {
 // A send that got nowhere is the state the user most needs written down: a route IS open, so the
 // phone falls further behind with every write.
 func TestTheHookSaysWhatStoppedTheSend(t *testing.T) {
-	for name, test := range map[string]struct {
-		icloud   bool
-		settings map[string]any
-	}{
-		"the mac has a folder":       {icloud: true},
-		"a Worker has been stood up": {settings: map[string]any{configWorkerURL: "https://viewer.example.workers.dev"}},
-	} {
-		t.Run(name, func(t *testing.T) {
-			t.Setenv(envAuthToken, "a-throwaway-token")
-			t.Setenv(envEncryptionKey, "")
-			withICloud(t, test.icloud)
+	t.Setenv(envAuthToken, "a-throwaway-token")
+	t.Setenv(envEncryptionKey, "")
+	withICloud(t, false)
 
-			stdout, stderr := capture(t, func() { hook(fired("task.done", test.settings)) })
+	stdout, stderr := capture(t, func() {
+		hook(fired("task.done", map[string]any{configWorkerURL: "https://viewer.example.workers.dev"}))
+	})
 
-			if stdout != "" {
-				t.Errorf("a hook's stdout is not a return value and nothing belongs on it: %q", stdout)
-			}
-			if !strings.Contains(stderr, "encryption key") {
-				t.Errorf("the line does not say what stopped the send: %q", stderr)
-			}
-		})
+	if stdout != "" {
+		t.Errorf("a hook's stdout is not a return value and nothing belongs on it: %q", stdout)
+	}
+	if !strings.Contains(stderr, "encryption key") {
+		t.Errorf("the line does not say what stopped the send: %q", stderr)
+	}
+}
+
+// The folder is on the user's own machine, in their own account, so nothing placed there is put
+// in an envelope — and a mac with no Worker, which is where the key comes from, is a mac that can
+// still feed a phone.
+func TestTheFolderIsARouteWithNoKey(t *testing.T) {
+	t.Setenv(envAuthToken, "")
+	t.Setenv(envEncryptionKey, "")
+	withICloud(t, true)
+
+	open := routesFor(fired("task.done", nil))
+
+	if len(open) != 1 || !strings.Contains(open[0].String(), "iCloud") {
+		t.Errorf("routes = %v, want the folder alone", open)
 	}
 }
 
@@ -119,6 +127,7 @@ func TestHalfOfTheCloudflareRouteIsNotARoute(t *testing.T) {
 // mac user with an iPhone at home and an Android phone at work wants them in both.
 func TestEveryRouteThatIsOpenIsCarriedTo(t *testing.T) {
 	t.Setenv(envAuthToken, "a-throwaway-token")
+	t.Setenv(envEncryptionKey, base64.RawURLEncoding.EncodeToString(make([]byte, keySize)))
 	withICloud(t, true)
 
 	open := routesFor(fired("task.done", map[string]any{configWorkerURL: "https://viewer.example.workers.dev"}))
