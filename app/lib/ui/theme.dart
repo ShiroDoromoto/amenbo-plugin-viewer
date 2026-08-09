@@ -63,15 +63,16 @@ class BundleHeading extends StatelessWidget {
   const BundleHeading({
     super.key,
     required this.title,
-    required this.count,
+    this.count,
     this.expanded,
     this.onToggle,
   });
 
   final String title;
 
-  /// Already capped by the store — `999+` is what a backlog past the cap says.
-  final String count;
+  /// Already capped by the store — `999+` is what a backlog past the cap says. Null where the
+  /// heading is over a handful the person just left behind and counting them says nothing.
+  final String? count;
 
   /// Whether the rows under it are showing, for a bundle that folds. Null for one that does not,
   /// and then the heading is not a button.
@@ -88,7 +89,7 @@ class BundleHeading extends StatelessWidget {
       child: Row(
         children: [
           Expanded(child: Text(title, style: style)),
-          Text(count, style: style),
+          if (count != null) Text(count!, style: style),
           if (folds)
             Icon(
               expanded! ? Icons.expand_less : Icons.expand_more,
@@ -102,9 +103,11 @@ class BundleHeading extends StatelessWidget {
       header: true,
       container: true,
       button: folds,
-      label: folds
-          ? '$title, $count, ${expanded! ? 'showing' : 'folded'}'
-          : '$title, $count',
+      label: [
+        title,
+        ?count,
+        if (folds) expanded! ? 'showing' : 'folded',
+      ].join(', '),
       child: ExcludeSemantics(
         child: folds ? InkWell(onTap: onToggle, child: heading) : heading,
       ),

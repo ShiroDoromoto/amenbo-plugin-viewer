@@ -23,7 +23,7 @@ String relativeTime(DateTime when, {required DateTime now}) {
   if (gap.inHours < 24 && _sameDay(local, now)) return '${gap.inHours} h ago';
 
   final yesterday = now.subtract(const Duration(days: 1));
-  if (_sameDay(local, yesterday)) return 'yesterday ${_clock(local)}';
+  if (_sameDay(local, yesterday)) return 'yesterday ${clockTime(local)}';
 
   return local.year == now.year
       ? _date(local)
@@ -33,7 +33,7 @@ String relativeTime(DateTime when, {required DateTime now}) {
 /// The whole instant, spelled out — what the long press reveals.
 String absoluteTime(DateTime when) {
   final local = when.toLocal();
-  return '${_date(local)} ${local.year}, ${_clock(local)}';
+  return '${_date(local)} ${local.year}, ${clockTime(local)}';
 }
 
 /// A day on its own (`due_on`, `start_on`), which amenbo writes as `YYYY-MM-DD`.
@@ -69,7 +69,9 @@ class TimeOnHold extends StatelessWidget {
 bool _sameDay(DateTime a, DateTime b) =>
     a.year == b.year && a.month == b.month && a.day == b.day;
 
-String _clock(DateTime when) =>
+/// The wall clock, `14:02`. Used where the question is when something happened rather than how
+/// long ago — a phone whose clock is out can still name the hour it took something at.
+String clockTime(DateTime when) =>
     '${when.hour.toString().padLeft(2, '0')}:${when.minute.toString().padLeft(2, '0')}';
 
 const _months = [

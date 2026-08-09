@@ -20,6 +20,8 @@ library;
 
 import 'package:flutter/material.dart';
 
+import 'cloudflare_intake.dart';
+import 'state_band.dart';
 import 'store/backlog_queries.dart';
 import 'store/backlog_store.dart';
 import 'ui/task_row.dart';
@@ -52,6 +54,10 @@ class NowScreen extends StatefulWidget {
     required this.onOpen,
     required this.onMore,
     required this.onSince,
+    this.failure,
+    this.iCloudAvailable,
+    this.onPairAgain,
+    this.onOpenSettings,
     this.take,
     this.arrivals,
     this.clock = DateTime.now,
@@ -68,6 +74,16 @@ class NowScreen extends StatefulWidget {
   /// One number on the card, opened into the list of just what it counted.
   final void Function(Moved moved) onSince;
 
+  /// How the last round of the intake ended, or null where it did not fail. It decides the band
+  /// at the top; it never decides whether the list is drawn.
+  final IntakeFailure? failure;
+
+  /// Whether the iCloud route can be read at all, or null where that is not the route.
+  final bool? iCloudAvailable;
+
+  final VoidCallback? onPairAgain;
+  final VoidCallback? onOpenSettings;
+
   /// Goes and fetches. Null before anything is paired — the screen still draws what is on the
   /// device, which is the whole point of it being a local store.
   final Future<void> Function()? take;
@@ -82,10 +98,6 @@ class NowScreen extends StatefulWidget {
   static const allProjects = 'All projects';
   static const chooseProject = 'Choose a project';
   static const refresh = 'Refresh';
-
-  /// Not an error and not an empty backlog: what the place holds has not reached the device yet.
-  /// The band above says which of those it is.
-  static const nothingYet = 'Nothing here yet';
 
   static String more(int rest, {bool overflowed = false}) =>
       '$rest${overflowed ? '+' : ''} more';
@@ -115,6 +127,10 @@ class _NowScreenState extends State<NowScreen> with WidgetsBindingObserver {
   /// The newest change the drawn rows include, stamped by the PC. What arrived after it is what
   /// the pill offers.
   String? _drawnAt;
+
+  /// When the last round finished. It is what says how old the picture is, which is the one thing
+  /// a reader offline has to be told and the one thing nothing else on the screen says.
+  DateTime? _takenAt;
 
   /// When the app was last brought to the front, taken once on arriving there and held for as
   /// long as it stays. Null on a device that has never had it open, where there is no "last time"
@@ -200,6 +216,9 @@ class _NowScreenState extends State<NowScreen> with WidgetsBindingObserver {
         ),
       );
     _drawnAt = widget.store.latestTaskChange(projectId: _projectId);
+    _takenAt = DateTime.tryParse(
+      widget.store.meta(MetaKey.fetchedAt) ?? '',
+    )?.toLocal();
     _arrived = null;
     _countSinceLook();
   }
@@ -268,6 +287,11 @@ class _NowScreenState extends State<NowScreen> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     final today = widget.clock();
+    final standing = standingOf(
+      anythingHere: !_empty,
+      failure: widget.failure,
+      iCloudAvailable: widget.iCloudAvailable,
+    );
     return Scaffold(
       appBar: AppBar(
         title: _title(),
@@ -292,7 +316,7 @@ class _NowScreenState extends State<NowScreen> with WidgetsBindingObserver {
         children: [
           RefreshIndicator(
             onRefresh: _pull,
-            child: _empty ? _nothing() : _scroll(today),
+            child: _empty ? _nothing(standing) : _scroll(today, standing),
           ),
           if (_arrived != null)
             Align(
@@ -351,27 +375,30 @@ class _NowScreenState extends State<NowScreen> with WidgetsBindingObserver {
     );
   }
 
-  Widget _nothing() => ListView(
+  /// A device that has never had anything. There is no picture for a band to sit above, so the
+  /// same words take the screen — which is also the only time this app shows an empty list, and it
+  /// does not show one even then.
+  Widget _nothing(Standing standing) => ListView(
     // Still a scroll, or there is nothing to pull on.
     physics: const AlwaysScrollableScrollPhysics(),
-    children: [
-      Padding(
-        padding: const EdgeInsets.fromLTRB(24, 64, 24, 24),
-        child: Text(
-          NowScreen.nothingYet,
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
-        ),
-      ),
-    ],
+    children: [_band(standing, whole: true)],
   );
 
-  Widget _scroll(DateTime today) {
+  Widget _band(Standing standing, {bool whole = false}) => StateBand(
+    standing: standing,
+    lastTakenAt: _takenAt,
+    onPairAgain: widget.onPairAgain,
+    onOpenSettings: widget.onOpenSettings,
+    whole: whole,
+  );
+
+  Widget _scroll(DateTime today, Standing standing) {
     final rows = <Widget>[
-      // First, because the person who opens this in bed is asking what happened overnight before
-      // they are asking anything else.
+      // Above the card and above the bundles: what is being read is only worth reading once the
+      // person knows how old it is and why.
+      _band(standing),
+      // Then the card, because the person who opens this in bed is asking what happened overnight
+      // before they are asking anything else.
       if (_sinceCounts.isNotEmpty)
         _SinceCard(counts: _sinceCounts, onOpen: widget.onSince),
     ];
