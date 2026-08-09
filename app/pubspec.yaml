@@ -34,6 +34,12 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
+  cryptography: ^2.9.0
+
+  # Held below 11, which compiles against SDK 37 — a level the SDK manager only ships as
+  # android-37.0, so Gradle looks for android-37 and finds nothing. The Android build fails
+  # before it reaches any of our code. Move it up once a plain android-37 exists.
+  flutter_secure_storage: ^10.3.1
 
 dev_dependencies:
   flutter_test:
