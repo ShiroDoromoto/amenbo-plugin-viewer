@@ -19,7 +19,7 @@ import (
 //
 //	Documents/
 //	  meta.json                    {"spec_v":1,"version":12345,"placed_at":"…"}
-//	  records/<dataset>/<id>.json  the record exactly as the other route carries it
+//	  records/<dataset>/<id>.json  {"k":"task/12","op":"put","r":{the row}}
 //
 // **One file per record**, which is the same unit the Cloudflare route places and the same one
 // amenbo's ledger names. iCloud syncs a file at a time, so an ordinary turn — a record or two
@@ -199,8 +199,10 @@ func (d drop) writeMeta(body placement) error {
 
 // writeRecordFile writes one record where its key files it.
 //
-// **What lands is the record as it travels**, envelope and all — the same document the Cloudflare
-// route carries, so the phone opens one shape whichever route it read from.
+// **What lands is the row as it is.** This folder is the reader's own iCloud container, guarded the
+// way their phone's own files are, so there is nothing to put an envelope between — and a key that
+// never has to reach the phone is a key a mac-only user never has to be given. The envelope belongs
+// to the other route, which ends up somewhere its owner merely rents.
 func writeRecordFile(path string, record outgoing) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return fmt.Errorf("the drop cannot be laid out: %w", err)

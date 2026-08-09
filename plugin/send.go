@@ -218,8 +218,9 @@ func changedRecords(changes []change, rows readBack) ([]outgoing, error) {
 // the same records go to both, so a mac user with an iPhone at home and an Android phone at work
 // is reading one backlog through two doors.
 //
-// **What differs is only where the bytes land.** The envelope, the keys and the version are the
-// send's, not the route's, which is what keeps the two ends from drifting into two contracts.
+// **The keys and the version are the send's, not the route's**, which is what keeps the two ends
+// from drifting into two contracts. What each route adds is only what its destination demands: the
+// Cloudflare one seals the rows on the way out, because that place is rented rather than owned.
 type route interface {
 	// String names the route in a diagnostic, in the user's own words for it.
 	String() string
