@@ -110,6 +110,9 @@ func TestPairingIssuesATokenAndTellsTheStoreOnlyItsHash(t *testing.T) {
 	if shown.V != specVersion || shown.URL != in.setting(configWorkerURL) {
 		t.Errorf("%+v", shown)
 	}
+	if shown.L != "iPhone" {
+		t.Errorf("the code does not name the phone, so it cannot say which row on the PC is itself: %q", shown.L)
+	}
 
 	if paired := pairedPhones(t); len(paired) != 1 || paired[0].Label != "iPhone" || paired[0].IssuedAt != store.issuedAt {
 		t.Errorf("the phone was not written down, so nobody can cut it off: %+v", paired)
