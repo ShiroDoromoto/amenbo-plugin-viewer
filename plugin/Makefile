@@ -13,7 +13,7 @@ VERSION ?= $(shell git describe --tags --exact-match 2>/dev/null || echo dev)
 # cross-compiles from one runner.
 PLATFORMS := macos-arm64 macos-x64 linux-x64 linux-arm64 windows-x64 windows-arm64
 
-.PHONY: build test manifest install dist clean
+.PHONY: build test manifest install fire dist clean
 
 build:
 	go build -o $(BIN) .
@@ -51,6 +51,54 @@ endif
 	cp dev/manifest.json "$(AMENBO_BASE)/plugins/$(BIN)/manifest.json"
 	@echo "installed into $(AMENBO_BASE)/plugins/$(BIN) — switch it on for a project:"
 	@echo "  amenbo plugin enable $(BIN)"
+
+# Fire one event at the installed plugin, with no amenbo to fire it:
+#
+#   make fire AMENBO_BASE=/tmp/base
+#   make fire AMENBO_BASE=/tmp/base EVENT=task.done ID=42 STORE_VERSION=7
+#   make fire AMENBO_BASE=/tmp/base WORKER_URL=http://127.0.0.1:8787
+#   make fire AMENBO_BASE=/tmp/base PAYLOAD='{"v":2,"event":"task.done"}'
+#
+# **The event is the only thing stood in for.** The observation face takes a JSON document on
+# stdin and nothing else, so that boundary is the whole of what has to be emulated — everything
+# behind it (the sync calls, the routes, the state) is the real thing, and a stand-in for any of
+# it would be a second copy of a contract amenbo already owns.
+#
+# **Everything is pointed inside the base**: the store that is read, the environment amenbo would
+# fill in, and the home whose iCloud folder is written into. Left pointing outside, this loop
+# would place the author's own backlog in the author's own container. Turn the mac route on by
+# standing that folder up:
+#
+#   mkdir -p "$$AMENBO_BASE/machine/Library/Mobile Documents/iCloud~work~amenbo~viewer/Documents"
+#
+# Secrets arrive the way amenbo hands them over, in the environment, so they are neither written
+# here nor typed on a command line: AMENBO_CONFIG_ENCRYPTION_KEY and AMENBO_CONFIG_AUTH_TOKEN
+# come from the shell, and throwaway values are what belongs in them.
+EVENT ?= store.changed
+ID ?= 1
+# The store version the event carries. Not this build's VERSION, which names the release.
+STORE_VERSION ?=
+WORKER_URL ?=
+PAYLOAD ?=
+# Which project the plugin may read, as its number. amenbo puts this in the environment when it
+# fires a plugin, and the sync calls draw their reach from it. A throwaway base has one project,
+# and it is the first.
+PROJECT ?= 1
+
+fire: install
+	@mkdir -p "$(AMENBO_BASE)/machine"
+	@set -e; \
+	document='$(PAYLOAD)'; \
+	if [ -z "$$document" ]; then \
+		version=''; \
+		if [ -n "$(STORE_VERSION)" ]; then version=',"version":$(STORE_VERSION)'; fi; \
+		config=''; \
+		if [ -n "$(WORKER_URL)" ]; then config=',"config":{"worker_url":"$(WORKER_URL)"}'; fi; \
+		document='{"v":1,"event":"$(EVENT)","id":$(ID),"at":"'"$$(date -u +%Y-%m-%dT%H:%M:%SZ)"'"'"$$version$$config"'}'; \
+	fi; \
+	echo "$$document" >&2; \
+	printf '%s' "$$document" | AMENBO_HOME="$(AMENBO_BASE)" HOME="$(AMENBO_BASE)/machine" \
+		AMENBO_PLUGIN_REACH="AMB-P-$(PROJECT)" "$(AMENBO_BASE)/plugins/$(BIN)/$(BIN)"
 #
 # The release build: every asset the catalog entry points at, plus the digests it quotes. The
 # release workflow runs this, so what CI publishes is what this prints; run it by hand to check

@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -252,6 +253,47 @@ func TestASilentRefusalIsStillOne(t *testing.T) {
 		t.Error("a 401 read as a successful send")
 	}
 }
+
+// refusing is a route that takes nothing, so what a send does with a route that failed can be
+// exercised without standing either real one up.
+type refusing struct {
+	name string
+}
+
+func (r refusing) String() string          { return r.name }
+func (r refusing) holdsNothing() bool      { return false }
+func (r refusing) place(placement) error   { return errors.New("it did not take it") }
+func (r refusing) replace(placement) error { return errors.New("it did not take it") }
+
+// A route that fails does not stop the others: they are two places holding the same records, and
+// a phone reading one of them is not waiting on the other. What comes back names every route that
+// did not take the records, because a line naming one of two would send the user to the wrong end.
+func TestARouteThatFailsDoesNotStopTheOthers(t *testing.T) {
+	taken := 0
+	taking := stub{took: func() { taken++ }}
+
+	err := carryTo([]route{refusing{name: "the first place"}, taking, refusing{name: "the second place"}}, placement{}, false)
+
+	if taken != 1 {
+		t.Error("a route in between two that failed was never carried to")
+	}
+	if err == nil {
+		t.Fatal("routes that took nothing read as a send that landed")
+	}
+	if !strings.Contains(err.Error(), "the first place") || !strings.Contains(err.Error(), "the second place") {
+		t.Errorf("%v names only one of the two that failed", err)
+	}
+}
+
+// stub is a route that takes whatever it is given.
+type stub struct {
+	took func()
+}
+
+func (s stub) String() string          { return "a place that takes anything" }
+func (s stub) holdsNothing() bool      { return false }
+func (s stub) place(placement) error   { s.took(); return nil }
+func (s stub) replace(placement) error { s.took(); return nil }
 
 // The trailing slash a user leaves on a pasted URL must not become a doubled one in the path.
 func TestATrailingSlashOnTheUrlIsNotCarriedIntoThePath(t *testing.T) {

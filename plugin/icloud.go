@@ -44,16 +44,15 @@ func icloudDropIn(home string) string {
 	return filepath.Join(home, "Library", "Mobile Documents", icloudContainer, "Documents")
 }
 
-// icloudRouteIsLive says whether the mac route has somewhere to write.
+// icloudDropPath is where this machine's drop is.
 //
-// **The directory's existence is the switch.** There is no setting to disagree with it: the
-// route turns itself on when the user first opens the app, which is the same moment the phone
-// becomes able to read anything.
+// **The directory's existence is the switch.** There is no setting to disagree with it: the route
+// turns itself on when the user first opens the app, which is the same moment the phone becomes
+// able to read anything.
 //
-// It is a variable because the directory it looks for is one no test is allowed to create.
-var icloudRouteIsLive = func() bool {
-	return dropIsThere(icloudDrop())
-}
+// It is a variable because the real directory is one no test is allowed to create, and every test
+// that has a route stands one somewhere it may write.
+var icloudDropPath = icloudDrop
 
 // dropIsThere says whether a path is a directory that can be written into. A path that is not
 // there, and a file standing where the directory should be, are both "no route" rather than
