@@ -162,3 +162,35 @@ make build     # viewer を作る
 make test      # gofmt / go vet / go test と、manifest の検証
 make dist      # リリース資産一式と、カタログに貼る digest
 ```
+
+## 手元で1周回す
+
+amenbo に起動してもらわずに、観測面へイベントを1つ流す。
+
+```sh
+B=$(mktemp -d)                                  # 使い捨てのベース
+(cd "$(mktemp -d)" && AMENBO_HOME="$B" amenbo init --actor human)
+make fire AMENBO_BASE="$B"                      # store.changed を1つ
+make fire AMENBO_BASE="$B" EVENT=task.done ID=42 STORE_VERSION=7
+make fire AMENBO_BASE="$B" WORKER_URL=http://127.0.0.1:8787
+make fire AMENBO_BASE="$B" PAYLOAD='{"v":2,"event":"task.done"}'   # 丸ごと差し替える
+```
+
+**偽物を置くのはイベント1枚だけ。** 観測面が受け取るのは stdin の JSON 1枚なので、
+そこだけ差し替えれば、その先（amenbo の口・経路・状態）は全部本物のまま1周が回る。
+口に偽物を置けば、同じ仕様を amenbo と2か所で持つことになる。
+
+**行き先は全部ベースの中に向く**——読むストアも、amenbo が埋める環境変数も、
+iCloud フォルダを探す先の HOME も。外を向いたままだと、この loop が自分の本物のバックログを
+自分の本物のコンテナへ置く。mac 経路を点けるなら、その中にフォルダを立てる:
+
+```sh
+mkdir -p "$B/machine/Library/Mobile Documents/iCloud~work~amenbo~viewer/Documents"
+```
+
+秘密は amenbo が渡すのと同じ形（環境変数）で渡す。**使い捨ての値を使う。**
+
+```sh
+AMENBO_CONFIG_ENCRYPTION_KEY=$(head -c 32 /dev/urandom | base64 | tr '+/' '-_' | tr -d '=') \
+  make fire AMENBO_BASE="$B"
+```
