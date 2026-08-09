@@ -1,7 +1,9 @@
 // The front screen: four bundles in one scroll, every project at once unless the person says
 // otherwise, and a floor that is never swapped while they are standing on it.
 
+import 'package:amenbo_viewer/cloudflare_intake.dart';
 import 'package:amenbo_viewer/now_screen.dart';
+import 'package:amenbo_viewer/state_band.dart';
 import 'package:amenbo_viewer/store/backlog_queries.dart';
 import 'package:amenbo_viewer/store/backlog_store.dart';
 import 'package:amenbo_viewer/ui/task_row.dart';
@@ -34,18 +36,45 @@ void main() {
     store.close();
   });
 
-  Widget screen({Future<void> Function()? take}) => MaterialApp(
-    theme: viewerTheme(Brightness.light),
-    home: NowScreen(
-      store: store,
-      take: take,
-      arrivals: arrivals,
-      clock: () => today,
-      onOpen: (line) => opened.add(line.id),
-      onMore: widened.add,
-      onSince: sinced.add,
-    ),
-  );
+  Widget screen({Future<void> Function()? take, IntakeFailure? failure}) =>
+      MaterialApp(
+        theme: viewerTheme(Brightness.light),
+        home: NowScreen(
+          store: store,
+          take: take,
+          failure: failure,
+          arrivals: arrivals,
+          clock: () => today,
+          onOpen: (line) => opened.add(line.id),
+          onMore: widened.add,
+          onSince: sinced.add,
+        ),
+      );
+
+  group('how things stand sits above the picture, never in place of it', () {
+    testWidgets('offline keeps every row readable', (tester) async {
+      store.applyPage([
+        BacklogChange.put('task', 1, task(id: 1, title: 'よめる')),
+      ]);
+      store.setMeta(MetaKey.fetchedAt, '2026-08-09T03:34:00Z');
+
+      await tester.pumpWidget(screen(failure: IntakeFailure.unreachable));
+
+      expect(find.text(standingWords(Standing.offline)), findsOneWidget);
+      // The whole promise: what is on the device stays readable whatever the network did.
+      expect(find.text('よめる'), findsOneWidget);
+    });
+
+    testWidgets('a device that never got anything is told which of the two', (
+      tester,
+    ) async {
+      await tester.pumpWidget(screen(failure: IntakeFailure.tooNew));
+
+      // Not "nothing has arrived yet" — something did, and this build cannot read it.
+      expect(find.text(standingWords(Standing.tooNew)), findsOneWidget);
+      expect(find.text(standingWords(Standing.waiting)), findsNothing);
+    });
+  });
 
   group('the four bundles, stacked', () {
     testWidgets('each one that has anything in it says how many', (
@@ -269,7 +298,7 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(screen());
-      expect(find.text(NowScreen.nothingYet), findsOneWidget);
+      expect(find.text(standingWords(Standing.waiting)), findsOneWidget);
 
       store.applyPage([
         BacklogChange.put('task', 1, task(id: 1, title: 'とどいた')),
