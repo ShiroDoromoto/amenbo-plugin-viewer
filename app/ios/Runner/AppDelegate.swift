@@ -14,5 +14,7 @@ import UIKit
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
     ICloudFolderBridge.register(
       with: engineBridge.pluginRegistry.registrar(forPlugin: ICloudFolderBridge.channelName)!)
+    FileProtectionBridge.register(
+      with: engineBridge.pluginRegistry.registrar(forPlugin: FileProtectionBridge.channelName)!)
   }
 }
