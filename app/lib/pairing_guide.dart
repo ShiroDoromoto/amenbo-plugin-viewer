@@ -7,9 +7,10 @@
 /// usefully offer until a route exists.
 ///
 /// The setup happens on the PC, in amenbo itself; nothing here can start it. That is why the
-/// screen carries steps rather than buttons: the one action the app will own — picking the iCloud
-/// folder, reading the QR code — arrives with the route it belongs to, and a button that did
-/// nothing would be worse than no button.
+/// screen carries steps rather than buttons: the one action the app will own — reading the QR
+/// code — arrives with the route it belongs to, and a button that did nothing would be worse
+/// than no button. The iCloud route owns no action at all: the phone is holding up its end by
+/// having been opened once.
 ///
 /// It knows nothing about the contract. No snapshot format, no cipher, no QR payload. That is
 /// deliberate: it means this screen is finished while the other three parts are not, which is the
@@ -41,15 +42,15 @@ class PairingRoute {
   final String cost;
   final List<String> steps;
 
-  /// mac and iPhone. iOS only — no other provider hands a folder to the picker, and Android has
-  /// no equivalent at all.
+  /// mac and iPhone. iOS only — the place both ends meet is this app's own iCloud container, and
+  /// Android has no equivalent at all.
   static const iCloud = PairingRoute(
     name: 'iCloud Drive',
     who: 'A Mac and an iPhone, both signed in to the same iCloud.',
     cost: 'Nothing to sign up for.',
     steps: [
-      'In amenbo on your Mac, turn on the iCloud route and pick a folder.',
-      'Come back here and pick that same folder.',
+      'In amenbo on your Mac, turn on the iCloud route.',
+      'Nothing to do on this phone. Opening the app is what made the place to write to.',
     ],
   );
 

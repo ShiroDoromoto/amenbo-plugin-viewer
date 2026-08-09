@@ -50,6 +50,11 @@ dependencies:
   # Where that file goes: application support, which is neither backed up nor shown as documents.
   path_provider: ^2.1.6
 
+  # The Cloudflare route's only reason for being here is `Client`: it is the seam the intake is
+  # handed, so the pages can be checked against answers written by hand rather than against a
+  # socket. `dart:io` would do the fetching just as well and leave nothing to stand in for it.
+  http: ^1.6.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

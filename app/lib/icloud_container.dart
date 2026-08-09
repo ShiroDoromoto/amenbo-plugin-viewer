@@ -1,6 +1,6 @@
-/// The Dart side of the iCloud Drive folder path.
+/// The Dart side of the iCloud path.
 ///
-/// iOS only. The work is in [`ios/Runner/ICloudFolderBridge.swift`]; this is the calling side,
+/// iOS only. The work is in [`ios/Runner/ICloudContainerBridge.swift`]; this is the calling side,
 /// which turns the channel's maps into types the rest of the app can hold.
 library;
 
@@ -10,7 +10,7 @@ import 'package:flutter/services.dart';
 ///
 /// [notDownloaded] is the state the whole path exists for: the file is listed, has a size, and
 /// its bytes are not here. [unknown] means the system does not treat the item as an iCloud item
-/// at all — a file in a local folder, for instance.
+/// at all.
 enum DownloadStatus {
   notDownloaded('NSURLUbiquitousItemDownloadingStatusNotDownloaded'),
   downloaded('NSURLUbiquitousItemDownloadingStatusDownloaded'),
@@ -27,41 +27,30 @@ enum DownloadStatus {
   );
 }
 
-/// Whether a folder is being held, and which one.
-class FolderStatus {
-  const FolderStatus({
-    required this.saved,
-    this.path,
-    this.name,
-    this.wasStale = false,
-    this.reachable = false,
-  });
+/// Whether the app's iCloud container can be reached.
+///
+/// [available] false is a normal state, not a failure: the person is signed out of iCloud, or
+/// iCloud Drive is off. There is nothing to pick and nothing to repair in the app — the answer
+/// lives in the system settings.
+class ContainerStatus {
+  const ContainerStatus({required this.available, this.path});
 
-  /// A bookmark is stored. This is what survives a restart; [reachable] is whether it still
-  /// resolves to something the app may read.
-  final bool saved;
+  final bool available;
+
+  /// The directory both sides agree on — the container's `Documents/`, which the Mac writes into.
   final String? path;
-  final String? name;
 
-  /// iOS reported the bookmark as stale and it was rewritten. Normal after the folder moves or
-  /// the app is updated — not a failure.
-  final bool wasStale;
-  final bool reachable;
+  static const unavailable = ContainerStatus(available: false);
 
-  static const none = FolderStatus(saved: false);
-
-  factory FolderStatus.fromMap(Map<Object?, Object?> map) => FolderStatus(
-    saved: map['saved'] as bool? ?? false,
+  factory ContainerStatus.fromMap(Map<Object?, Object?> map) => ContainerStatus(
+    available: map['available'] as bool? ?? false,
     path: map['path'] as String?,
-    name: map['name'] as String?,
-    wasStale: map['wasStale'] as bool? ?? false,
-    reachable: map['reachable'] as bool? ?? false,
   );
 }
 
-/// One entry in the chosen folder.
-class FolderEntry {
-  const FolderEntry({
+/// One entry in the container.
+class ContainerEntry {
+  const ContainerEntry({
     required this.name,
     required this.isDirectory,
     required this.bytes,
@@ -73,11 +62,11 @@ class FolderEntry {
   final bool isDirectory;
   final int bytes;
 
-  /// The item lives in iCloud. False for anything the picker reached outside it.
+  /// The item lives in iCloud. False for anything the system does not treat as an iCloud item.
   final bool ubiquitous;
   final DownloadStatus status;
 
-  factory FolderEntry.fromMap(Map<Object?, Object?> map) => FolderEntry(
+  factory ContainerEntry.fromMap(Map<Object?, Object?> map) => ContainerEntry(
     name: map['name'] as String? ?? '',
     isDirectory: map['isDirectory'] as bool? ?? false,
     bytes: map['bytes'] as int? ?? 0,
@@ -89,8 +78,8 @@ class FolderEntry {
 /// The result of reading one file, with the download status on either side of the read.
 ///
 /// [statusBefore] is the interesting half: a read that started at [DownloadStatus.notDownloaded]
-/// and came back with bytes is the third requirement met. [statusAfter] lags behind the bytes and
-/// is often still [DownloadStatus.notDownloaded] right after a read that succeeded.
+/// and came back with bytes is the requirement met. [statusAfter] lags behind the bytes and is
+/// often still [DownloadStatus.notDownloaded] right after a read that succeeded.
 class FileRead {
   const FileRead({
     required this.name,
@@ -118,36 +107,33 @@ class FileRead {
   );
 }
 
-/// A folder in iCloud Drive the user picked once, read as often as needed afterwards.
-class ICloudFolder {
-  const ICloudFolder._();
+/// The app's own iCloud container, read without anyone choosing anything.
+class ICloudContainer {
+  const ICloudContainer._();
 
-  static const _channel = MethodChannel('work.amenbo.viewer/icloud_folder');
+  static const _channel = MethodChannel('work.amenbo.viewer/icloud_container');
 
-  /// Shows the system folder picker. Returns null if the user backed out.
+  /// Whether the container resolves, and where it landed.
   ///
-  /// Called once. Everything after this goes through the stored bookmark.
-  static Future<FolderStatus?> pick() async {
-    final result = await _channel.invokeMethod<Map<Object?, Object?>>('pick');
-    if (result == null) return null;
-    return FolderStatus.fromMap(result);
-  }
-
-  static Future<FolderStatus> status() async {
+  /// Asking is also what creates the directory the Mac writes into, so this is worth calling on
+  /// launch even when nothing is going to be read.
+  static Future<ContainerStatus> status() async {
     final result = await _channel.invokeMethod<Map<Object?, Object?>>('status');
-    return result == null ? FolderStatus.none : FolderStatus.fromMap(result);
+    return result == null
+        ? ContainerStatus.unavailable
+        : ContainerStatus.fromMap(result);
   }
 
-  /// Lists the folder through a coordinated read.
-  static Future<List<FolderEntry>> list() async {
+  /// Lists the container through a coordinated read.
+  static Future<List<ContainerEntry>> list() async {
     final result = await _channel.invokeMethod<Map<Object?, Object?>>('list');
     final entries = result?['entries'] as List<Object?>? ?? const [];
     return entries
-        .map((entry) => FolderEntry.fromMap(entry! as Map<Object?, Object?>))
+        .map((entry) => ContainerEntry.fromMap(entry! as Map<Object?, Object?>))
         .toList(growable: false);
   }
 
-  /// Reads one file out of the folder, waiting for iCloud to hand over the contents if the
+  /// Reads one file out of the container, waiting for iCloud to hand over the contents if the
   /// device is not holding them.
   static Future<FileRead> read(String name) async {
     final result = await _channel.invokeMethod<Map<Object?, Object?>>('read', {
@@ -155,7 +141,4 @@ class ICloudFolder {
     });
     return FileRead.fromMap(result ?? const {});
   }
-
-  /// Drops the bookmark. The next read needs a fresh [pick].
-  static Future<void> forget() => _channel.invokeMethod<void>('forget');
 }
