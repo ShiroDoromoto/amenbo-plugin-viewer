@@ -240,6 +240,7 @@ class TaskQuery {
     this.bundle,
     this.valueId,
     this.changedSince,
+    this.moved,
     this.projectId,
   });
 
@@ -252,6 +253,13 @@ class TaskQuery {
 
   /// Only what moved after this instant — what the "since you last looked" card opens into.
   final DateTime? changedSince;
+
+  /// Which of the three shapes of change [changedSince] means, or null for any change at all.
+  ///
+  /// The card counts three numbers and each one is its own way in, so a number pressed has to
+  /// land on the rows it counted. Without this they would all open the same list, and two of the
+  /// three would be lying about what they had counted.
+  final Moved? moved;
 
   /// Every project on the machine arrives, so every face has to be able to narrow to one.
   final int? projectId;
@@ -819,7 +827,18 @@ List<Object?> _orderArgs(Bundle bundle, DateTime today) =>
     args.add(query.valueId);
   }
   if (query.changedSince != null) {
-    clauses.add('t.updated_at > ?');
+    // The card counts comments where this counts tasks: a task written on three times is three
+    // of the card's number and one row to open, which is the only row there could be.
+    clauses.add(switch (query.moved) {
+      null => 't.updated_at > ?',
+      Moved.finished =>
+        "(t.status IN ('done', 'rejected') "
+            'AND COALESCE(t.completed_at, t.status_changed_at, t.updated_at) > ?)',
+      Moved.filed => 't.created_at > ?',
+      Moved.commented =>
+        'EXISTS (SELECT 1 FROM task_comment c '
+            'WHERE c.task_id = t.id AND c.created_at > ?)',
+    });
     args.add(amenboStamp(query.changedSince!));
   }
   if (query.projectId != null) {

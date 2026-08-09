@@ -69,10 +69,15 @@ class NowScreen extends StatefulWidget {
   final void Function(TaskLine line) onOpen;
 
   /// The rest of a bundle, past the window the screen holds.
-  final void Function(Bundle bundle) onMore;
+  ///
+  /// It hands over a query rather than a bundle because what the person is holding is the bundle
+  /// *and* whatever project they narrowed to, and a list that quietly widened back out would not
+  /// be the rest of what they were reading.
+  final void Function(TaskQuery narrowing) onMore;
 
-  /// One number on the card, opened into the list of just what it counted.
-  final void Function(Moved moved) onSince;
+  /// One number on the card, opened into the list of just what it counted — same face, and the
+  /// same narrowing, as everything else that leaves this screen.
+  final void Function(TaskQuery narrowing) onSince;
 
   /// How the last round of the intake ended, or null where it did not fail. It decides the band
   /// at the top; it never decides whether the list is drawn.
@@ -225,6 +230,19 @@ class _NowScreenState extends State<NowScreen> with WidgetsBindingObserver {
 
   /// Counted inside the narrowing the screen is holding, or a number the person presses opens a
   /// list that does not hold that many.
+  /// A number on the card, as the query that opens exactly what it counted.
+  ///
+  /// The instant is the one the card counted from, not "now": the card is read minutes after it
+  /// was drawn, and a list counted from a fresher moment would come back shorter than the number
+  /// that was pressed.
+  void _openSince(Moved moved) {
+    final since = DateTime.tryParse(_lastLooked ?? '');
+    if (since == null) return;
+    widget.onSince(
+      TaskQuery(changedSince: since, moved: moved, projectId: _projectId),
+    );
+  }
+
   void _countSinceLook() {
     final since = _lastLooked;
     _sinceCounts = since == null
@@ -400,7 +418,7 @@ class _NowScreenState extends State<NowScreen> with WidgetsBindingObserver {
       // Then the card, because the person who opens this in bed is asking what happened overnight
       // before they are asking anything else.
       if (_sinceCounts.isNotEmpty)
-        _SinceCard(counts: _sinceCounts, onOpen: widget.onSince),
+        _SinceCard(counts: _sinceCounts, onOpen: _openSince),
     ];
     for (final bundle in Bundle.values) {
       final held = _bundles[bundle]!;
@@ -446,7 +464,8 @@ class _NowScreenState extends State<NowScreen> with WidgetsBindingObserver {
         rows.add(
           _MoreRow(
             label: NowScreen.more(rest, overflowed: held.total.overflowed),
-            onTap: () => widget.onMore(bundle),
+            onTap: () =>
+                widget.onMore(TaskQuery(bundle: bundle, projectId: _projectId)),
           ),
         );
       }

@@ -37,7 +37,7 @@ Future<void> main() async {
 
   // The same start the real entrypoint makes, so what is dumped is the app as it runs and not a
   // second assembly of it that could drift.
-  runApp(AmenboViewerApp(settings: await openSettings()));
+  runApp(await openViewer());
 
   () async {
     await Future<void>.delayed(_settle);

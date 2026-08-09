@@ -21,7 +21,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import 'now_screen.dart' show bundleHeading;
+import 'now_screen.dart' show bundleHeading, movedHeading;
 import 'store/backlog_queries.dart';
 import 'store/backlog_store.dart';
 import 'store/recents.dart';
@@ -77,6 +77,12 @@ class SearchScreen extends StatefulWidget {
   /// behind them.
   static const sinceYouLooked = 'Since you last looked';
 
+  /// The same narrowing, said with the number it came from — the card has three, and a chip that
+  /// said only "since you last looked" would not say which one was pressed.
+  static String since(Moved? moved) => moved == null
+      ? sinceYouLooked
+      : '${movedHeading(moved)} since you last looked';
+
   static String tab(String name, Counted count) => '$name ${countLabel(count)}';
 
   @override
@@ -96,6 +102,7 @@ class _SearchScreenState extends State<SearchScreen>
   Bundle? _bundle;
   int? _valueId;
   DateTime? _changedSince;
+  Moved? _moved;
   int? _projectId;
 
   var _projects = const <({int id, String name})>[];
@@ -122,6 +129,7 @@ class _SearchScreenState extends State<SearchScreen>
     _bundle = widget.narrowing.bundle;
     _valueId = widget.narrowing.valueId;
     _changedSince = widget.narrowing.changedSince;
+    _moved = widget.narrowing.moved;
     _projectId = widget.narrowing.projectId;
     _text = widget.narrowing.text ?? '';
     _field.text = _text;
@@ -145,6 +153,7 @@ class _SearchScreenState extends State<SearchScreen>
     bundle: _bundle,
     valueId: _valueId,
     changedSince: _changedSince,
+    moved: _moved,
     projectId: _projectId,
   );
 
@@ -271,9 +280,10 @@ class _SearchScreenState extends State<SearchScreen>
       ),
     if (_changedSince != null)
       (
-        label: SearchScreen.sinceYouLooked,
+        label: SearchScreen.since(_moved),
         off: () => setState(() {
           _changedSince = null;
+          _moved = null;
           _load();
         }),
       ),

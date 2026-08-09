@@ -1,0 +1,383 @@
+/// What the app opens on, and where everything leads.
+///
+/// The screens were each built to be handed what they need and to hand back what was pressed, so
+/// until something joined them up none of them could be reached. This is that joining, and it is
+/// two decisions.
+///
+/// **Which screen the app opens on.** A phone with no way in gets the guide — not an empty list,
+/// which cannot say what to do about itself. A phone that has a way in, either a pairing it was
+/// given or rows that already arrived, gets its backlog. Pairing runs straight into the first
+/// sync and comes out on the front screen; erasing goes back to the guide.
+///
+/// **Where the ways out go.** Three tabs across the bottom, because the thumb of a hand holding a
+/// phone reaches the bottom half and a menu at the top does not exist for someone standing on a
+/// train. Everything that opens a list opens the one list face; everything that opens a task opens
+/// the one detail. Where there is width for it, what was opened sits beside the list it was
+/// opened from rather than on top of it.
+library;
+
+import 'package:flutter/material.dart';
+
+import 'cloudflare_intake.dart';
+import 'connection.dart';
+import 'first_sync.dart';
+import 'icloud_container.dart';
+import 'now_screen.dart';
+import 'pairing_guide.dart';
+import 'pairing_scan.dart';
+import 'pairing_store.dart';
+import 'search_screen.dart';
+import 'settings.dart';
+import 'settings_screen.dart';
+import 'store/backlog_queries.dart';
+import 'store/backlog_store.dart';
+import 'task_detail.dart';
+import 'ui/two_pane.dart';
+
+/// One round against the place, for the pairing this phone holds.
+///
+/// Handed in rather than built here, so the root can be walked with no network behind it.
+typedef Rounds = TakeTheBacklog Function(Pairing pairing);
+
+class ViewerHome extends StatefulWidget {
+  const ViewerHome({
+    super.key,
+    required this.store,
+    required this.settings,
+    required this.appName,
+    this.pairings = const PairingStore(),
+    this.hasICloud = false,
+    this.rounds,
+    this.clock = DateTime.now,
+  });
+
+  final BacklogStore store;
+  final SettingsController settings;
+  final String appName;
+  final PairingStore pairings;
+
+  /// Whether this build runs somewhere with an iCloud container — iOS. Passed in rather than read
+  /// from `dart:io`, so the Android answer is reachable from a Mac.
+  final bool hasICloud;
+
+  final Rounds? rounds;
+  final DateTime Function() clock;
+
+  @override
+  State<ViewerHome> createState() => _ViewerHomeState();
+}
+
+class _ViewerHomeState extends State<ViewerHome> {
+  Pairing? _pairing;
+
+  /// Whether the container answers, on a phone that has one and was never paired. Null everywhere
+  /// else, where it is not a fact about this phone's route at all.
+  bool? _iCloudAvailable;
+
+  /// Whether the keychain has been read yet. It is a file on the device, not a request.
+  bool _looked = false;
+
+  /// How the last round ended, for the band at the top of the front screen.
+  IntakeFailure? _failure;
+
+  @override
+  void initState() {
+    super.initState();
+    _look();
+  }
+
+  Future<void> _look() async {
+    final pairing = await widget.pairings.read();
+    // A pairing is this phone having been pointed at a Worker on purpose, so it settles the route
+    // — the same rule the connection screen reads by.
+    final available = pairing == null && widget.hasICloud
+        ? (await ICloudContainer.status()).available
+        : null;
+    if (!mounted) return;
+    setState(() {
+      _pairing = pairing;
+      _iCloudAvailable = available;
+      _looked = true;
+    });
+  }
+
+  /// Goes and takes a round, for the pull on the front screen.
+  ///
+  /// Null on a phone with no pairing: the iCloud route is read by nobody yet, and a pull that
+  /// silently did nothing would be worse than a list that does not offer one.
+  Future<void> Function()? get _take {
+    final pairing = _pairing;
+    if (pairing == null) return null;
+    return () async {
+      try {
+        await _rounds(pairing)((_) {});
+        if (mounted) setState(() => _failure = null);
+      } on IntakeException catch (stopped) {
+        // The list keeps what it had. Which line the band shows is decided from this.
+        if (mounted) setState(() => _failure = stopped.failure);
+      }
+    };
+  }
+
+  TakeTheBacklog _rounds(Pairing pairing) =>
+      widget.rounds?.call(pairing) ??
+      (watching) => CloudflareIntake(
+        pairing: pairing,
+        store: widget.store,
+      ).run(watching: watching);
+
+  /// A code was read. The first round is the one wait long enough to be worth a screen, so it gets
+  /// one, and what it comes back to is the backlog rather than a report that it arrived.
+  Future<void> _paired(Pairing pairing) async {
+    setState(() {
+      _pairing = pairing;
+      _iCloudAvailable = null;
+      _failure = null;
+    });
+    await Navigator.of(context).push<IntakeReport>(
+      MaterialPageRoute(
+        builder: (_) => FirstSyncScreen(take: _rounds(pairing)),
+      ),
+    );
+    if (mounted) setState(() {});
+  }
+
+  /// A fresh code, from the band that says this device was turned away. The scanning screen keeps
+  /// what it read, so what is left here is the first round against the new place.
+  Future<void> _pairAgain() async {
+    final pairing = await Navigator.of(context).push<Pairing>(
+      MaterialPageRoute(builder: (_) => const PairingScanScreen()),
+    );
+    if (pairing == null || !mounted) return;
+    await _paired(pairing);
+  }
+
+  /// This phone's copy is gone, and with it the way in. What is left to show is the guide, and the
+  /// phone is asked about itself again — a phone that can read a container is back on that route.
+  void _erased() {
+    setState(() {
+      _pairing = null;
+      _failure = null;
+    });
+    _look();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Nothing is drawn while the keychain is read: a guide that appeared and vanished a frame
+    // later would be the app telling the person they are not set up and then taking it back.
+    if (!_looked) return const Scaffold(body: SizedBox.shrink());
+    final pairing = _pairing;
+    // The guide is for a phone with no way in. Rows already here are a way in of their own — the
+    // iCloud route is set up entirely on the Mac, so there is nothing this phone was asked to do.
+    if (pairing == null && widget.store.latestTaskChange() == null) {
+      return PairingGuideScreen(appName: widget.appName, onPaired: _paired);
+    }
+    return HomeShell(
+      store: widget.store,
+      settings: widget.settings,
+      connection: PhoneConnection(
+        store: widget.store,
+        pairings: widget.pairings,
+        hasICloud: widget.hasICloud,
+      ),
+      appName: widget.appName,
+      take: _take,
+      failure: _failure,
+      iCloudAvailable: _iCloudAvailable,
+      onPairAgain: _pairAgain,
+      onErased: _erased,
+      clock: widget.clock,
+    );
+  }
+}
+
+/// The three screens, and the destinations they share.
+class HomeShell extends StatefulWidget {
+  const HomeShell({
+    super.key,
+    required this.store,
+    required this.settings,
+    required this.connection,
+    required this.appName,
+    this.take,
+    this.failure,
+    this.iCloudAvailable,
+    this.onPairAgain,
+    this.onErased,
+    this.clock = DateTime.now,
+  });
+
+  final BacklogStore store;
+  final SettingsController settings;
+  final ConnectionFacts connection;
+  final String appName;
+  final Future<void> Function()? take;
+  final IntakeFailure? failure;
+  final bool? iCloudAvailable;
+  final VoidCallback? onPairAgain;
+  final VoidCallback? onErased;
+  final DateTime Function() clock;
+
+  static const now = 'Now';
+  static const search = 'Search';
+  static const settingsTab = 'Settings';
+
+  /// What the right-hand side says while nothing has been opened into it. Only ever seen where
+  /// there are two panes.
+  static const nothingOpen = 'Open something to read it here';
+
+  @override
+  State<HomeShell> createState() => _HomeShellState();
+}
+
+class _HomeShellState extends State<HomeShell> {
+  int _tab = 0;
+
+  /// How many times the search tab has been arrived at. It keys the screen, so each visit is a
+  /// fresh one: search starts from everything, and a narrowing carried over from a screen the
+  /// person left would be one they did not ask for.
+  int _visits = 0;
+
+  /// What is open beside the list, on a screen wide enough to hold both. Null on a phone held
+  /// upright, where opening pushes instead and the back gesture is the way out.
+  int? _besideTaskId;
+
+  bool get _wide => MediaQuery.sizeOf(context).width >= twoPaneWidth;
+
+  /// Opens a task from one of the tabs: beside the list where there is room, on top of it where
+  /// there is not.
+  void _open(int taskId) {
+    if (_wide) {
+      setState(() => _besideTaskId = taskId);
+      return;
+    }
+    _push(taskId);
+  }
+
+  /// Opens a task from a screen that is itself pushed. Whatever is beside the list is behind two
+  /// routes by now, and putting it there would be putting it out of sight.
+  void _push(int taskId) => Navigator.of(
+    context,
+  ).push(MaterialPageRoute(builder: (_) => _detail(taskId, opens: _push)));
+
+  /// The one list face, opened with whatever narrowing was pressed.
+  void _list(TaskQuery narrowing) => Navigator.of(context).push(
+    MaterialPageRoute(builder: (_) => _searchFace(narrowing, opens: _push)),
+  );
+
+  /// A decision, from a task that links one or from the other tab of the search face.
+  ///
+  /// Nothing opens yet: the screen that reads a decision is being built. This is the one place it
+  /// will be reached from.
+  void _openDecision(int decisionId) {}
+
+  Widget _detail(int taskId, {required void Function(int taskId) opens}) =>
+      TaskDetailScreen(
+        store: widget.store,
+        taskId: taskId,
+        clock: widget.clock,
+        onOpenTask: opens,
+        onOpenDecision: _openDecision,
+        onProject: (projectId) => _list(TaskQuery(projectId: projectId)),
+        onValue: (valueId) => _list(TaskQuery(valueId: valueId)),
+      );
+
+  /// The one list face. [opens] is how a row is opened: pushed where the face itself was pushed,
+  /// beside the list where it is the tab.
+  Widget _searchFace(
+    TaskQuery narrowing, {
+    required void Function(int taskId) opens,
+  }) => SearchScreen(
+    store: widget.store,
+    narrowing: narrowing,
+    clock: widget.clock,
+    onOpenTask: (line) => opens(line.id),
+    onOpenDecision: (line) => _openDecision(line.id),
+  );
+
+  /// A tab's list, with what it opened beside it once there is width for two.
+  Widget _pane(Widget list) => TwoPane(
+    list: list,
+    detail: _besideTaskId == null
+        ? null
+        : _detail(
+            _besideTaskId!,
+            opens: (id) => setState(() => _besideTaskId = id),
+          ),
+    placeholder: Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Text(
+          HomeShell.nothingOpen,
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ),
+    ),
+  );
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    // The three keep their state while the person moves between them — the front screen most of
+    // all, which counts from the moment the app came to the front and would count from a new one
+    // every time it was rebuilt.
+    body: IndexedStack(
+      index: _tab,
+      children: [
+        _pane(
+          NowScreen(
+            store: widget.store,
+            clock: widget.clock,
+            take: widget.take,
+            failure: widget.failure,
+            iCloudAvailable: widget.iCloudAvailable,
+            onOpen: (line) => _open(line.id),
+            onMore: _list,
+            onSince: _list,
+            onPairAgain: widget.onPairAgain,
+            onOpenSettings: () => setState(() => _tab = 2),
+          ),
+        ),
+        KeyedSubtree(
+          key: ValueKey(_visits),
+          child: _pane(_searchFace(const TaskQuery(), opens: _open)),
+        ),
+        SettingsScreen(
+          settings: widget.settings,
+          connection: widget.connection,
+          appName: widget.appName,
+          onErased: widget.onErased,
+        ),
+      ],
+    ),
+    bottomNavigationBar: NavigationBar(
+      selectedIndex: _tab,
+      onDestinationSelected: (chosen) => setState(() {
+        _tab = chosen;
+        // What was open belonged to the list being left.
+        _besideTaskId = null;
+        if (chosen == 1) _visits += 1;
+      }),
+      destinations: const [
+        NavigationDestination(
+          icon: Icon(Icons.list_alt_outlined),
+          selectedIcon: Icon(Icons.list_alt),
+          label: HomeShell.now,
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.search_outlined),
+          selectedIcon: Icon(Icons.search),
+          label: HomeShell.search,
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.settings_outlined),
+          selectedIcon: Icon(Icons.settings),
+          label: HomeShell.settingsTab,
+        ),
+      ],
+    ),
+  );
+}
