@@ -4,17 +4,10 @@
   "tabSearch": "Suchen",
   "nothingOpen": "Öffne etwas, um es hier zu lesen",
 
-  "movedFinished": "Erledigt",
-  "movedFiled": "Neu",
-  "movedCommented": "Kommentare",
-
   "allProjects": "Alle Projekte",
   "chooseProject": "Projekt wählen",
   "refresh": "Abrufen",
   "newActivity": "Neue Aktivität · {count}",
-  "sinceLastLook": "Seit deinem letzten Blick",
-  "sinceLastLookSpoken": "seit deinem letzten Blick",
-  "sinceMoved": "{name} seit deinem letzten Blick",
 
   "standingTooNew": "Dein PC schreibt ein neueres Format, als diese App liest",
   "standingUnreadable": "Der Schlüssel dieses Geräts öffnet nicht, was angekommen ist",
@@ -50,7 +43,6 @@
   "dueToday": "Heute fällig",
   "dueOn": "Fällig {day}",
 
-  "rowUnread": "ungelesen",
   "rowAssignedToAi": "der KI zugewiesen",
   "markAi": "KI",
   "markYou": "Du",
@@ -111,7 +103,7 @@
   "appearanceHeading": "Darstellung",
   "refreshNote": "Automatisch heißt: beim Öffnen der App und bei der Rückkehr zu ihr. Im Hintergrund läuft nie etwas.",
   "refreshAutomatic": "Automatisch",
-  "refreshManualOnly": "Nur wenn ich nach unten ziehe",
+  "refreshManualOnly": "Nur wenn ich es anfordere",
   "appearanceSystem": "Wie das Telefon",
   "appearanceLight": "Hell",
   "appearanceDark": "Dunkel",

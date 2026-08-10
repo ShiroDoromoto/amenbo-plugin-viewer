@@ -4,17 +4,10 @@
   "tabSearch": "खोजें",
   "nothingOpen": "कुछ खोलिए, वह यहाँ पढ़ने को मिलेगा",
 
-  "movedFinished": "पूरे हुए",
-  "movedFiled": "नए",
-  "movedCommented": "टिप्पणियाँ",
-
   "allProjects": "सभी प्रोजेक्ट",
   "chooseProject": "प्रोजेक्ट चुनें",
   "refresh": "लाएँ",
   "newActivity": "नई हलचल · {count}",
-  "sinceLastLook": "पिछली बार देखने के बाद से",
-  "sinceLastLookSpoken": "पिछली बार देखने के बाद से",
-  "sinceMoved": "पिछली बार देखने के बाद से {name}",
 
   "standingTooNew": "आपका पीसी जिस रूप में लिख रहा है, यह ऐप उससे पुराना पढ़ता है",
   "standingUnreadable": "जो आया है, उसे इस डिवाइस की कुंजी नहीं खोलती",
@@ -50,7 +43,6 @@
   "dueToday": "आज तक",
   "dueOn": "{day} तक",
 
-  "rowUnread": "बिना पढ़ा",
   "rowAssignedToAi": "एआई को सौंपा गया",
   "markAi": "एआई",
   "markYou": "आप",
@@ -111,7 +103,7 @@
   "appearanceHeading": "रूप",
   "refreshNote": "अपने आप का मतलब है ऐप खुलने पर और उस पर लौटने पर। पृष्ठभूमि में यह कभी नहीं चलता।",
   "refreshAutomatic": "अपने आप",
-  "refreshManualOnly": "सिर्फ़ जब मैं नीचे खींचूँ",
+  "refreshManualOnly": "सिर्फ़ जब मैं कहूँ",
   "appearanceSystem": "फ़ोन जैसा",
   "appearanceLight": "उजला",
   "appearanceDark": "गहरा",

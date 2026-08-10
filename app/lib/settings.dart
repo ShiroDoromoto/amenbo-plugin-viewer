@@ -11,7 +11,7 @@
 ///
 /// **There is no refresh interval.** The app is not resident and never wakes itself, so an
 /// interval would be a number that does nothing. Automatic means launch and coming back to the
-/// front, and the alternative is not a slower version of that but pulling the list down by hand.
+/// front, and the alternative is not a slower version of that but asking for it by hand.
 ///
 /// The choices are this device's own, not the place's, so they are kept beside the cursor rather
 /// than inside it: throwing the local copy away and taking it again leaves them standing.
@@ -27,7 +27,8 @@ enum Refresh {
   /// On launch and on coming back to the front, and at no other moment.
   automatic('automatic'),
 
-  /// Only when the person pulls the list down.
+  /// Only when the person asks — the way out at the top of the front screen, or a pull. Both
+  /// stay whichever choice is made; this settles the app going on its own, and nothing else.
   manualOnly('manual');
 
   const Refresh(this.stored);

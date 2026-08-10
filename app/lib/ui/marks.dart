@@ -1,4 +1,4 @@
-/// The small marks a row wears — priority, state, lateness, unread, who is on it.
+/// The small marks a row wears — priority, state, lateness, who is on it.
 ///
 /// **None of them says anything with colour alone.** The screen is read at night, at arm's
 /// length, and by people who do not separate the colours the same way, so every mark carries a
@@ -55,36 +55,27 @@ class PriorityMark extends StatelessWidget {
 /// full / half / hollow, the word is in the sentence a screen reader is given ([rowLabel]), and
 /// nothing here is allowed to grow sideways.
 class RowLead extends StatelessWidget {
-  const RowLead({super.key, this.unread = false, this.priority});
+  const RowLead({super.key, this.priority});
 
-  final bool unread;
   final String? priority;
 
-  /// Two slots and the gap that separates the column from the title.
-  static const width = Space.s5 * 2 + Space.s3;
+  /// One slot and the gap that separates the column from the title.
+  static const width = Space.s5 + Space.s3;
 
   @override
   Widget build(BuildContext context) => ExcludeSemantics(
     child: Padding(
-      // Sits the marks on the first line of the title rather than on the top of its line box.
+      // Sits the mark on the first line of the title rather than on the top of its line box.
       padding: const EdgeInsets.only(top: Space.hair),
       child: SizedBox(
         width: width,
-        child: Row(
-          children: [
-            UnreadDot(unread: unread),
-            SizedBox(
-              width: Space.s5,
-              child: priority == null
-                  ? null
-                  : Icon(
-                      priorityLook(context, priority!).$1,
-                      size: Space.s4,
-                      color: priorityLook(context, priority!).$2,
-                    ),
-            ),
-          ],
-        ),
+        child: priority == null
+            ? null
+            : Icon(
+                priorityLook(context, priority!).$1,
+                size: Space.s4,
+                color: priorityLook(context, priority!).$2,
+              ),
       ),
     ),
   );
@@ -245,31 +236,6 @@ String dueLabel(TimeFace face, String dueOn, {required DateTime today}) {
   return words.dueOn(dayLabel(face, dueOn, now: today));
 }
 
-/// Not read since the person last looked.
-///
-/// A filled dot against nothing at all, so it reads as present or absent without needing the
-/// colour to be seen — and it is the one mark that carries no word, because a row with nothing
-/// new about it must not say "read".
-class UnreadDot extends StatelessWidget {
-  const UnreadDot({super.key, required this.unread});
-
-  final bool unread;
-
-  @override
-  Widget build(BuildContext context) => ExcludeSemantics(
-    child: SizedBox(
-      width: Space.s5,
-      child: unread
-          ? Icon(
-              Icons.circle,
-              size: Space.s3,
-              color: Theme.of(context).colorScheme.primary,
-            )
-          : null,
-    ),
-  );
-}
-
 /// One line of text and its glyph.
 class _Mark extends StatelessWidget {
   const _Mark({required this.icon, required this.colour, required this.text});
@@ -313,7 +279,6 @@ String rowLabel(
   required String title,
   required String status,
   String? priority,
-  bool unread = false,
   String? assigneeKind,
   int comments = 0,
   String? due,
@@ -322,7 +287,6 @@ String rowLabel(
   String? when,
   String? excerpt,
 }) => [
-  if (unread) words.rowUnread,
   ref,
   title,
   // Only where the row shows it — a list narrowed to one project would otherwise say the same

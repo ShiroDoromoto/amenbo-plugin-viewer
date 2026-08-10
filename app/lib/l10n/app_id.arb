@@ -4,17 +4,10 @@
   "tabSearch": "Cari",
   "nothingOpen": "Buka sesuatu untuk dibaca di sini",
 
-  "movedFinished": "Selesai",
-  "movedFiled": "Baru",
-  "movedCommented": "Komentar",
-
   "allProjects": "Semua proyek",
   "chooseProject": "Pilih proyek",
   "refresh": "Ambil",
   "newActivity": "Ada yang baru · {count}",
-  "sinceLastLook": "Sejak terakhir kamu melihat",
-  "sinceLastLookSpoken": "sejak terakhir kamu melihat",
-  "sinceMoved": "{name} sejak terakhir kamu melihat",
 
   "standingTooNew": "PC-mu menulis dalam format yang lebih baru daripada yang dibaca aplikasi ini",
   "standingUnreadable": "Kunci perangkat ini tidak membuka apa yang datang",
@@ -50,7 +43,6 @@
   "dueToday": "Tenggat hari ini",
   "dueOn": "Tenggat {day}",
 
-  "rowUnread": "belum dibaca",
   "rowAssignedToAi": "diserahkan ke AI",
   "markAi": "AI",
   "markYou": "Kamu",
@@ -111,7 +103,7 @@
   "appearanceHeading": "Tampilan",
   "refreshNote": "Otomatis berarti saat aplikasi dibuka dan saat kamu kembali ke sana. Tidak pernah berjalan di latar belakang.",
   "refreshAutomatic": "Otomatis",
-  "refreshManualOnly": "Hanya saat saya tarik ke bawah",
+  "refreshManualOnly": "Hanya saat saya minta",
   "appearanceSystem": "Ikut ponsel",
   "appearanceLight": "Terang",
   "appearanceDark": "Gelap",

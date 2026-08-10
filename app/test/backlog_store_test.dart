@@ -110,16 +110,16 @@ void main() {
       expect(store.meta(MetaKey.version), '12345');
     });
 
-    test('a wipe drops the rows but not when the person last looked', () {
+    test('a wipe drops the rows but not what the person chose', () {
       store.applyPage([BacklogChange.put('task', 1, task(id: 1))], seq: 42);
-      store.setMeta(MetaKey.lastOpenedAt, '2026-08-09T06:00:00Z');
+      store.setMeta(MetaKey.appearance, 'dark');
 
       store.wipe();
 
       expect(store.taskCount(const TaskQuery()).value, 0);
       expect(store.seq, 0);
-      // The place being replaced says nothing about what the person has already read.
-      expect(store.meta(MetaKey.lastOpenedAt), '2026-08-09T06:00:00Z');
+      // The place being replaced says nothing about how the person wants the app to look.
+      expect(store.meta(MetaKey.appearance), 'dark');
     });
   });
 }

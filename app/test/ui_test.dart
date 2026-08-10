@@ -163,12 +163,11 @@ void main() {
         title: 'wire the store up',
         status: 'in_progress',
         priority: 'medium',
-        unread: true,
         assigneeKind: 'ai',
         comments: 5,
       );
 
-      expect(label, startsWith('unread, '));
+      expect(label, startsWith('${taskRef(2833)}, '));
       expect(label, contains('In progress'));
       expect(label, contains('Med priority'));
       expect(label, contains('assigned to AI'));
@@ -203,7 +202,6 @@ void main() {
             label: 'the whole row',
             child: Row(
               children: [
-                const UnreadDot(unread: true),
                 const PriorityMark('high'),
                 const Expanded(child: RowTitle('wire the store up')),
               ],
@@ -411,17 +409,12 @@ void main() {
       tester,
     ) async {
       final lefts = <double>{};
-      for (final (unread, priority) in [
-        (false, null),
-        (true, 'high'),
-        (false, 'low'),
-        (true, null),
-      ]) {
+      for (final priority in [null, 'high', 'low']) {
         await tester.pumpWidget(
           _wrap(
             Row(
               children: [
-                RowLead(unread: unread, priority: priority),
+                RowLead(priority: priority),
                 const Expanded(child: RowTitle('a task')),
               ],
             ),
@@ -429,7 +422,7 @@ void main() {
         );
         lefts.add(tester.getTopLeft(find.byType(RowTitle)).dx);
       }
-      // One place, for all four rows: the marks a row happens to wear are not allowed to move the
+      // One place, for all three rows: the mark a row happens to wear is not allowed to move the
       // column the eye is following.
       expect(lefts, hasLength(1));
     });

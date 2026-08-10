@@ -4,17 +4,10 @@
   "tabSearch": "Zoeken",
   "nothingOpen": "Open iets om het hier te lezen",
 
-  "movedFinished": "Afgerond",
-  "movedFiled": "Nieuw",
-  "movedCommented": "Reacties",
-
   "allProjects": "Alle projecten",
   "chooseProject": "Kies een project",
   "refresh": "Ophalen",
   "newActivity": "Nieuwe activiteit · {count}",
-  "sinceLastLook": "Sinds je laatste bezoek",
-  "sinceLastLookSpoken": "sinds je laatste bezoek",
-  "sinceMoved": "{name} sinds je laatste bezoek",
 
   "standingTooNew": "Je pc schrijft een nieuwer formaat dan deze app leest",
   "standingUnreadable": "De sleutel van dit toestel opent niet wat er is aangekomen",
@@ -50,7 +43,6 @@
   "dueToday": "Vandaag klaar",
   "dueOn": "Klaar op {day}",
 
-  "rowUnread": "ongelezen",
   "rowAssignedToAi": "toegewezen aan de AI",
   "markAi": "AI",
   "markYou": "Jij",
@@ -111,7 +103,7 @@
   "appearanceHeading": "Weergave",
   "refreshNote": "Automatisch betekent bij het openen van de app en als je ernaar terugkeert. Er draait nooit iets op de achtergrond.",
   "refreshAutomatic": "Automatisch",
-  "refreshManualOnly": "Alleen als ik naar beneden trek",
+  "refreshManualOnly": "Alleen als ik erom vraag",
   "appearanceSystem": "Zoals de telefoon",
   "appearanceLight": "Licht",
   "appearanceDark": "Donker",

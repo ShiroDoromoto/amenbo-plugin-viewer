@@ -6,32 +6,16 @@
   "nothingOpen": "Open something to read it here",
   "@nothingOpen": { "description": "The empty half of a two-pane screen, before anything has been opened into it." },
 
-  "movedFinished": "Finished",
-  "@movedFinished": { "description": "One of the three numbers on the card: work closed since the person last looked." },
-  "movedFiled": "New",
-  "@movedFiled": { "description": "One of the three numbers on the card: tasks filed since the person last looked." },
-  "movedCommented": "Comments",
-  "@movedCommented": { "description": "One of the three numbers on the card: comments added since the person last looked." },
-
   "allProjects": "All projects",
   "@allProjects": { "description": "The screen is not narrowed to one project." },
   "chooseProject": "Choose a project",
   "@chooseProject": { "description": "What the project menu is for." },
   "refresh": "Refresh",
-  "@refresh": { "description": "The button at the top of the front screen: go and look now. A verb the person is asking for, not a name for the screen." },
+  "@refresh": { "description": "The way out at the top of the front screen: go and look now. Drawn as circling arrows, so this is what it is read out and tipped as — a verb the person is asking for, not a name for the screen." },
   "newActivity": "New activity · {count}",
   "@newActivity": {
     "description": "The pill offering rows that landed behind the person's back.",
     "placeholders": { "count": { "type": "String" } }
-  },
-  "sinceLastLook": "Since you last looked",
-  "@sinceLastLook": { "description": "The card's heading, and the chip the list face wears when it was opened from one of its numbers." },
-  "sinceLastLookSpoken": "since you last looked",
-  "@sinceLastLookSpoken": { "description": "The same, read out at the end of a number on the card. Written rather than lower-cased, because case is not a thing every language does the same way." },
-  "sinceMoved": "{name} since you last looked",
-  "@sinceMoved": {
-    "description": "The chip for one of the card's three numbers, once the card is behind the person.",
-    "placeholders": { "name": { "type": "String" } }
   },
 
   "standingTooNew": "Your PC is writing a newer format than this app reads",
@@ -109,8 +93,6 @@
     "placeholders": { "day": { "type": "String" } }
   },
 
-  "rowUnread": "unread",
-  "@rowUnread": { "description": "Read out first on a row that has not been read. The dot itself carries no word on a row that has." },
   "rowAssignedToAi": "assigned to AI",
   "@rowAssignedToAi": { "description": "Read out as part of a row the AI holds." },
   "markAi": "AI",
@@ -257,8 +239,8 @@
   "@refreshNote": { "description": "The sentence that lets the refresh choice be made once and never revisited." },
   "refreshAutomatic": "Automatically",
   "@refreshAutomatic": { "description": "Fetch on launch and on coming back to the front." },
-  "refreshManualOnly": "Only when I pull to refresh",
-  "@refreshManualOnly": { "description": "Fetch only under the person's own thumb." },
+  "refreshManualOnly": "Only when I ask",
+  "@refreshManualOnly": { "description": "Fetch only when the person asks — the way out at the top of the front screen, or a pull. Named for the asking rather than for one of the two doors, because both stay whichever choice is made." },
   "appearanceSystem": "Match the phone",
   "@appearanceSystem": { "description": "Follow the OS's light or dark setting." },
   "appearanceLight": "Light",

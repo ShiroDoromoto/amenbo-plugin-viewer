@@ -9,7 +9,6 @@ import 'package:amenbo_viewer/store/backlog_store.dart';
 import 'package:amenbo_viewer/ui/task_row.dart';
 import 'package:amenbo_viewer/ui/theme.dart';
 import 'package:amenbo_viewer/ui/time.dart';
-import 'package:amenbo_viewer/ui/tokens.dart';
 import 'package:amenbo_viewer/l10n/words.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -29,13 +28,11 @@ void main() {
   late BacklogStore store;
   late Arrivals arrivals;
   late List<int> opened;
-  late List<TaskQuery> sinced;
 
   setUp(() {
     store = BacklogStore.openInMemory();
     arrivals = Arrivals();
     opened = [];
-    sinced = [];
   });
   tearDown(() {
     arrivals.dispose();
@@ -61,7 +58,6 @@ void main() {
         arrivals: arrivals,
         clock: () => today,
         onOpen: (line) => opened.add(line.id),
-        onSince: sinced.add,
       ),
     ),
   );
@@ -106,9 +102,10 @@ void main() {
 
       // The clock, not "3 h ago": a phone whose clock is out can still name the hour.
       expect(find.text('Taken 12:34'), findsOneWidget);
-      // And what to do about it said in words rather than drawn as an arrow, so it can be read
-      // before it is pressed.
-      await tester.tap(find.widgetWithText(TextButton, words.refresh));
+      // And the way to a newer one beside it: the circling arrows, wearing the word rather than
+      // printing it, so the one-line top spends its width on the hour.
+      expect(find.byIcon(Icons.refresh), findsWidgets);
+      await tester.tap(find.byTooltip(words.refresh).first);
       await tester.pumpAndSettle();
       expect(takes, 1);
     });
@@ -152,7 +149,7 @@ void main() {
       // Nothing to date yet, and the way to go and get something is still on the screen — an
       // operation nobody can find until it has already happened is one nobody finds.
       expect(find.textContaining('Taken'), findsNothing);
-      expect(find.widgetWithText(TextButton, words.refresh), findsOneWidget);
+      expect(find.byTooltip(words.refresh), findsWidgets);
     });
 
     testWidgets('a phone with no route to take is offered nothing to press', (
@@ -160,7 +157,7 @@ void main() {
     ) async {
       await tester.pumpWidget(screen());
 
-      expect(find.widgetWithText(TextButton, words.refresh), findsNothing);
+      expect(find.byTooltip(words.refresh), findsNothing);
     });
   });
 
@@ -477,12 +474,7 @@ void main() {
         MaterialApp(
           localizationsDelegates: Words.localizationsDelegates,
           supportedLocales: Words.supportedLocales,
-          home: NowScreen(
-            store: alone,
-            clock: () => today,
-            onOpen: (_) {},
-            onSince: (_) {},
-          ),
+          home: NowScreen(store: alone, clock: () => today, onOpen: (_) {}),
         ),
       );
 
@@ -579,7 +571,7 @@ void main() {
         ),
       );
 
-      await tester.tap(find.widgetWithText(TextButton, words.refresh));
+      await tester.tap(find.byTooltip(words.refresh).first);
       await tester.pumpAndSettle();
 
       expect(takes, 1);
@@ -595,7 +587,7 @@ void main() {
       ]);
       await tester.pumpWidget(screen(take: () async => throw Exception('off')));
 
-      await tester.tap(find.widgetWithText(TextButton, words.refresh));
+      await tester.tap(find.byTooltip(words.refresh).first);
       await tester.pumpAndSettle();
 
       expect(find.text('のこる'), findsOneWidget);
@@ -603,216 +595,9 @@ void main() {
     });
   });
 
-  group('what moved while they were away', () {
-    /// The mark the previous visit left behind. Everything in this group is stamped after it.
-    const lastLook = '2026-08-09T00:00:00Z';
-    const after = '2026-08-09T09:00:00Z';
-
-    testWidgets('a device nobody has opened before has nothing to say', (
-      tester,
-    ) async {
-      store.applyPage([BacklogChange.put('task', 1, task(id: 1))]);
-
-      await tester.pumpWidget(screen());
-
-      expect(find.text(words.sinceLastLook), findsNothing);
-    });
-
-    testWidgets('the three numbers are counted from the last visit', (
-      tester,
-    ) async {
-      store.setMeta(MetaKey.lastOpenedAt, lastLook);
-      store.applyPage([
-        BacklogChange.put(
-          'task',
-          1,
-          task(id: 1, status: 'done', completedAt: after),
-        ),
-        BacklogChange.put('task', 2, task(id: 2, createdAt: after)),
-        BacklogChange.put('task', 3, task(id: 3)),
-        BacklogChange.put(
-          'task_comment',
-          1,
-          comment(id: 1, taskId: 3, createdAt: after),
-        ),
-      ]);
-
-      await tester.pumpWidget(screen());
-
-      expect(find.text(words.sinceLastLook), findsOneWidget);
-      for (final moved in Moved.values) {
-        expect(
-          find.text(NowScreen.moved(words, moved, const Counted(1, false))),
-          findsOneWidget,
-        );
-      }
-    });
-
-    testWidgets('nothing moved is no card at all, not a card saying so', (
-      tester,
-    ) async {
-      store.setMeta(MetaKey.lastOpenedAt, after);
-      store.applyPage([
-        BacklogChange.put('task', 1, task(id: 1, createdAt: lastLook)),
-      ]);
-
-      await tester.pumpWidget(screen());
-
-      expect(find.text(words.sinceLastLook), findsNothing);
-      expect(
-        find.textContaining(movedHeading(words, Moved.filed)),
-        findsNothing,
-      );
-    });
-
-    testWidgets('a number is pressed with a thumb, so it is a thumb wide', (
-      tester,
-    ) async {
-      store.setMeta(MetaKey.lastOpenedAt, lastLook);
-      store.applyPage([
-        BacklogChange.put(
-          'task',
-          1,
-          task(id: 1, status: 'done', completedAt: after),
-        ),
-      ]);
-
-      await tester.pumpWidget(screen());
-      final label = NowScreen.moved(
-        words,
-        Moved.finished,
-        const Counted(1, false),
-      );
-
-      expect(
-        tester
-            .getSize(
-              find
-                  .ancestor(
-                    of: find.text(label),
-                    matching: find.byType(InkWell),
-                  )
-                  .first,
-            )
-            .height,
-        greaterThanOrEqualTo(Layout.touch),
-      );
-    });
-
-    testWidgets('a number opens the list of just what it counted', (
-      tester,
-    ) async {
-      store.setMeta(MetaKey.lastOpenedAt, lastLook);
-      store.applyPage([
-        BacklogChange.put(
-          'task',
-          1,
-          task(id: 1, status: 'done', completedAt: after),
-        ),
-      ]);
-
-      await tester.pumpWidget(screen());
-      await tester.tap(
-        find.text(
-          NowScreen.moved(words, Moved.finished, const Counted(1, false)),
-        ),
-      );
-
-      expect(sinced.single.moved, Moved.finished);
-      // Counted from the moment the card counted from, so the list is the length of the number
-      // that was pressed.
-      expect(sinced.single.changedSince, isNotNull);
-    });
-
-    testWidgets('it counts inside the narrowing the screen is holding', (
-      tester,
-    ) async {
-      store.setMeta(MetaKey.lastOpenedAt, lastLook);
-      store.applyPage([
-        BacklogChange.put('project', 16, project(id: 16, name: 'viewer')),
-        BacklogChange.put('project', 20, project(id: 20, name: 'nsys')),
-        BacklogChange.put(
-          'task',
-          1,
-          task(id: 1, projectId: 16, createdAt: after),
-        ),
-        BacklogChange.put(
-          'task',
-          2,
-          task(id: 2, projectId: 20, createdAt: after),
-        ),
-      ]);
-
-      await tester.pumpWidget(screen());
-      expect(
-        find.text(NowScreen.moved(words, Moved.filed, const Counted(2, false))),
-        findsOneWidget,
-      );
-
-      await tester.tap(find.text(words.allProjects));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('viewer').last);
-      await tester.pumpAndSettle();
-
-      expect(
-        find.text(NowScreen.moved(words, Moved.filed, const Counted(1, false))),
-        findsOneWidget,
-      );
-    });
-
-    testWidgets('the mark is taken on arriving and held while reading', (
-      tester,
-    ) async {
-      store.setMeta(MetaKey.lastOpenedAt, lastLook);
-      store.applyPage([
-        BacklogChange.put('task', 1, task(id: 1, createdAt: after)),
-      ]);
-
-      await tester.pumpWidget(screen());
-      expect(store.meta(MetaKey.lastOpenedAt), amenboStamp(today));
-
-      // Rows landing behind the pill, and then being let in, are not a new visit: the card has to
-      // still say what it said when the person started reading.
-      store.applyPage([
-        BacklogChange.put(
-          'task',
-          2,
-          task(id: 2, createdAt: after, updatedAt: after),
-        ),
-      ]);
-      arrivals.tick();
-      await tester.pumpAndSettle();
-      await tester.tap(
-        find.text(NowScreen.arrived(words, const Counted(1, false))),
-      );
-      await tester.pumpAndSettle();
-
-      expect(
-        find.text(NowScreen.moved(words, Moved.filed, const Counted(2, false))),
-        findsOneWidget,
-      );
-    });
-
-    testWidgets('opening a row takes its dot away', (tester) async {
-      store.setMeta(MetaKey.lastOpenedAt, lastLook);
-      store.applyPage([
-        BacklogChange.put('task', 1, task(id: 1, updatedAt: after)),
-      ]);
-
-      await tester.pumpWidget(screen());
-      expect(tester.widget<TaskRow>(find.byType(TaskRow)).unread, isTrue);
-
-      await tester.tap(find.byType(TaskRow));
-      await tester.pumpAndSettle();
-
-      expect(tester.widget<TaskRow>(find.byType(TaskRow)).unread, isFalse);
-    });
-  });
-
   testWidgets('nothing overflows at the largest text a phone offers', (
     tester,
   ) async {
-    store.setMeta(MetaKey.lastOpenedAt, '2026-07-01T00:00:00Z');
     store.applyPage([
       BacklogChange.put('project', 16, project(id: 16, name: 'viewer')),
       BacklogChange.put('project', 20, project(id: 20, name: 'nsys')),
@@ -844,12 +629,7 @@ void main() {
           theme: viewerTheme(Brightness.light),
           home: MediaQuery(
             data: MediaQueryData(textScaler: TextScaler.linear(scale)),
-            child: NowScreen(
-              store: store,
-              clock: () => today,
-              onOpen: (_) {},
-              onSince: (_) {},
-            ),
+            child: NowScreen(store: store, clock: () => today, onOpen: (_) {}),
           ),
         ),
       );

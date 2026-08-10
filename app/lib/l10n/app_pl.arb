@@ -4,17 +4,10 @@
   "tabSearch": "Szukaj",
   "nothingOpen": "Otwórz coś, żeby przeczytać to tutaj",
 
-  "movedFinished": "Zakończone",
-  "movedFiled": "Nowe",
-  "movedCommented": "Komentarze",
-
   "allProjects": "Wszystkie projekty",
   "chooseProject": "Wybierz projekt",
   "refresh": "Pobierz",
   "newActivity": "Nowe · {count}",
-  "sinceLastLook": "Od ostatniego zajrzenia",
-  "sinceLastLookSpoken": "od ostatniego zajrzenia",
-  "sinceMoved": "{name} od ostatniego zajrzenia",
 
   "standingTooNew": "Twój komputer pisze w nowszym formacie, niż czyta ta aplikacja",
   "standingUnreadable": "Klucz tego urządzenia nie otwiera tego, co przyszło",
@@ -50,7 +43,6 @@
   "dueToday": "Termin dzisiaj",
   "dueOn": "Termin {day}",
 
-  "rowUnread": "nieprzeczytane",
   "rowAssignedToAi": "przypisane do SI",
   "markAi": "SI",
   "markYou": "Ty",
@@ -111,7 +103,7 @@
   "appearanceHeading": "Wygląd",
   "refreshNote": "Automatycznie znaczy przy otwarciu aplikacji i przy powrocie do niej. W tle nic nigdy nie działa.",
   "refreshAutomatic": "Automatycznie",
-  "refreshManualOnly": "Tylko gdy pociągnę w dół",
+  "refreshManualOnly": "Tylko gdy poproszę",
   "appearanceSystem": "Jak telefon",
   "appearanceLight": "Jasny",
   "appearanceDark": "Ciemny",

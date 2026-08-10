@@ -4,17 +4,10 @@
   "tabSearch": "Tìm",
   "nothingOpen": "Mở một mục để đọc ở đây",
 
-  "movedFinished": "Xong",
-  "movedFiled": "Mới",
-  "movedCommented": "Bình luận",
-
   "allProjects": "Tất cả dự án",
   "chooseProject": "Chọn dự án",
   "refresh": "Lấy về",
   "newActivity": "Có cái mới · {count}",
-  "sinceLastLook": "Từ lần bạn xem gần nhất",
-  "sinceLastLookSpoken": "từ lần bạn xem gần nhất",
-  "sinceMoved": "{name} từ lần bạn xem gần nhất",
 
   "standingTooNew": "Máy tính của bạn ghi bằng định dạng mới hơn những gì ứng dụng này đọc được",
   "standingUnreadable": "Khoá của máy này không mở được thứ vừa tới",
@@ -50,7 +43,6 @@
   "dueToday": "Hạn hôm nay",
   "dueOn": "Hạn {day}",
 
-  "rowUnread": "chưa đọc",
   "rowAssignedToAi": "giao cho AI",
   "markAi": "AI",
   "markYou": "Bạn",
@@ -111,7 +103,7 @@
   "appearanceHeading": "Giao diện",
   "refreshNote": "Tự động nghĩa là khi mở ứng dụng và khi bạn quay lại nó. Nó không bao giờ chạy nền.",
   "refreshAutomatic": "Tự động",
-  "refreshManualOnly": "Chỉ khi tôi kéo xuống",
+  "refreshManualOnly": "Chỉ khi tôi yêu cầu",
   "appearanceSystem": "Theo máy",
   "appearanceLight": "Sáng",
   "appearanceDark": "Tối",

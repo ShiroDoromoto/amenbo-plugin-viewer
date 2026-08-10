@@ -4,17 +4,10 @@
   "tabSearch": "Пошук",
   "nothingOpen": "Відкрийте щось, щоб прочитати тут",
 
-  "movedFinished": "Завершено",
-  "movedFiled": "Нових",
-  "movedCommented": "Коментарів",
-
   "allProjects": "Усі проєкти",
   "chooseProject": "Вибрати проєкт",
   "refresh": "Завантажити",
   "newActivity": "Нове · {count}",
-  "sinceLastLook": "Відколи ви востаннє дивилися",
-  "sinceLastLookSpoken": "відколи ви востаннє дивилися",
-  "sinceMoved": "{name} відколи ви востаннє дивилися",
 
   "standingTooNew": "Комп'ютер пише новішим форматом, ніж читає цей застосунок",
   "standingUnreadable": "Ключ цього пристрою не відкриває те, що прийшло",
@@ -50,7 +43,6 @@
   "dueToday": "Термін сьогодні",
   "dueOn": "Термін {day}",
 
-  "rowUnread": "непрочитане",
   "rowAssignedToAi": "доручено ШІ",
   "markAi": "ШІ",
   "markYou": "Ви",
@@ -111,7 +103,7 @@
   "appearanceHeading": "Оформлення",
   "refreshNote": "Автоматично — це коли застосунок відкривається і коли ви до нього повертаєтесь. У фоні нічого не працює.",
   "refreshAutomatic": "Автоматично",
-  "refreshManualOnly": "Лише коли я тягну вниз",
+  "refreshManualOnly": "Лише коли я попрошу",
   "appearanceSystem": "Як на телефоні",
   "appearanceLight": "Світле",
   "appearanceDark": "Темне",

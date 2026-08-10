@@ -4,17 +4,10 @@
   "tabSearch": "さがす",
   "nothingOpen": "開いたものが、ここに出ます",
 
-  "movedFinished": "終わった",
-  "movedFiled": "新しく入った",
-  "movedCommented": "コメント",
-
   "allProjects": "すべてのプロジェクト",
   "chooseProject": "プロジェクトを選ぶ",
   "refresh": "取りに行く",
   "newActivity": "新しい動き · {count}",
-  "sinceLastLook": "前に見たときから",
-  "sinceLastLookSpoken": "前に見たときから",
-  "sinceMoved": "前に見たときからの{name}",
 
   "standingTooNew": "PC が書いている形式を、このアプリはまだ読めません",
   "standingUnreadable": "届いたものが、この端末の鍵では開きません",
@@ -50,7 +43,6 @@
   "dueToday": "今日が期限",
   "dueOn": "{day}が期限",
 
-  "rowUnread": "未読",
   "rowAssignedToAi": "AI が担当",
   "markAi": "AI",
   "markYou": "自分",
@@ -111,7 +103,7 @@
   "appearanceHeading": "見た目",
   "refreshNote": "自動は、アプリを開いたときと、前に戻ってきたときです。裏では動きません。",
   "refreshAutomatic": "自動",
-  "refreshManualOnly": "引き下げたときだけ",
+  "refreshManualOnly": "頼んだときだけ",
   "appearanceSystem": "端末に合わせる",
   "appearanceLight": "明るい",
   "appearanceDark": "暗い",

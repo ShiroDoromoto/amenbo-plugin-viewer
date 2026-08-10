@@ -4,17 +4,10 @@
   "tabSearch": "ค้นหา",
   "nothingOpen": "เปิดสักรายการเพื่ออ่านตรงนี้",
 
-  "movedFinished": "เสร็จ",
-  "movedFiled": "ใหม่",
-  "movedCommented": "ความเห็น",
-
   "allProjects": "ทุกโครงการ",
   "chooseProject": "เลือกโครงการ",
   "refresh": "ไปเอามา",
   "newActivity": "มีความเคลื่อนไหวใหม่ · {count}",
-  "sinceLastLook": "ตั้งแต่ครั้งล่าสุดที่คุณดู",
-  "sinceLastLookSpoken": "ตั้งแต่ครั้งล่าสุดที่คุณดู",
-  "sinceMoved": "{name} ตั้งแต่ครั้งล่าสุดที่คุณดู",
 
   "standingTooNew": "คอมพิวเตอร์ของคุณเขียนด้วยรูปแบบที่ใหม่กว่าที่แอปนี้อ่านได้",
   "standingUnreadable": "กุญแจของเครื่องนี้เปิดสิ่งที่ส่งมาไม่ได้",
@@ -50,7 +43,6 @@
   "dueToday": "ครบกำหนดวันนี้",
   "dueOn": "ครบกำหนด {day}",
 
-  "rowUnread": "ยังไม่ได้อ่าน",
   "rowAssignedToAi": "มอบให้ AI",
   "markAi": "AI",
   "markYou": "คุณ",
@@ -111,7 +103,7 @@
   "appearanceHeading": "หน้าตา",
   "refreshNote": "อัตโนมัติหมายถึงตอนเปิดแอปและตอนกลับมาที่แอป ไม่มีอะไรทำงานเบื้องหลังเลย",
   "refreshAutomatic": "อัตโนมัติ",
-  "refreshManualOnly": "เฉพาะตอนที่ฉันลากลง",
+  "refreshManualOnly": "เฉพาะตอนที่ฉันขอ",
   "appearanceSystem": "ตามเครื่อง",
   "appearanceLight": "สว่าง",
   "appearanceDark": "มืด",

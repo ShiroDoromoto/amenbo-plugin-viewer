@@ -269,18 +269,6 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.textContaining('こめんと'), findsNWidgets(5));
     });
-
-    testWidgets('unread ones are reached by the window that opens', (
-      tester,
-    ) async {
-      fill(5);
-      // Not one of them has been read, so a window of three would leave two unread comments
-      // marked at a position nobody can see.
-      store.setMeta(MetaKey.lastOpenedAt, '2026-07-01T00:00:00Z');
-
-      await tester.pumpWidget(detail());
-      expect(find.textContaining('こめんと'), findsNWidgets(5));
-    });
   });
 
   group('the bridge back to the PC', () {

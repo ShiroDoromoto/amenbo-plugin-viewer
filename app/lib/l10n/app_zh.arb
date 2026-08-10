@@ -4,17 +4,10 @@
   "tabSearch": "查找",
   "nothingOpen": "打开一条，就在这里读",
 
-  "movedFinished": "完成",
-  "movedFiled": "新建",
-  "movedCommented": "评论",
-
   "allProjects": "全部项目",
   "chooseProject": "选择项目",
   "refresh": "去取",
   "newActivity": "新动静 · {count}",
-  "sinceLastLook": "上次查看之后",
-  "sinceLastLookSpoken": "上次查看之后",
-  "sinceMoved": "上次查看之后的{name}",
 
   "standingTooNew": "电脑写的格式比这个应用能读的更新",
   "standingUnreadable": "本机的密钥打不开收到的内容",
@@ -50,7 +43,6 @@
   "dueToday": "今天到期",
   "dueOn": "{day} 到期",
 
-  "rowUnread": "未读",
   "rowAssignedToAi": "交给了 AI",
   "markAi": "AI",
   "markYou": "你",
@@ -111,7 +103,7 @@
   "appearanceHeading": "外观",
   "refreshNote": "自动是指打开应用时，以及回到应用时。它从不在后台运行。",
   "refreshAutomatic": "自动",
-  "refreshManualOnly": "只在我下拉时",
+  "refreshManualOnly": "只在我要求时",
   "appearanceSystem": "跟随手机",
   "appearanceLight": "浅色",
   "appearanceDark": "深色",

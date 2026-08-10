@@ -336,8 +336,8 @@ class _HomeShellState extends State<HomeShell> {
   /// them, so every visit builds them again: search starts from everything, and a narrowing
   /// carried over from a screen the person left would be one they did not ask for — and the
   /// decisions list is read off the store as it stands now rather than as it stood when the shell
-  /// was built. The front screen is not one of them: it counts from the moment the app came to the
-  /// front, and would count from a new one every time it was rebuilt.
+  /// was built. The front screen is not one of them: it holds what arrived while it was being
+  /// read behind a pill, and rebuilding it would let those rows in unasked.
   int _visits = 0;
 
   /// What is open beside the list, on a screen wide enough to hold both. Null on a phone held
@@ -469,9 +469,9 @@ class _HomeShellState extends State<HomeShell> {
     // the detail split at, both being the same judgement about how it is being held.
     final wide = _wide;
     // The three keep their state while the person moves between them — the front screen most of
-    // all, which counts from the moment the app came to the front and would count from a new one
-    // every time it was rebuilt. The two that are keyed on the visit are the exception, and they
-    // are keyed because being read fresh is what they are for.
+    // all, which holds what arrived while it was being read behind a pill and would let those
+    // rows in unasked if it were rebuilt. The two that are keyed on the visit are the exception,
+    // and they are keyed because being read fresh is what they are for.
     final tabs = IndexedStack(
       index: _tab,
       children: [
@@ -484,7 +484,6 @@ class _HomeShellState extends State<HomeShell> {
             failure: widget.failure,
             iCloudAvailable: widget.iCloudAvailable,
             onOpen: (line) => _open(line.id),
-            onSince: _list,
             onPairAgain: widget.onPairAgain,
             onOpenSettings: _openSettings,
           ),
