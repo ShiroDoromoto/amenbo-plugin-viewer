@@ -662,7 +662,9 @@ class _MarkdownSectionsState extends State<MarkdownSections> {
                 () => _open.contains(i) ? _open.remove(i) : _open.add(i),
               ),
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: Space.s2),
+                // The same air a detail's own headings take: more above than below, so a section
+                // heading belongs to what follows it rather than floating between two sections.
+                padding: const EdgeInsets.only(top: Space.s5, bottom: Space.s2),
                 child: Row(
                   children: [
                     Expanded(

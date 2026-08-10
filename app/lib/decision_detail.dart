@@ -2,8 +2,9 @@
 ///
 /// The same skeleton as a task's detail — number, project, title, state, body, ties, comments —
 /// because the two are read the same way and a second layout would only be a second thing to
-/// learn. What differs is what a decision has instead of a deadline: whether anybody has ruled on
-/// it, and what is not moving until somebody does.
+/// learn. It is literally the same pieces: the frame and the head come from `ui/detail.dart`, and
+/// what differs is what a decision has instead of a deadline — whether anybody has ruled on it,
+/// and what is not moving until somebody does.
 ///
 /// **An undecided one is the whole point of this screen.** A decision nobody has answered is work
 /// the person owes their own backlog, and everything linked to it reads `ready:no` until they do,
@@ -16,6 +17,7 @@ import 'l10n/words.dart';
 import 'store/backlog_queries.dart';
 import 'store/backlog_store.dart';
 import 'task_detail.dart';
+import 'ui/detail.dart';
 import 'ui/markdown.dart';
 import 'ui/marks.dart';
 import 'ui/refs.dart';
@@ -128,112 +130,62 @@ class _DecisionDetailScreenState extends State<DecisionDetailScreen> {
     final decision = _decision;
     final today = widget.clock();
     final words = Words.of(context);
-    return Scaffold(
-      appBar: AppBar(
-        actions: [
-          if (decision != null)
-            IconButton(
-              icon: const Icon(Icons.share),
-              tooltip: words.share,
-              onPressed: () => widget.onShare(
-                handoffText(
-                  ref: decisionRef(decision.id),
-                  title: decision.title,
-                  state: decisionStatusWords(words, decision.status),
-                ),
+    return DetailFrame(
+      ref: decisionRef(widget.decisionId),
+      name: decision?.title,
+      missing: words.decisionGone,
+      onShare: decision == null
+          ? null
+          : () => widget.onShare(
+              handoffText(
+                ref: decisionRef(decision.id),
+                title: decision.title,
+                state: decisionStatusWords(words, decision.status),
               ),
             ),
-        ],
-      ),
-      body: decision == null
-          ? Center(child: Text(words.decisionGone))
-          : ListView(
-              padding: const EdgeInsets.fromLTRB(
-                Space.gutter,
-                Space.s3,
-                Space.gutter,
-                Space.s7,
-              ),
-              children: [
-                _header(context, words, decision, today),
-                ..._undecided(context, words, decision),
-                if (_body.trim().isNotEmpty)
-                  MarkdownSections(source: _body, onLink: widget.onLink),
-                ..._tiesSection(context, words),
-                ..._tasksSection(context, words, today),
-                ..._attachmentsSection(context, words),
-                ..._commentsSection(context, words, today),
-              ],
-            ),
+      head: decision == null ? null : _head(context, words, decision, today),
+      children: decision == null
+          ? const []
+          : [
+              ..._undecided(context, words, decision),
+              if (_body.trim().isNotEmpty)
+                MarkdownSections(source: _body, onLink: widget.onLink),
+              ..._tiesSection(context, words),
+              ..._tasksSection(context, words, today),
+              ..._attachmentsSection(context, words),
+              ..._commentsSection(context, words, today),
+            ],
     );
   }
 
-  Widget _header(
+  Widget _head(
     BuildContext context,
     Words words,
     DecisionLine decision,
     DateTime today,
   ) {
     final theme = Theme.of(context);
-    final project = widget.projectName;
     // Decided when it was ruled on, raised when nobody has — either way the date on the screen is
     // the date the person would remember it by.
     final when = DateTime.tryParse(decision.decidedAt ?? decision.createdAt);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        RefChip(decisionRef(decision.id)),
-        if (project != null)
-          InkWell(
-            onTap: widget.onProject == null
-                ? null
-                : () => widget.onProject!(decision.projectId),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: Space.s1),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    project,
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      color: theme.colorScheme.primary,
-                    ),
-                  ),
-                  if (widget.onProject != null)
-                    Icon(
-                      Icons.chevron_right,
-                      size:
-                          (theme.textTheme.labelLarge?.fontSize ??
-                              Lettering.md) *
-                          1.2,
-                      color: theme.colorScheme.primary,
-                    ),
-                ],
+    return DetailHead(
+      title: decision.title,
+      project: widget.projectName,
+      onProject: widget.onProject == null
+          ? null
+          : () => widget.onProject!(decision.projectId),
+      marks: [
+        DecisionStatusMark(decision.status),
+        if (when != null)
+          TimeOnHold(
+            when: when,
+            child: Text(
+              relativeTime(words, when, now: today),
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
           ),
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: Space.s1),
-          child: Text(decision.title, style: theme.textTheme.headlineSmall),
-        ),
-        Wrap(
-          spacing: 12,
-          runSpacing: 4,
-          children: [
-            DecisionStatusMark(decision.status),
-            if (when != null)
-              TimeOnHold(
-                when: when,
-                child: Text(
-                  relativeTime(words, when, now: today),
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ),
-          ],
-        ),
-        const Divider(),
       ],
     );
   }
@@ -248,26 +200,15 @@ class _DecisionDetailScreenState extends State<DecisionDetailScreen> {
     DecisionLine decision,
   ) {
     if (decision.status != 'proposed') return const [];
-    final theme = Theme.of(context);
     final held = _heldTasks;
     final line = held == 0
         ? words.decisionWaiting
         : '${words.decisionWaiting} · ${words.decisionHeld(held)}';
     return [
-      Container(
-        padding: const EdgeInsets.all(Space.s4),
-        margin: const EdgeInsets.only(bottom: Space.s5),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surfaceContainerHighest,
-          borderRadius: Corner.smooth,
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.help_outline, color: theme.colorScheme.primary),
-            const SizedBox(width: Space.s3),
-            Expanded(child: Text(line, style: theme.textTheme.bodyMedium)),
-          ],
-        ),
+      NoticePanel(
+        icon: Icons.help_outline,
+        colour: Theme.of(context).colorScheme.primary,
+        text: line,
       ),
     ];
   }
@@ -275,7 +216,7 @@ class _DecisionDetailScreenState extends State<DecisionDetailScreen> {
   List<Widget> _tiesSection(BuildContext context, Words words) {
     if (_edges.isEmpty) return const [];
     return [
-      _sectionHeading(context, words.ties),
+      SectionHeading(words.ties),
       for (final edge in _edges)
         _tie(
           context,
@@ -285,7 +226,6 @@ class _DecisionDetailScreenState extends State<DecisionDetailScreen> {
           state: decisionStatusWords(words, edge.status),
           onTap: () => widget.onOpenDecision(edge.targetId),
         ),
-      const SizedBox(height: Space.s3),
     ];
   }
 
@@ -341,14 +281,13 @@ class _DecisionDetailScreenState extends State<DecisionDetailScreen> {
   ) {
     if (_tasks.isEmpty) return const [];
     return [
-      _sectionHeading(context, words.tasksSection),
+      SectionHeading(words.tasksSection),
       for (final task in _tasks)
         TaskRow(
           line: task,
           today: today,
           onOpen: () => widget.onOpenTask(task.id),
         ),
-      const SizedBox(height: Space.s3),
     ];
   }
 
@@ -356,7 +295,7 @@ class _DecisionDetailScreenState extends State<DecisionDetailScreen> {
     if (_attachments.isEmpty) return const [];
     final theme = Theme.of(context);
     return [
-      _sectionHeading(context, words.attachments),
+      SectionHeading(words.attachments),
       Text(
         words.attachmentsStayOnThePc,
         style: theme.textTheme.bodySmall?.copyWith(
@@ -386,7 +325,6 @@ class _DecisionDetailScreenState extends State<DecisionDetailScreen> {
             ],
           ),
         ),
-      const SizedBox(height: Space.s3),
     ];
   }
 
@@ -398,8 +336,7 @@ class _DecisionDetailScreenState extends State<DecisionDetailScreen> {
     if (_commentCount.value == 0) return const [];
     final theme = Theme.of(context);
     return [
-      _sectionHeading(
-        context,
+      SectionHeading(
         '${words.commentsSection} ${countLabel(words, _commentCount)}',
       ),
       if (_comments.length < _commentCount.value)
@@ -442,14 +379,6 @@ class _DecisionDetailScreenState extends State<DecisionDetailScreen> {
         ),
     ];
   }
-
-  Widget _sectionHeading(BuildContext context, String title) => Padding(
-    padding: const EdgeInsets.only(top: Space.s3, bottom: Space.s1),
-    child: Semantics(
-      header: true,
-      child: Text(title, style: Theme.of(context).textTheme.titleSmall),
-    ),
-  );
 }
 
 /// amenbo's own words for one decision standing on another.

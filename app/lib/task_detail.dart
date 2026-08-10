@@ -16,6 +16,7 @@ import 'package:flutter/material.dart' hide Chip;
 import 'l10n/words.dart';
 import 'store/backlog_queries.dart';
 import 'store/backlog_store.dart';
+import 'ui/detail.dart';
 import 'ui/markdown.dart';
 import 'ui/marks.dart';
 import 'ui/refs.dart';
@@ -140,122 +141,72 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     final task = _task;
     final today = widget.clock();
     final words = Words.of(context);
-    return Scaffold(
-      appBar: AppBar(
-        actions: [
-          // Only where there is something to send. A task the phone does not hold has a number
-          // and nothing else, and a share sheet carrying one line is not the bridge this is for.
-          if (task != null)
-            IconButton(
-              icon: const Icon(Icons.share),
-              tooltip: words.share,
-              onPressed: () => widget.onShare(
-                handoffText(
-                  ref: taskRef(task.id),
-                  title: task.title,
-                  state: statusWords(words, task.status),
-                ),
+    return DetailFrame(
+      ref: taskRef(widget.taskId),
+      name: task?.title,
+      missing: words.taskGone,
+      // Only where there is something to send. A task the phone does not hold has a number and
+      // nothing else, and a share sheet carrying one line is not the bridge this is for.
+      onShare: task == null
+          ? null
+          : () => widget.onShare(
+              handoffText(
+                ref: taskRef(task.id),
+                title: task.title,
+                state: statusWords(words, task.status),
               ),
             ),
-        ],
-      ),
-      body: task == null
-          ? Center(child: Text(words.taskGone))
-          : ListView(
-              padding: const EdgeInsets.fromLTRB(
-                Space.gutter,
-                Space.s3,
-                Space.gutter,
-                Space.s7,
-              ),
-              children: [
-                _header(context, words, task, today),
-                ..._stall(context, words, task, today),
-                if (_notes.trim().isNotEmpty)
-                  MarkdownSections(source: _notes, onLink: widget.onLink),
-                ..._tiesSection(context, words),
-                ..._chipsSection(context, words),
-                ..._attachmentsSection(context, words),
-                ..._commitsSection(context, words),
-                ..._commentsSection(context, words, today),
-              ],
-            ),
+      head: task == null ? null : _head(context, words, task, today),
+      children: task == null
+          ? const []
+          : [
+              ..._stall(context, words, task, today),
+              if (_notes.trim().isNotEmpty)
+                MarkdownSections(source: _notes, onLink: widget.onLink),
+              ..._chipsSection(context, words),
+              ..._tiesSection(context, words),
+              ..._attachmentsSection(context, words),
+              ..._commitsSection(context, words),
+              ..._commentsSection(context, words, today),
+            ],
     );
   }
 
-  Widget _header(
+  Widget _head(
     BuildContext context,
     Words words,
     TaskLine task,
     DateTime today,
   ) {
     final theme = Theme.of(context);
-    final project = widget.projectName;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        RefChip(taskRef(task.id)),
-        if (project != null)
-          InkWell(
-            onTap: widget.onProject == null
-                ? null
-                : () => widget.onProject!(task.projectId),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: Space.s1),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    project,
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      color: theme.colorScheme.primary,
-                    ),
-                  ),
-                  if (widget.onProject != null)
-                    Icon(
-                      Icons.chevron_right,
-                      size:
-                          (theme.textTheme.labelLarge?.fontSize ??
-                              Lettering.md) *
-                          1.2,
-                      color: theme.colorScheme.primary,
-                    ),
-                ],
-              ),
+    return DetailHead(
+      title: task.title,
+      project: widget.projectName,
+      onProject: widget.onProject == null
+          ? null
+          : () => widget.onProject!(task.projectId),
+      marks: [
+        StatusMark(task.status),
+        if (task.priority != null) PriorityMark(task.priority),
+        if (task.assigneeKind == 'ai')
+          Text(words.markAi, style: theme.textTheme.labelMedium),
+        TimeOnHold(
+          when: DateTime.parse(task.updatedAt),
+          child: Text(
+            relativeTime(words, DateTime.parse(task.updatedAt), now: today),
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: Space.s1),
-          child: Text(task.title, style: theme.textTheme.headlineSmall),
         ),
-        Wrap(
-          spacing: 12,
-          runSpacing: 4,
-          children: [
-            StatusMark(task.status),
-            if (task.priority != null) PriorityMark(task.priority),
-            if (task.assigneeKind == 'ai')
-              Text(words.markAi, style: theme.textTheme.labelMedium),
-            TimeOnHold(
-              when: DateTime.parse(task.updatedAt),
-              child: Text(
-                relativeTime(words, DateTime.parse(task.updatedAt), now: today),
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
+        if (task.dueOn != null) DueMark(task.dueOn!, today: today),
+        if (task.startOn != null)
+          Text(
+            words.stallStarts(dayLabel(words, task.startOn!, now: today)),
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
             ),
-            if (task.dueOn != null) DueMark(task.dueOn!, today: today),
-            if (task.startOn != null)
-              Text(
-                words.stallStarts(dayLabel(words, task.startOn!, now: today)),
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-          ],
-        ),
-        const Divider(),
+          ),
       ],
     );
   }
@@ -268,28 +219,12 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   ) {
     final reason = stallReason(words, task, today: today);
     if (reason == null) return const [];
-    final theme = Theme.of(context);
     return [
-      Container(
-        padding: const EdgeInsets.all(Space.s4),
-        margin: const EdgeInsets.only(bottom: Space.s5),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surfaceContainerHighest,
-          borderRadius: Corner.smooth,
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.report_outlined, color: theme.colorScheme.error),
-            const SizedBox(width: Space.s3),
-            Expanded(
-              child: Text(
-                reason,
-                style: theme.textTheme.bodyMedium,
-                semanticsLabel: '${words.detailStalled}, $reason',
-              ),
-            ),
-          ],
-        ),
+      NoticePanel(
+        icon: Icons.report_outlined,
+        colour: Theme.of(context).colorScheme.error,
+        text: reason,
+        spoken: '${words.detailStalled}, $reason',
       ),
     ];
   }
@@ -299,7 +234,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       return const [];
     }
     return [
-      _sectionHeading(context, words.ties),
+      SectionHeading(words.ties),
       for (final one in _blockers)
         _tie(
           context,
@@ -328,7 +263,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           state: decisionStatusWords(words, one.status),
           onTap: () => widget.onOpenDecision(one.id),
         ),
-      const SizedBox(height: Space.s3),
     ];
   }
 
@@ -375,23 +309,29 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     );
   }
 
+  /// What the task is filed under, directly under what it says.
+  ///
+  /// It carries no heading of its own — it is one more thing the task *is*, not a section about
+  /// it — so it stands with the body rather than among the sections that follow.
   List<Widget> _chipsSection(BuildContext context, Words words) {
     if (_chips.isEmpty) return const [];
     return [
-      Wrap(
-        spacing: 8,
-        runSpacing: 4,
-        children: [
-          for (final chip in _chips)
-            ActionChip(
-              label: Text(words.chipLabel(chip.dimension, chip.value)),
-              onPressed: widget.onValue == null
-                  ? null
-                  : () => widget.onValue!(chip.valueId),
-            ),
-        ],
+      Padding(
+        padding: const EdgeInsets.only(top: Space.s3),
+        child: Wrap(
+          spacing: Space.s3,
+          runSpacing: Space.s1,
+          children: [
+            for (final chip in _chips)
+              ActionChip(
+                label: Text(words.chipLabel(chip.dimension, chip.value)),
+                onPressed: widget.onValue == null
+                    ? null
+                    : () => widget.onValue!(chip.valueId),
+              ),
+          ],
+        ),
       ),
-      const SizedBox(height: Space.s3),
     ];
   }
 
@@ -399,7 +339,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     if (_attachments.isEmpty) return const [];
     final theme = Theme.of(context);
     return [
-      _sectionHeading(context, words.attachments),
+      SectionHeading(words.attachments),
       Text(
         words.attachmentsStayOnThePc,
         style: theme.textTheme.bodySmall?.copyWith(
@@ -431,7 +371,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             ],
           ),
         ),
-      const SizedBox(height: Space.s3),
     ];
   }
 
@@ -439,10 +378,12 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     if (_commits.isEmpty) return const [];
     final theme = Theme.of(context);
     return [
+      // A section heading that is also the way to open the section, so it keeps the heading's air
+      // above and below rather than the even gap a row would take.
       InkWell(
         onTap: () => setState(() => _commitsOpen = !_commitsOpen),
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: Space.s3),
+          padding: const EdgeInsets.only(top: Space.s6, bottom: Space.s2),
           child: Row(
             children: [
               Expanded(
@@ -464,11 +405,10 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               // Nothing here can open one. The short form is what a person types on the PC.
               sha.substring(0, sha.length < 12 ? sha.length : 12),
               style: theme.textTheme.bodySmall?.copyWith(
-                fontFamily: 'monospace',
+                fontFamily: Lettering.mono,
               ),
             ),
           ),
-      const SizedBox(height: Space.s3),
     ];
   }
 
@@ -480,8 +420,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     if (_commentCount.value == 0) return const [];
     final theme = Theme.of(context);
     return [
-      _sectionHeading(
-        context,
+      SectionHeading(
         '${words.commentsSection} ${countLabel(words, _commentCount)}',
       ),
       if (_comments.length < _commentCount.value)
@@ -524,14 +463,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         ),
     ];
   }
-
-  Widget _sectionHeading(BuildContext context, String title) => Padding(
-    padding: const EdgeInsets.only(top: Space.s3, bottom: Space.s1),
-    child: Semantics(
-      header: true,
-      child: Text(title, style: Theme.of(context).textTheme.titleSmall),
-    ),
-  );
 }
 
 /// A file's size, near enough. The row exists to say the file is there and roughly how big — a

@@ -62,6 +62,68 @@ void main() {
     expect(openedTasks, [-1]);
   });
 
+  testWidgets('the bar goes on saying what is open once the head has gone', (
+    tester,
+  ) async {
+    store.applyPage([
+      BacklogChange.put(
+        'task',
+        1,
+        task(id: 1, title: 'かく', notes: List.filled(40, 'ほんぶん').join('\n\n')),
+      ),
+    ]);
+
+    await tester.pumpWidget(detail());
+    final name = find.descendant(
+      of: find.byType(AppBar),
+      matching: find.text('かく'),
+    );
+    // While the head is showing, the bar would only be saying it twice.
+    expect(name, findsNothing);
+
+    await tester.drag(find.byType(ListView), const Offset(0, -400));
+    await tester.pump();
+
+    expect(name, findsOneWidget);
+    // The number never leaves: it is what the person types on the PC.
+    expect(
+      find.descendant(of: find.byType(AppBar), matching: find.text(taskRef(1))),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('the reason it cannot start does not wear the body\'s face', (
+    tester,
+  ) async {
+    store.applyPage([
+      BacklogChange.put('task', 9, task(id: 9, title: 'さきに')),
+      BacklogChange.put('task', 1, task(id: 1, notes: '```\nこーど\n```')),
+      BacklogChange.put(
+        'task_dependency',
+        1,
+        dependency(id: 1, taskId: 1, blockedById: 9),
+      ),
+    ]);
+
+    await tester.pumpWidget(detail());
+
+    BoxDecoration decorationOf(Finder of) => tester
+        .widgetList<Container>(
+          find.ancestor(of: of, matching: find.byType(Container)),
+        )
+        .map((box) => box.decoration)
+        .whereType<BoxDecoration>()
+        .first;
+
+    // The app's own remark is outlined; what somebody wrote into the record is a filled block.
+    // Drawn on one surface, the remark reads as a line of the notes.
+    final notice = decorationOf(find.textContaining('is not finished'));
+    final code = decorationOf(find.text('こーど'));
+    expect(notice.color, isNull);
+    expect(notice.border, isNotNull);
+    expect(code.color, isNotNull);
+  });
+
   testWidgets('why it cannot move is above what it says', (tester) async {
     store.applyPage([
       BacklogChange.put('task', 9, task(id: 9, title: 'さきに')),
