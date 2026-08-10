@@ -26,8 +26,17 @@ import 'main.dart';
 const dumpFileName = 'screen.txt';
 
 /// Long enough for a first frame and whatever it kicks off, short enough that a script does not
-/// sit on it. The dump is repeated once after this again, so a slow start is not a wrong answer.
+/// sit on it. The reading is repeated at this interval, so a slow start is not a wrong answer.
 const _settle = Duration(seconds: 3);
+
+/// How many readings one run takes, at [_settle] apart.
+///
+/// Two would do for the screen the app opens on, and the app opens on the same screen every time —
+/// so the screens reached by pressing something could not be read at all. Going on reading for a
+/// couple of minutes is what lets somebody walk through the app with the phone in their hand while
+/// this writes down each place they stop. Bounded rather than endless: the app is here to be read
+/// and then killed, and a probe left running would go on writing into a phone nobody is watching.
+const _readings = 40;
 
 Future<void> main() async {
   final binding = WidgetsFlutterBinding.ensureInitialized();
@@ -40,15 +49,16 @@ Future<void> main() async {
   runApp(await openViewer());
 
   () async {
-    await Future<void>.delayed(_settle);
-    _dump('after ${_settle.inSeconds}s', first: true);
-    await Future<void>.delayed(_settle);
-    _dump('after ${_settle.inSeconds * 2}s', first: false);
+    for (var reading = 1; reading <= _readings; reading++) {
+      await Future<void>.delayed(_settle);
+      _dump('after ${_settle.inSeconds * reading}s', first: reading == 1);
+    }
   }();
 }
 
-/// Writes one reading of the tree — the first of a run replaces the file, the second is appended,
-/// so what comes back is this run and shows whether the screen settled or moved.
+/// Writes one reading of the tree — the first of a run replaces the file and the rest are
+/// appended, so what comes back is this run and nothing before it, and reads as what the screen
+/// did over the run rather than as one instant that may have been mid-flight.
 void _dump(String label, {required bool first}) {
   final out = StringBuffer()..writeln('--- $label ---');
   // The root owner owns no tree of its own: each view hangs its own owner underneath, so the
@@ -86,6 +96,9 @@ void _walk(SemanticsNode node, int depth, StringBuffer out) {
     if (data.label.isNotEmpty) data.label,
     if (data.value.isNotEmpty) '= ${data.value}',
     if (data.hint.isNotEmpty) '(${data.hint})',
+    // A button whose whole name is its tooltip — every icon on a bar in this app — would be a
+    // blank line otherwise, and a blank line reads as a control nothing can announce.
+    if (data.tooltip.isNotEmpty) '[${data.tooltip}]',
   ].join(' ');
   // The rectangle is the node's own, in its parent's coordinates. It is here to tell two
   // otherwise identical rows apart and to show that something has a size at all — not as a
