@@ -3,7 +3,6 @@
 
 import 'package:amenbo_viewer/cloudflare_intake.dart';
 import 'package:amenbo_viewer/now_screen.dart';
-import 'package:amenbo_viewer/settings.dart';
 import 'package:amenbo_viewer/state_band.dart';
 import 'package:amenbo_viewer/store/backlog_queries.dart';
 import 'package:amenbo_viewer/store/backlog_store.dart';
@@ -48,7 +47,6 @@ void main() {
   Widget screen({
     Future<void> Function()? take,
     IntakeFailure? failure,
-    DoneWindow doneWindow = DoneWindow.sevenDays,
     bool hours24 = true,
   }) => MaterialApp(
     localizationsDelegates: Words.localizationsDelegates,
@@ -61,13 +59,23 @@ void main() {
         take: take,
         failure: failure,
         arrivals: arrivals,
-        doneWindow: doneWindow,
         clock: () => today,
         onOpen: (line) => opened.add(line.id),
         onSince: sinced.add,
       ),
     ),
   );
+
+  /// The finished state, reached the way a person reaches it — by its own switch, which carries
+  /// the number in it.
+  Future<void> openFinished(WidgetTester tester, int count) async {
+    await tester.tap(
+      find.text(
+        NowScreen.tab(words, TaskState.finished, Counted(count, false)),
+      ),
+    );
+    await tester.pumpAndSettle();
+  }
 
   group('what the switch says', () {
     test('a state is named and counted in one', () {
@@ -312,71 +320,60 @@ void main() {
       expect(when, findsOneWidget);
     });
 
-    testWidgets('the finished state reaches as far as the setting says', (
-      tester,
-    ) async {
+    testWidgets('the finished state holds work of any age', (tester) async {
       store.applyPage([
         BacklogChange.put(
           'task',
           1,
           task(
             id: 1,
-            title: 'せんげつ終わった',
+            title: 'きょねん終わった',
             status: 'done',
-            completedAt: '2026-07-20T00:00:00Z',
+            completedAt: '2025-01-06T06:00:00Z',
           ),
         ),
         // So the phone is not one with nothing on it, which is a screen of its own.
         BacklogChange.put('task', 2, task(id: 2)),
       ]);
 
-      Future<void> openFinished(WidgetTester tester, int count) async {
-        await tester.tap(
-          find.text(
-            NowScreen.tab(words, TaskState.finished, Counted(count, false)),
-          ),
-        );
-        await tester.pumpAndSettle();
-      }
-
-      // A week back does not reach it, so the state is empty and says so.
       await tester.pumpWidget(screen());
-      await openFinished(tester, 0);
-      expect(find.text('せんげつ終わった'), findsNothing);
-      expect(find.text(words.nothingInState), findsOneWidget);
-
-      await tester.pumpWidget(screen(doneWindow: DoneWindow.thirtyDays));
       await openFinished(tester, 1);
-      // The reach is written above the rows, or the setting would look like it missed.
-      expect(find.text(words.bundleFinishedWithin(30)), findsOneWidget);
-      expect(find.text('せんげつ終わった'), findsOneWidget);
+
+      // The device holds the whole copy, so nothing is behind a cut-off to go and fetch — and a
+      // row that is old is still a row the person finished.
+      expect(find.text('きょねん終わった'), findsOneWidget);
     });
 
-    testWidgets('no cut-off says nothing about a reach', (tester) async {
+    testWidgets('the date is written in wherever it changes', (tester) async {
       store.applyPage([
-        BacklogChange.put(
-          'task',
-          1,
-          task(
-            id: 1,
-            status: 'done',
-            // Long past any cut-off: only "everything" holds it.
-            completedAt: '2025-01-01T00:00:00Z',
+        for (final (id, closed) in const [
+          (1, '2026-08-08T06:00:00Z'),
+          (2, '2026-08-08T07:00:00Z'),
+          (3, '2026-08-05T06:00:00Z'),
+        ])
+          BacklogChange.put(
+            'task',
+            id,
+            task(id: id, title: 'しごと $id', status: 'done', completedAt: closed),
           ),
-        ),
-        BacklogChange.put('task', 2, task(id: 2)),
+        BacklogChange.put('task', 4, task(id: 4)),
       ]);
 
-      await tester.pumpWidget(screen(doneWindow: DoneWindow.everything));
-      await tester.tap(
-        find.text(
-          NowScreen.tab(words, TaskState.finished, const Counted(1, false)),
-        ),
-      );
-      await tester.pumpAndSettle();
+      await tester.pumpWidget(screen());
+      await openFinished(tester, 3);
 
-      expect(find.text(words.bundleFinishedWithin(30)), findsNothing);
-      expect(find.byType(TaskRow), findsOneWidget);
+      // Two days, so two headings — the pair that ended on the same day share theirs, or the
+      // heading would be a line repeated over every row instead of a place in the list.
+      expect(find.byType(ListHeading), findsNWidgets(2));
+      for (final closed in const [
+        '2026-08-08T06:00:00Z',
+        '2026-08-05T06:00:00Z',
+      ]) {
+        expect(
+          find.text(dateHeading(face, DateTime.parse(closed), now: today)),
+          findsOneWidget,
+        );
+      }
     });
 
     testWidgets('one state is read to its end, not handed to another face', (
@@ -482,7 +479,6 @@ void main() {
           supportedLocales: Words.supportedLocales,
           home: NowScreen(
             store: alone,
-            doneWindow: DoneWindow.sevenDays,
             clock: () => today,
             onOpen: (_) {},
             onSince: (_) {},
@@ -850,7 +846,6 @@ void main() {
             data: MediaQueryData(textScaler: TextScaler.linear(scale)),
             child: NowScreen(
               store: store,
-              doneWindow: DoneWindow.sevenDays,
               clock: () => today,
               onOpen: (_) {},
               onSince: (_) {},

@@ -1,9 +1,10 @@
 /// Everything the person may change, on one screen that does not scroll far.
 ///
-/// The whole of it is three choices and two ways out — to the connection, and to what this build
+/// The whole of it is two choices and two ways out — to the connection, and to what this build
 /// is. There is nothing here about how the screens are laid out, what a list shows or what order
 /// it is in: those are decided once, from what the app is for, and handing them over would leave
-/// the person tuning a reader instead of reading.
+/// the person tuning a reader instead of reading. Narrowing is not here either — it is changed on
+/// the screen being read, not in a drawer two screens away from it.
 ///
 /// Erasing the phone happens two screens in and undoes everything behind this one, so whoever put
 /// this screen there has to hear about it — which this screen says by popping `true`.
@@ -82,22 +83,6 @@ class SettingsScreen extends StatelessWidget {
                       RadioListTile<Appearance>(
                         value: one,
                         title: Text(appearanceWords(words, one)),
-                      ),
-                  ],
-                ),
-              ),
-              _Heading(words.doneHeading),
-              RadioGroup<DoneWindow>(
-                groupValue: chosen.doneWindow,
-                onChanged: (picked) {
-                  if (picked != null) settings.setDoneWindow(picked);
-                },
-                child: Column(
-                  children: [
-                    for (final one in DoneWindow.values)
-                      RadioListTile<DoneWindow>(
-                        value: one,
-                        title: Text(doneWindowWords(words, one)),
                       ),
                   ],
                 ),

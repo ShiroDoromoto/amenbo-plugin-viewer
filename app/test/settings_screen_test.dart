@@ -50,7 +50,7 @@ Future<void> tapRow(WidgetTester tester, Finder row) async {
 }
 
 void main() {
-  testWidgets('the three choices are all there is to change', (tester) async {
+  testWidgets('the two choices are all there is to change', (tester) async {
     await pumpSettings(tester);
 
     for (final one in Refresh.values) {
@@ -59,10 +59,7 @@ void main() {
     for (final one in Appearance.values) {
       expect(find.text(appearanceWords(words, one)), findsOneWidget);
     }
-    for (final one in DoneWindow.values) {
-      expect(find.text(doneWindowWords(words, one)), findsOneWidget);
-    }
-    // Everything a person can decide here is a radio in one of those three groups, plus the two
+    // Everything a person can decide here is a radio in one of those two groups, plus the two
     // ways out. Anything else on this screen would be the app's shape handed over.
     expect(find.byType(Switch), findsNothing);
     expect(find.byType(Slider), findsNothing);
@@ -95,13 +92,24 @@ void main() {
   testWidgets('the screen shows what is chosen, not what was tapped', (
     tester,
   ) async {
-    final keep = UnkeptSettings()..write(MetaKey.doneWindow, '30');
+    final keep = UnkeptSettings()..write(MetaKey.appearance, 'dark');
     await pumpSettings(tester, keep: keep);
 
-    final group = tester.widget<RadioGroup<DoneWindow>>(
-      find.byType(RadioGroup<DoneWindow>),
+    final group = tester.widget<RadioGroup<Appearance>>(
+      find.byType(RadioGroup<Appearance>),
     );
-    expect(group.groupValue, DoneWindow.thirtyDays);
+    expect(group.groupValue, Appearance.dark);
+  });
+
+  testWidgets('how far back the finished ones reach is not asked here', (
+    tester,
+  ) async {
+    await pumpSettings(tester);
+
+    // The list holds everything the device has, and what a list holds is narrowed where it is
+    // read rather than in a drawer two screens away from it.
+    expect(find.textContaining('7 days'), findsNothing);
+    expect(find.textContaining('30 days'), findsNothing);
   });
 
   testWidgets('the connection is one tap away', (tester) async {

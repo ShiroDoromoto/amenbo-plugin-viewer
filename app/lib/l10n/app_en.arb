@@ -6,12 +6,6 @@
   "nothingOpen": "Open something to read it here",
   "@nothingOpen": { "description": "The empty half of a two-pane screen, before anything has been opened into it." },
 
-  "bundleFinishedWithin": "{days, plural, one{Finished (1 day)} other{Finished ({days} days)}}",
-  "@bundleFinishedWithin": {
-    "description": "The line above the finished state, saying how far back it reaches. The reach is said because the person chose it, and because that state is the one list on the screen that is not everything there is. A language with more number forms than English writes them all in — the arms here are the two English has, not the set.",
-    "placeholders": { "days": { "type": "int" } }
-  },
-
   "movedFinished": "Finished",
   "@movedFinished": { "description": "One of the three numbers on the card: work closed since the person last looked." },
   "movedFiled": "New",
@@ -259,8 +253,6 @@
   "@refreshHeading": { "description": "The setting for when the app fetches." },
   "appearanceHeading": "Appearance",
   "@appearanceHeading": { "description": "The setting for how dark it is." },
-  "doneHeading": "Finished work stays on the list for",
-  "@doneHeading": { "description": "The setting for how far back the finished bundle reaches." },
   "refreshNote": "Automatically means when the app opens and when you come back to it. It never runs in the background.",
   "@refreshNote": { "description": "The sentence that lets the refresh choice be made once and never revisited." },
   "refreshAutomatic": "Automatically",
@@ -273,12 +265,6 @@
   "@appearanceLight": { "description": "Always light." },
   "appearanceDark": "Dark",
   "@appearanceDark": { "description": "Always dark." },
-  "doneWindowSevenDays": "The last 7 days",
-  "@doneWindowSevenDays": { "description": "How far back finished work stays on the list." },
-  "doneWindowThirtyDays": "The last 30 days",
-  "@doneWindowThirtyDays": { "description": "How far back finished work stays on the list." },
-  "doneWindowEverything": "Everything",
-  "@doneWindowEverything": { "description": "No cut-off at all, which is not the same as a very large number of days." },
 
   "connectionTitle": "Connection",
   "@connectionTitle": { "description": "The screen that describes this one phone's connection." },

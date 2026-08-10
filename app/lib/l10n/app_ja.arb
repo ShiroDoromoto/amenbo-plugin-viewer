@@ -4,8 +4,6 @@
   "tabSearch": "さがす",
   "nothingOpen": "開いたものが、ここに出ます",
 
-  "bundleFinishedWithin": "{days, plural, other{終わったもの（{days}日）}}",
-
   "movedFinished": "終わった",
   "movedFiled": "新しく入った",
   "movedCommented": "コメント",
@@ -111,16 +109,12 @@
   "settingsTitle": "設定",
   "refreshHeading": "取りに行く",
   "appearanceHeading": "見た目",
-  "doneHeading": "終わったものを一覧に残す期間",
   "refreshNote": "自動は、アプリを開いたときと、前に戻ってきたときです。裏では動きません。",
   "refreshAutomatic": "自動",
   "refreshManualOnly": "引き下げたときだけ",
   "appearanceSystem": "端末に合わせる",
   "appearanceLight": "明るい",
   "appearanceDark": "暗い",
-  "doneWindowSevenDays": "7日",
-  "doneWindowThirtyDays": "30日",
-  "doneWindowEverything": "すべて",
 
   "connectionTitle": "接続",
   "routeICloud": "iCloud Drive",

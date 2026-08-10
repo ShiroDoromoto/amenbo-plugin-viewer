@@ -12,7 +12,9 @@
 ///   derived, and it changes overnight without the task moving. A row waiting on something stays
 ///   in `todo` and says what it is waiting on.
 /// * **One state is read to its end.** A window at a time, asked for by reaching the bottom —
-///   there is no "N more" that hands the rest to another screen.
+///   there is no "N more" that hands the rest to another screen. Finished work is all of it,
+///   newest first, with the date written in wherever it changes: the device holds the whole copy,
+///   so a cut-off would be hiding rows that are already here.
 /// * **The floor is never swapped while someone is standing on it.** Rows that arrive on their own
 ///   are counted, not applied — the person presses a pill when they are ready. The exception is a
 ///   list that is still empty, where there is nothing to pull out from under anyone and a first
@@ -28,7 +30,6 @@ import 'package:flutter/material.dart';
 
 import 'cloudflare_intake.dart';
 import 'l10n/words.dart';
-import 'settings.dart';
 import 'state_band.dart';
 import 'store/backlog_queries.dart';
 import 'store/backlog_store.dart';
@@ -87,7 +88,6 @@ class NowScreen extends StatefulWidget {
     this.onOpenSettings,
     this.take,
     this.arrivals,
-    required this.doneWindow,
     this.clock = DateTime.now,
   });
 
@@ -117,11 +117,6 @@ class NowScreen extends StatefulWidget {
 
   /// Ticks when a fetch this screen did not run has written rows.
   final Arrivals? arrivals;
-
-  /// How far back the finished state reaches. Handed in rather than read from the settings here,
-  /// and required rather than defaulted, because a screen that quietly kept its own week would
-  /// leave the person with a choice that changes nothing.
-  final DoneWindow doneWindow;
 
   /// Passed in rather than read here, so a row and the heading over it cannot disagree about what
   /// "today" was.
@@ -238,9 +233,6 @@ class _NowScreenState extends State<NowScreen>
       old.arrivals?.removeListener(_rowsArrived);
       widget.arrivals?.addListener(_rowsArrived);
     }
-    // A choice made on the settings screen and come back from. Nothing is being pulled out from
-    // under anyone here: the person asked for this one, so it is applied rather than counted.
-    if (old.doneWindow != widget.doneWindow) _load();
   }
 
   @override
@@ -265,14 +257,12 @@ class _NowScreenState extends State<NowScreen>
         state,
         today: today,
         projectId: _projectId,
-        finishedDays: widget.doneWindow.days,
       );
       _rows[state] = rows;
       _totals[state] = widget.store.stateCount(
         state,
         today: today,
         projectId: _projectId,
-        finishedDays: widget.doneWindow.days,
       );
       _more[state] = rows.length == Windows.list;
     }
@@ -302,7 +292,6 @@ class _NowScreenState extends State<NowScreen>
           state,
           today: widget.clock(),
           projectId: _projectId,
-          finishedDays: widget.doneWindow.days,
           offset: held.length,
         );
         _rows[state] = [...held, ...next];
@@ -579,7 +568,6 @@ class _NowScreenState extends State<NowScreen>
     Standing standing,
   ) {
     final rows = _rows[state] ?? const <TaskLine>[];
-    final days = widget.doneWindow.days;
     final header = <Widget>[
       _takeLine(words),
       _band(standing),
@@ -587,11 +575,10 @@ class _NowScreenState extends State<NowScreen>
       // anything else.
       if (_sinceCounts.isNotEmpty)
         _SinceCard(counts: _sinceCounts, onOpen: _openSince),
-      // The one state that is not everything there is. A person who set it to a month and read
-      // nothing about a reach would take the list for the whole of what they finished.
-      if (state == TaskState.finished && days != null)
-        ListHeading(title: words.bundleFinishedWithin(days)),
     ];
+    final dates = state == TaskState.finished
+        ? _dateHeadings(rows, now: today)
+        : const <int, String>{};
     return RefreshIndicator(
       onRefresh: _pull,
       child: ListView.builder(
@@ -606,7 +593,7 @@ class _NowScreenState extends State<NowScreen>
           if (rows.isEmpty) return _none(words);
           if (place < rows.length) {
             final line = rows[place];
-            return TaskRow(
+            final row = TaskRow(
               line: line,
               today: today,
               unread: _unread(line),
@@ -625,12 +612,45 @@ class _NowScreenState extends State<NowScreen>
                 widget.onOpen(line);
               },
             );
+            final date = dates[place];
+            // The heading travels with the first row of its day rather than as an item of its
+            // own, so a window arriving underneath cannot land between the two.
+            return date == null
+                ? row
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      ListHeading(title: date),
+                      row,
+                    ],
+                  );
           }
           _widen(state);
           return const SizedBox(height: Stroke.rule);
         },
       ),
     );
+  }
+
+  /// Which rows of the finished state open a new day, and what that day is called.
+  ///
+  /// Finished work is all of it and it only grows, so the date is what says how far down someone
+  /// has read — written in wherever it changes, and nowhere else. It is taken from the same
+  /// instant the list is ordered by, or a row would sit under a day it did not end on.
+  Map<int, String> _dateHeadings(List<TaskLine> rows, {required DateTime now}) {
+    final face = TimeFace.of(context);
+    final headings = <int, String>{};
+    DateTime? standing;
+    for (var place = 0; place < rows.length; place += 1) {
+      final line = rows[place];
+      final when = DateTime.tryParse(
+        line.closedAt ?? line.updatedAt,
+      )?.toLocal();
+      if (when == null || DateUtils.isSameDay(standing, when)) continue;
+      standing = when;
+      headings[place] = dateHeading(face, when, now: now);
+    }
+    return headings;
   }
 
   /// A state with nothing in it.

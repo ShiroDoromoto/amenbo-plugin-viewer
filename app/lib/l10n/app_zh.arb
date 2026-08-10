@@ -4,8 +4,6 @@
   "tabSearch": "查找",
   "nothingOpen": "打开一条，就在这里读",
 
-  "bundleFinishedWithin": "{days, plural, other{已完成（{days} 天内）}}",
-
   "movedFinished": "完成",
   "movedFiled": "新建",
   "movedCommented": "评论",
@@ -111,16 +109,12 @@
   "settingsTitle": "设置",
   "refreshHeading": "去取",
   "appearanceHeading": "外观",
-  "doneHeading": "已完成的内容留在列表里的时长",
   "refreshNote": "自动是指打开应用时，以及回到应用时。它从不在后台运行。",
   "refreshAutomatic": "自动",
   "refreshManualOnly": "只在我下拉时",
   "appearanceSystem": "跟随手机",
   "appearanceLight": "浅色",
   "appearanceDark": "深色",
-  "doneWindowSevenDays": "最近 7 天",
-  "doneWindowThirtyDays": "最近 30 天",
-  "doneWindowEverything": "全部",
 
   "connectionTitle": "连接",
   "routeICloud": "iCloud 云盘",

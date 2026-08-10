@@ -4,8 +4,6 @@
   "tabSearch": "Поиск",
   "nothingOpen": "Откройте что-нибудь, чтобы прочитать здесь",
 
-  "bundleFinishedWithin": "{days, plural, one{Завершённые (1 день)} few{Завершённые ({days} дня)} many{Завершённые ({days} дней)} other{Завершённые ({days} дня)}}",
-
   "movedFinished": "Завершено",
   "movedFiled": "Новых",
   "movedCommented": "Комментариев",
@@ -111,16 +109,12 @@
   "settingsTitle": "Настройки",
   "refreshHeading": "Загрузка",
   "appearanceHeading": "Оформление",
-  "doneHeading": "Завершённое остаётся в списке",
   "refreshNote": "Автоматически — это при открытии приложения и при возвращении в него. В фоне ничего не работает.",
   "refreshAutomatic": "Автоматически",
   "refreshManualOnly": "Только когда я тяну вниз",
   "appearanceSystem": "Как на телефоне",
   "appearanceLight": "Светлое",
   "appearanceDark": "Тёмное",
-  "doneWindowSevenDays": "Последние 7 дней",
-  "doneWindowThirtyDays": "Последние 30 дней",
-  "doneWindowEverything": "Всё",
 
   "connectionTitle": "Подключение",
   "routeICloud": "iCloud Drive",

@@ -4,8 +4,6 @@
   "tabSearch": "खोजें",
   "nothingOpen": "कुछ खोलिए, वह यहाँ पढ़ने को मिलेगा",
 
-  "bundleFinishedWithin": "{days, plural, one{पूरे हुए (1 दिन)} other{पूरे हुए ({days} दिन)}}",
-
   "movedFinished": "पूरे हुए",
   "movedFiled": "नए",
   "movedCommented": "टिप्पणियाँ",
@@ -111,16 +109,12 @@
   "settingsTitle": "सेटिंग्स",
   "refreshHeading": "जाकर देखना",
   "appearanceHeading": "रूप",
-  "doneHeading": "पूरा हुआ काम सूची में इतने समय तक रहता है",
   "refreshNote": "अपने आप का मतलब है ऐप खुलने पर और उस पर लौटने पर। पृष्ठभूमि में यह कभी नहीं चलता।",
   "refreshAutomatic": "अपने आप",
   "refreshManualOnly": "सिर्फ़ जब मैं नीचे खींचूँ",
   "appearanceSystem": "फ़ोन जैसा",
   "appearanceLight": "उजला",
   "appearanceDark": "गहरा",
-  "doneWindowSevenDays": "पिछले 7 दिन",
-  "doneWindowThirtyDays": "पिछले 30 दिन",
-  "doneWindowEverything": "सब कुछ",
 
   "connectionTitle": "जुड़ाव",
   "routeICloud": "iCloud Drive",

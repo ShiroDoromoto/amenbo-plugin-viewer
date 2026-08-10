@@ -83,9 +83,19 @@ String absoluteTime(TimeFace face, DateTime when) {
 String dayLabel(TimeFace face, String isoDay, {required DateTime now}) {
   final parsed = DateTime.tryParse(isoDay);
   if (parsed == null) return isoDay;
-  return parsed.year == now.year
-      ? _date(face, parsed)
-      : _dateWithYear(face, parsed);
+  return dateHeading(face, parsed, now: now);
+}
+
+/// The day an instant fell on, as a heading over the rows that share it.
+///
+/// The year comes with it once it is not this one. A list of finished work reaches back years, and
+/// a heading that said only the month and the day would repeat itself once a year without saying
+/// which one the reader is now in.
+String dateHeading(TimeFace face, DateTime when, {required DateTime now}) {
+  final local = when.toLocal();
+  return local.year == now.year
+      ? _date(face, local)
+      : _dateWithYear(face, local);
 }
 
 /// Reveals [when] in full while it is held down.

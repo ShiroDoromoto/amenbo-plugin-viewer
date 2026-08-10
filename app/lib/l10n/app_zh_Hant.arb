@@ -4,8 +4,6 @@
   "tabSearch": "尋找",
   "nothingOpen": "打開一條，就在這裡讀",
 
-  "bundleFinishedWithin": "{days, plural, other{已完成（{days} 天內）}}",
-
   "movedFinished": "完成",
   "movedFiled": "新建",
   "movedCommented": "留言",
@@ -111,16 +109,12 @@
   "settingsTitle": "設定",
   "refreshHeading": "去取",
   "appearanceHeading": "外觀",
-  "doneHeading": "已完成的內容留在列表裡的時間",
   "refreshNote": "自動是指打開 App 時，以及回到 App 時。它從不在背景執行。",
   "refreshAutomatic": "自動",
   "refreshManualOnly": "只在我下拉時",
   "appearanceSystem": "跟隨手機",
   "appearanceLight": "淺色",
   "appearanceDark": "深色",
-  "doneWindowSevenDays": "最近 7 天",
-  "doneWindowThirtyDays": "最近 30 天",
-  "doneWindowEverything": "全部",
 
   "connectionTitle": "連線",
   "routeICloud": "iCloud 雲碟",

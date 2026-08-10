@@ -4,8 +4,6 @@
   "tabSearch": "Tìm",
   "nothingOpen": "Mở một mục để đọc ở đây",
 
-  "bundleFinishedWithin": "{days, plural, other{Đã xong ({days} ngày)}}",
-
   "movedFinished": "Xong",
   "movedFiled": "Mới",
   "movedCommented": "Bình luận",
@@ -111,16 +109,12 @@
   "settingsTitle": "Cài đặt",
   "refreshHeading": "Đi lấy",
   "appearanceHeading": "Giao diện",
-  "doneHeading": "Việc đã xong ở lại danh sách trong",
   "refreshNote": "Tự động nghĩa là khi mở ứng dụng và khi bạn quay lại nó. Nó không bao giờ chạy nền.",
   "refreshAutomatic": "Tự động",
   "refreshManualOnly": "Chỉ khi tôi kéo xuống",
   "appearanceSystem": "Theo máy",
   "appearanceLight": "Sáng",
   "appearanceDark": "Tối",
-  "doneWindowSevenDays": "7 ngày gần nhất",
-  "doneWindowThirtyDays": "30 ngày gần nhất",
-  "doneWindowEverything": "Tất cả",
 
   "connectionTitle": "Kết nối",
   "routeICloud": "iCloud Drive",

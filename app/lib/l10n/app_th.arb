@@ -4,8 +4,6 @@
   "tabSearch": "ค้นหา",
   "nothingOpen": "เปิดสักรายการเพื่ออ่านตรงนี้",
 
-  "bundleFinishedWithin": "{days, plural, other{เสร็จแล้ว ({days} วัน)}}",
-
   "movedFinished": "เสร็จ",
   "movedFiled": "ใหม่",
   "movedCommented": "ความเห็น",
@@ -111,16 +109,12 @@
   "settingsTitle": "การตั้งค่า",
   "refreshHeading": "ไปเอามา",
   "appearanceHeading": "หน้าตา",
-  "doneHeading": "งานที่เสร็จแล้วอยู่ในรายการนาน",
   "refreshNote": "อัตโนมัติหมายถึงตอนเปิดแอปและตอนกลับมาที่แอป ไม่มีอะไรทำงานเบื้องหลังเลย",
   "refreshAutomatic": "อัตโนมัติ",
   "refreshManualOnly": "เฉพาะตอนที่ฉันลากลง",
   "appearanceSystem": "ตามเครื่อง",
   "appearanceLight": "สว่าง",
   "appearanceDark": "มืด",
-  "doneWindowSevenDays": "7 วันล่าสุด",
-  "doneWindowThirtyDays": "30 วันล่าสุด",
-  "doneWindowEverything": "ทั้งหมด",
 
   "connectionTitle": "การเชื่อมต่อ",
   "routeICloud": "iCloud Drive",

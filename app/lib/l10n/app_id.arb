@@ -4,8 +4,6 @@
   "tabSearch": "Cari",
   "nothingOpen": "Buka sesuatu untuk dibaca di sini",
 
-  "bundleFinishedWithin": "{days, plural, other{Selesai ({days} hari)}}",
-
   "movedFinished": "Selesai",
   "movedFiled": "Baru",
   "movedCommented": "Komentar",
@@ -111,16 +109,12 @@
   "settingsTitle": "Pengaturan",
   "refreshHeading": "Pergi mengambil",
   "appearanceHeading": "Tampilan",
-  "doneHeading": "Pekerjaan selesai tetap di daftar selama",
   "refreshNote": "Otomatis berarti saat aplikasi dibuka dan saat kamu kembali ke sana. Tidak pernah berjalan di latar belakang.",
   "refreshAutomatic": "Otomatis",
   "refreshManualOnly": "Hanya saat saya tarik ke bawah",
   "appearanceSystem": "Ikut ponsel",
   "appearanceLight": "Terang",
   "appearanceDark": "Gelap",
-  "doneWindowSevenDays": "7 hari terakhir",
-  "doneWindowThirtyDays": "30 hari terakhir",
-  "doneWindowEverything": "Semua",
 
   "connectionTitle": "Sambungan",
   "routeICloud": "iCloud Drive",

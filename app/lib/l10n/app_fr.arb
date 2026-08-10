@@ -4,8 +4,6 @@
   "tabSearch": "Rechercher",
   "nothingOpen": "Ouvrez quelque chose pour le lire ici",
 
-  "bundleFinishedWithin": "{days, plural, one{Terminé (1 jour)} other{Terminé ({days} jours)}}",
-
   "movedFinished": "Terminé",
   "movedFiled": "Nouveau",
   "movedCommented": "Commentaires",
@@ -111,16 +109,12 @@
   "settingsTitle": "Réglages",
   "refreshHeading": "Aller voir",
   "appearanceHeading": "Apparence",
-  "doneHeading": "Le travail terminé reste dans la liste pendant",
   "refreshNote": "Automatiquement veut dire à l'ouverture de l'app et quand vous y revenez. Rien ne tourne en arrière-plan.",
   "refreshAutomatic": "Automatiquement",
   "refreshManualOnly": "Seulement quand je tire vers le bas",
   "appearanceSystem": "Comme le téléphone",
   "appearanceLight": "Clair",
   "appearanceDark": "Sombre",
-  "doneWindowSevenDays": "Les 7 derniers jours",
-  "doneWindowThirtyDays": "Les 30 derniers jours",
-  "doneWindowEverything": "Tout",
 
   "connectionTitle": "Connexion",
   "routeICloud": "iCloud Drive",

@@ -84,9 +84,6 @@ class MetaKey {
   /// Light, dark, or whatever the phone is doing.
   static const appearance = 'appearance';
 
-  /// How far back the finished ones reach on the list.
-  static const doneWindow = 'done_window';
-
   /// The last few words typed into the search face.
   static const recentTerms = 'recent_terms';
 
@@ -101,7 +98,6 @@ class MetaKey {
     lastOpenedAt,
     refresh,
     appearance,
-    doneWindow,
     recentTerms,
     recentlyViewed,
   };

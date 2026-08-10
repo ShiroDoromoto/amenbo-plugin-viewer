@@ -12,26 +12,30 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('what an untouched phone does', () {
-    test('it goes and looks, wears what the phone wears, and keeps a week', () {
+    test('it goes and looks, and wears what the phone wears', () {
       final settings = SettingsController(UnkeptSettings()).value;
 
       expect(settings, ViewerSettings.defaults);
       expect(settings.refresh, Refresh.automatic);
       expect(settings.appearance.themeMode, ThemeMode.system);
-      expect(settings.doneWindow.days, 7);
     });
 
     test('a value written by another build reads as the default', () {
-      final keep = UnkeptSettings()
-        ..write(MetaKey.appearance, 'sepia')
-        ..write(MetaKey.doneWindow, 'a fortnight');
+      final keep = UnkeptSettings()..write(MetaKey.appearance, 'sepia');
 
       final settings = SettingsController(keep).value;
 
       // Not an exception and not a blank screen: a settings row nobody recognises is worth less
       // than the launch it would otherwise take down.
       expect(settings.appearance, Appearance.system);
-      expect(settings.doneWindow, DoneWindow.sevenDays);
+    });
+
+    test('a choice this build no longer has is left where it lies', () {
+      // A phone that once chose a week of finished work. Nothing reads the row any more, and a
+      // launch is not the place to find out that it is there.
+      final keep = UnkeptSettings()..write('done_window', '7');
+
+      expect(SettingsController(keep).value, ViewerSettings.defaults);
     });
   });
 
@@ -65,8 +69,7 @@ void main() {
     final keep = UnkeptSettings();
     SettingsController(keep)
       ..setRefresh(Refresh.manualOnly)
-      ..setAppearance(Appearance.dark)
-      ..setDoneWindow(DoneWindow.everything);
+      ..setAppearance(Appearance.dark);
 
     // A second controller over the same keep is what the next launch is.
     expect(
@@ -74,7 +77,6 @@ void main() {
       const ViewerSettings(
         refresh: Refresh.manualOnly,
         appearance: Appearance.dark,
-        doneWindow: DoneWindow.everything,
       ),
     );
   });

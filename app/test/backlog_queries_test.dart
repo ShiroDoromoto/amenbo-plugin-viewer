@@ -132,7 +132,7 @@ void main() {
       ]);
     });
 
-    test('finished is the last seven days, newest first', () {
+    test('finished is all of it, newest first', () {
       store.applyPage([
         BacklogChange.put(
           'task',
@@ -155,31 +155,15 @@ void main() {
         ),
       ]);
 
+      // The one closed last summer is as much a part of it as the one closed yesterday: the
+      // device holds the whole copy, so nothing is left out for being old.
       expect(
         store.inState(TaskState.finished, today: today).map((row) => row.id),
-        [1, 2],
+        [1, 2, 3],
       );
     });
 
-    test('a wider reach takes in what the week left out', () {
-      store.applyPage([
-        BacklogChange.put(
-          'task',
-          1,
-          task(id: 1, status: 'done', completedAt: '2026-07-20T10:00:00Z'),
-        ),
-      ]);
-
-      expect(store.inState(TaskState.finished, today: today), isEmpty);
-      expect(
-        store
-            .inState(TaskState.finished, today: today, finishedDays: 30)
-            .map((row) => row.id),
-        [1],
-      );
-    });
-
-    test('everything has no cut-off, and still hands back one window', () {
+    test('a long-closed one is still handed back, one window at a time', () {
       store.applyPage([
         for (var id = 1; id <= Windows.list + 5; id++)
           BacklogChange.put(
@@ -190,15 +174,13 @@ void main() {
       ]);
 
       expect(
-        store.inState(TaskState.finished, today: today, finishedDays: null),
+        store.inState(TaskState.finished, today: today),
         hasLength(Windows.list),
       );
       // The count is asked the same question as the window, or the number on the switch would be
       // counting something the list is not.
       expect(
-        store
-            .stateCount(TaskState.finished, today: today, finishedDays: null)
-            .value,
+        store.stateCount(TaskState.finished, today: today).value,
         Windows.list + 5,
       );
     });

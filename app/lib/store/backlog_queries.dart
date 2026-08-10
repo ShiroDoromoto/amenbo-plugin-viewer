@@ -32,17 +32,10 @@ enum TaskState {
   /// amenbo's `blocked`: a stall nobody can move past.
   blocked,
 
-  /// Closed — `done` or `rejected` — within the reach the phone is set to (see
-  /// [finishedDaysDefault]).
+  /// Closed — `done` or `rejected`. All of it: the device holds the whole copy, so there is
+  /// nothing behind a cut-off to go and fetch.
   finished,
 }
-
-/// How far back the finished state reaches when nobody has said otherwise.
-///
-/// It is the settings screen's own starting choice, written here as well because the store answers
-/// callers that have no settings behind them. Null, wherever one of these is passed, is not a very
-/// large number of days but no cut-off at all.
-const finishedDaysDefault = 7;
 
 /// The three things the "since you last looked" card counts.
 ///
@@ -281,8 +274,6 @@ extension BacklogQueries on BacklogStore {
   /// [today] is passed in rather than read from the clock so that rows drawn at 23:59 and the
   /// count beside them cannot disagree about which day it is.
   ///
-  /// [finishedDays] is how far back [TaskState.finished] reaches, null being everything.
-  ///
   /// The count is asked for separately ([stateCount]): a state is walked window by window to its
   /// end, and re-counting the whole of it on every window would be paying for the number in the
   /// heading again and again.
@@ -290,11 +281,10 @@ extension BacklogQueries on BacklogStore {
     TaskState state, {
     required DateTime today,
     int? projectId,
-    int? finishedDays = finishedDaysDefault,
     int limit = Windows.list,
     int offset = 0,
   }) {
-    final where = _stateWhere(state, today, projectId, finishedDays);
+    final where = _stateWhere(state, today, projectId);
     final rows = db.select(
       'SELECT ${_taskColumns()} FROM task t WHERE ${where.sql} '
       'ORDER BY ${_stateOrder(state, today)} LIMIT ? OFFSET ?',
@@ -308,9 +298,8 @@ extension BacklogQueries on BacklogStore {
     TaskState state, {
     required DateTime today,
     int? projectId,
-    int? finishedDays = finishedDaysDefault,
   }) {
-    final where = _stateWhere(state, today, projectId, finishedDays);
+    final where = _stateWhere(state, today, projectId);
     return _count('SELECT 1 FROM task t WHERE ${where.sql}', where.args);
   }
 
@@ -758,7 +747,6 @@ TaskLine _taskLine(Row row) => TaskLine(
   TaskState state,
   DateTime today,
   int? projectId,
-  int? finishedDays,
 ) {
   final clauses = <String>[];
   final args = <Object?>[];
@@ -771,14 +759,6 @@ TaskLine _taskLine(Row row) => TaskLine(
       clauses.add("t.status = 'blocked'");
     case TaskState.finished:
       clauses.add("t.status IN ('done', 'rejected')");
-      // Everything asks for no cut-off, so the clause is left off rather than pushed far enough
-      // back to look like one.
-      if (finishedDays != null) {
-        clauses.add(
-          'COALESCE(t.completed_at, t.status_changed_at, t.updated_at) >= ?',
-        );
-        args.add(amenboStamp(today.subtract(Duration(days: finishedDays))));
-      }
   }
   clauses.add(_liveProject);
   if (projectId != null) {

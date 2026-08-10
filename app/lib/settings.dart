@@ -2,8 +2,12 @@
 ///
 /// The list is short on purpose. This is a thing to read, so every switch on it is one more place
 /// to stop on the way to the backlog — and a switch that changed how a screen is built would mean
-/// the app has two shapes and nobody has seen both. What is left is when to go and look, how dark
-/// it is, and how far back the finished ones reach.
+/// the app has two shapes and nobody has seen both. What is left is when to go and look, and how
+/// dark it is.
+///
+/// **Narrowing is not kept here.** What a list holds is changed where the list is being read, and
+/// the one narrowing that had been left in this drawer — how far back the finished ones reached —
+/// was cutting off rows the device already held.
 ///
 /// **There is no refresh interval.** The app is not resident and never wakes itself, so an
 /// interval would be a number that does nothing. Automatic means launch and coming back to the
@@ -65,66 +69,35 @@ String appearanceWords(Words words, Appearance appearance) =>
       Appearance.dark => words.appearanceDark,
     };
 
-/// How far back the finished ones reach on the list.
-enum DoneWindow {
-  sevenDays('7', 7),
-  thirtyDays('30', 30),
-  everything('all', null);
-
-  const DoneWindow(this.stored, this.days);
-
-  final String stored;
-
-  /// Null for [everything] — no cut-off at all, which is not the same as a very large number of
-  /// days and is worth being able to say.
-  final int? days;
-
-  static DoneWindow read(String? stored) =>
-      values.firstWhere((one) => one.stored == stored, orElse: () => sevenDays);
-}
-
-String doneWindowWords(Words words, DoneWindow window) => switch (window) {
-  DoneWindow.sevenDays => words.doneWindowSevenDays,
-  DoneWindow.thirtyDays => words.doneWindowThirtyDays,
-  DoneWindow.everything => words.doneWindowEverything,
-};
-
-/// The three choices, together.
+/// The two choices, together.
 @immutable
 class ViewerSettings {
   const ViewerSettings({
     this.refresh = Refresh.automatic,
     this.appearance = Appearance.system,
-    this.doneWindow = DoneWindow.sevenDays,
   });
 
   /// What a phone that has never been to this screen behaves like: go and look without being
-  /// asked, wear what the phone wears, and keep a week of finished work.
+  /// asked, and wear what the phone wears.
   static const defaults = ViewerSettings();
 
   final Refresh refresh;
   final Appearance appearance;
-  final DoneWindow doneWindow;
 
-  ViewerSettings copyWith({
-    Refresh? refresh,
-    Appearance? appearance,
-    DoneWindow? doneWindow,
-  }) => ViewerSettings(
-    refresh: refresh ?? this.refresh,
-    appearance: appearance ?? this.appearance,
-    doneWindow: doneWindow ?? this.doneWindow,
-  );
+  ViewerSettings copyWith({Refresh? refresh, Appearance? appearance}) =>
+      ViewerSettings(
+        refresh: refresh ?? this.refresh,
+        appearance: appearance ?? this.appearance,
+      );
 
   @override
   bool operator ==(Object other) =>
       other is ViewerSettings &&
       other.refresh == refresh &&
-      other.appearance == appearance &&
-      other.doneWindow == doneWindow;
+      other.appearance == appearance;
 
   @override
-  int get hashCode => Object.hash(refresh, appearance, doneWindow);
+  int get hashCode => Object.hash(refresh, appearance);
 }
 
 /// Where the choices survive a restart.
@@ -168,7 +141,6 @@ class SettingsController extends ChangeNotifier {
     : _value = ViewerSettings(
         refresh: Refresh.read(_keep.read(MetaKey.refresh)),
         appearance: Appearance.read(_keep.read(MetaKey.appearance)),
-        doneWindow: DoneWindow.read(_keep.read(MetaKey.doneWindow)),
       );
 
   final SettingsKeep _keep;
@@ -185,14 +157,6 @@ class SettingsController extends ChangeNotifier {
       _value.copyWith(appearance: appearance),
       MetaKey.appearance,
       appearance.stored,
-    );
-  }
-
-  void setDoneWindow(DoneWindow doneWindow) {
-    _change(
-      _value.copyWith(doneWindow: doneWindow),
-      MetaKey.doneWindow,
-      doneWindow.stored,
     );
   }
 

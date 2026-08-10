@@ -4,8 +4,6 @@
   "tabSearch": "Suchen",
   "nothingOpen": "Öffne etwas, um es hier zu lesen",
 
-  "bundleFinishedWithin": "{days, plural, one{Erledigt (1 Tag)} other{Erledigt ({days} Tage)}}",
-
   "movedFinished": "Erledigt",
   "movedFiled": "Neu",
   "movedCommented": "Kommentare",
@@ -111,16 +109,12 @@
   "settingsTitle": "Einstellungen",
   "refreshHeading": "Abrufen",
   "appearanceHeading": "Darstellung",
-  "doneHeading": "Erledigtes bleibt in der Liste für",
   "refreshNote": "Automatisch heißt: beim Öffnen der App und bei der Rückkehr zu ihr. Im Hintergrund läuft nie etwas.",
   "refreshAutomatic": "Automatisch",
   "refreshManualOnly": "Nur wenn ich nach unten ziehe",
   "appearanceSystem": "Wie das Telefon",
   "appearanceLight": "Hell",
   "appearanceDark": "Dunkel",
-  "doneWindowSevenDays": "Die letzten 7 Tage",
-  "doneWindowThirtyDays": "Die letzten 30 Tage",
-  "doneWindowEverything": "Alles",
 
   "connectionTitle": "Verbindung",
   "routeICloud": "iCloud Drive",

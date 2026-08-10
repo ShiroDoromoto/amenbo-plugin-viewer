@@ -479,7 +479,6 @@ class _HomeShellState extends State<HomeShell> {
           NowScreen(
             store: widget.store,
             clock: widget.clock,
-            doneWindow: widget.settings.value.doneWindow,
             take: widget.take,
             arrivals: widget.arrivals,
             failure: widget.failure,

@@ -4,8 +4,6 @@
   "tabSearch": "Buscar",
   "nothingOpen": "Abra algo para ler aqui",
 
-  "bundleFinishedWithin": "{days, plural, one{Concluídas (1 dia)} other{Concluídas ({days} dias)}}",
-
   "movedFinished": "Concluídas",
   "movedFiled": "Novas",
   "movedCommented": "Comentários",
@@ -111,16 +109,12 @@
   "settingsTitle": "Ajustes",
   "refreshHeading": "Ir buscar",
   "appearanceHeading": "Aparência",
-  "doneHeading": "O que foi concluído fica na lista por",
   "refreshNote": "Automaticamente quer dizer ao abrir o app e ao voltar para ele. Nada roda em segundo plano.",
   "refreshAutomatic": "Automaticamente",
   "refreshManualOnly": "Só quando eu puxar para baixo",
   "appearanceSystem": "Igual ao telefone",
   "appearanceLight": "Claro",
   "appearanceDark": "Escuro",
-  "doneWindowSevenDays": "Os últimos 7 dias",
-  "doneWindowThirtyDays": "Os últimos 30 dias",
-  "doneWindowEverything": "Tudo",
 
   "connectionTitle": "Conexão",
   "routeICloud": "iCloud Drive",

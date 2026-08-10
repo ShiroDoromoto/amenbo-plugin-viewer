@@ -4,8 +4,6 @@
   "tabSearch": "Zoeken",
   "nothingOpen": "Open iets om het hier te lezen",
 
-  "bundleFinishedWithin": "{days, plural, one{Afgerond (1 dag)} other{Afgerond ({days} dagen)}}",
-
   "movedFinished": "Afgerond",
   "movedFiled": "Nieuw",
   "movedCommented": "Reacties",
@@ -111,16 +109,12 @@
   "settingsTitle": "Instellingen",
   "refreshHeading": "Gaan kijken",
   "appearanceHeading": "Weergave",
-  "doneHeading": "Afgerond werk blijft in de lijst gedurende",
   "refreshNote": "Automatisch betekent bij het openen van de app en als je ernaar terugkeert. Er draait nooit iets op de achtergrond.",
   "refreshAutomatic": "Automatisch",
   "refreshManualOnly": "Alleen als ik naar beneden trek",
   "appearanceSystem": "Zoals de telefoon",
   "appearanceLight": "Licht",
   "appearanceDark": "Donker",
-  "doneWindowSevenDays": "De laatste 7 dagen",
-  "doneWindowThirtyDays": "De laatste 30 dagen",
-  "doneWindowEverything": "Alles",
 
   "connectionTitle": "Verbinding",
   "routeICloud": "iCloud Drive",
