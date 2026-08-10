@@ -308,6 +308,7 @@ class HomeShell extends StatefulWidget {
     this.onPairAgain,
     this.onErased,
     this.clock = DateTime.now,
+    this.initialTab = 0,
   });
 
   final BacklogStore store;
@@ -315,6 +316,10 @@ class HomeShell extends StatefulWidget {
   final ConnectionFacts connection;
   final String appName;
   final Future<void> Function()? take;
+
+  /// Which of the three ways out the shell opens on. The front screen, for anybody arriving at the
+  /// app — the other two are for something that opens the shell already knowing where it is going.
+  final int initialTab;
 
   /// Ticks when rows landed from somewhere other than the front screen's own pull.
   final Arrivals? arrivals;
@@ -330,7 +335,7 @@ class HomeShell extends StatefulWidget {
 }
 
 class _HomeShellState extends State<HomeShell> {
-  int _tab = 0;
+  late int _tab = widget.initialTab;
 
   /// How many times one of the two faces that start fresh has been arrived at. It keys both of
   /// them, so every visit builds them again: search starts from everything, and a narrowing

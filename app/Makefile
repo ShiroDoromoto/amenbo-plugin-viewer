@@ -8,7 +8,7 @@
 
 FLUTTER := flutter
 
-.PHONY: build test analyze apk ipa screen-android screen-ios clean
+.PHONY: build test analyze apk ipa screen-android screen-ios shots-ios shots-android clean
 
 build: analyze
 
@@ -37,6 +37,15 @@ screen-android:
 
 screen-ios:
 	tool/device-screen.sh ios
+
+# The pictures the stores put next to the app. A simulator, not a phone: the sizes the stores ask
+# for are not the sizes of the phone on the cable. Out of `build` and `test` for the same reason
+# the two above are.
+shots-ios:
+	tool/store-shots.sh ios
+
+shots-android:
+	tool/store-shots.sh android
 
 clean:
 	$(FLUTTER) clean
