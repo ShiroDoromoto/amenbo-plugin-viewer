@@ -2,13 +2,21 @@
 
 iOS と Android を1本で作る。`ios/` と `android/` は Flutter がこの下に生成する。
 
+**Flutter を選んだのは、プロジェクトを跨いで技術構成を揃えるため**で、ここ単体の最適解を採ったのではない。
+構成がばらつくと保守の作法がプロジェクトごとに変わり、その負担は実装量の差より長く効く。
+
 | | 値 |
 |---|---|
 | ストア表示名 | amenbo Viewer |
 | バンドル ID / パッケージ名 | `work.amenbo.viewer` |
 | Dart のパッケージ名 | `amenbo_viewer` |
+| iOS の最低対応 | 15.0 |
 
 表示名は日英どちらでも通るので、言語ごとに変えず揃える。
+
+**iOS の下限を下げても、対応機種は1台も増えない。** iOS 15 は iOS 13 と同じ端末まで上がる
+（下限は iPhone 6s と第1世代 SE）。13 まで戻して届くのは5年以上 OS を更新していない利用者だけで、
+代わりに手元に実機の無い OS が2つ増える。
 
 iOS は2経路を持つ。アプリ専用の iCloud コンテナ（`iCloud.work.amenbo.viewer`）を読む経路と、
 Cloudflare へ HTTPS で取りに行く経路。Android は Cloudflare 経路だけ。
