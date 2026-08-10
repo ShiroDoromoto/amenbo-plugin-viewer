@@ -106,7 +106,7 @@
   "doneHeading": "Le travail terminé reste dans la liste pendant",
   "refreshNote": "Automatiquement veut dire à l'ouverture de l'app et quand vous y revenez. Rien ne tourne en arrière-plan.",
   "refreshAutomatic": "Automatiquement",
-  "refreshManualOnly": "Seulement quand je tire vers le bas",
+  "refreshManualOnly": "Seulement quand je le demande",
   "appearanceSystem": "Comme le téléphone",
   "appearanceLight": "Clair",
   "appearanceDark": "Sombre",

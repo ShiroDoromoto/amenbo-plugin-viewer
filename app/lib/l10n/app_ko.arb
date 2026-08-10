@@ -106,7 +106,7 @@
   "doneHeading": "끝난 일을 목록에 남겨두는 기간",
   "refreshNote": "자동은 앱을 열 때와 앱으로 돌아올 때를 말합니다. 백그라운드에서는 절대 돌지 않습니다.",
   "refreshAutomatic": "자동",
-  "refreshManualOnly": "아래로 당길 때만",
+  "refreshManualOnly": "요청할 때만",
   "appearanceSystem": "휴대폰에 맞춤",
   "appearanceLight": "밝게",
   "appearanceDark": "어둡게",

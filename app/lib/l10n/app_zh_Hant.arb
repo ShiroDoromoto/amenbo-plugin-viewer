@@ -106,7 +106,7 @@
   "doneHeading": "已完成的內容留在列表裡的時間",
   "refreshNote": "自動是指打開 App 時，以及回到 App 時。它從不在背景執行。",
   "refreshAutomatic": "自動",
-  "refreshManualOnly": "只在我下拉時",
+  "refreshManualOnly": "只在我要求時",
   "appearanceSystem": "跟隨手機",
   "appearanceLight": "淺色",
   "appearanceDark": "深色",

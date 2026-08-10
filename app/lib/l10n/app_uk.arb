@@ -106,7 +106,7 @@
   "doneHeading": "Завершене залишається у списку",
   "refreshNote": "Автоматично — це коли застосунок відкривається і коли ви до нього повертаєтесь. У фоні нічого не працює.",
   "refreshAutomatic": "Автоматично",
-  "refreshManualOnly": "Лише коли я тягну вниз",
+  "refreshManualOnly": "Лише коли я попрошу",
   "appearanceSystem": "Як на телефоні",
   "appearanceLight": "Світле",
   "appearanceDark": "Темне",

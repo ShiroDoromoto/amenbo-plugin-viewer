@@ -106,7 +106,7 @@
   "doneHeading": "Завершённое остаётся в списке",
   "refreshNote": "Автоматически — это при открытии приложения и при возвращении в него. В фоне ничего не работает.",
   "refreshAutomatic": "Автоматически",
-  "refreshManualOnly": "Только когда я тяну вниз",
+  "refreshManualOnly": "Только когда я попрошу",
   "appearanceSystem": "Как на телефоне",
   "appearanceLight": "Светлое",
   "appearanceDark": "Тёмное",

@@ -106,7 +106,7 @@
   "doneHeading": "Lo terminado se queda en la lista durante",
   "refreshNote": "Automáticamente significa al abrir la app y al volver a ella. Nunca funciona en segundo plano.",
   "refreshAutomatic": "Automáticamente",
-  "refreshManualOnly": "Solo cuando tiro hacia abajo",
+  "refreshManualOnly": "Solo cuando lo pida",
   "appearanceSystem": "Como el teléfono",
   "appearanceLight": "Claro",
   "appearanceDark": "Oscuro",
