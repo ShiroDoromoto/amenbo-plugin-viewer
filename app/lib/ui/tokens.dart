@@ -114,6 +114,34 @@ abstract final class Corner {
   static const wide = BorderRadius.all(Radius.circular(lg));
 }
 
+/// How long the two things that move take, and the shape they move with.
+///
+/// Motion belongs in the sheet for the same reason spacing does — written at the point of use it
+/// drifts, and one place is the only place a phone asking for less of it can be answered.
+///
+/// There are two entries because there are two places: a section of a body folding, and the notice
+/// of what has arrived coming and going. Everything else keeps whatever the platform already does,
+/// screen to screen included. Motion here is not decoration; it is there so that a change nobody
+/// pressed for can be seen happening rather than found already done.
+abstract final class Motion {
+  /// A section opening or closing under the finger that asked for it. Short: the person is waiting
+  /// on the words, not on the movement.
+  static const fold = Duration(milliseconds: 160);
+
+  /// The notice of new arrivals, which comes in on its own and leaves once it is taken. A touch
+  /// longer than a fold, because nothing pointed at it first.
+  static const notice = Duration(milliseconds: 200);
+
+  /// Away quickly and slowing into place — something settling where it was put.
+  static const curve = Curves.easeOutCubic;
+
+  /// [duration], or none at all where the person has asked their phone to move less. Both
+  /// platforms carry that setting, and it is not a matter of taste: motion is what makes some
+  /// people ill. Every animation in the app reads it through here.
+  static Duration asked(BuildContext context, Duration duration) =>
+      MediaQuery.disableAnimationsOf(context) ? Duration.zero : duration;
+}
+
 /// Text sizes, and the weights and leading that go with them.
 ///
 /// Writing sizes here is not the same as a widget writing its own size: these are the text theme,

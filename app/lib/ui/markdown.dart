@@ -678,18 +678,47 @@ class _MarkdownSectionsState extends State<MarkdownSections> {
                         style: theme.textTheme.titleMedium,
                       ),
                     ),
-                    Icon(
-                      _open.contains(i) ? Icons.expand_less : Icons.expand_more,
-                      color: theme.colorScheme.onSurfaceVariant,
+                    // One glyph that turns over, rather than two that swap. Swapped, the arrow is
+                    // simply pointing the other way the next time the eye reaches it; turning, it
+                    // is the same arrow and the person saw it answer them.
+                    AnimatedRotation(
+                      turns: _open.contains(i) ? 0.5 : 0,
+                      duration: Motion.asked(context, Motion.fold),
+                      curve: Motion.curve,
+                      child: Icon(
+                        Icons.expand_more,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ],
                 ),
               ),
             ),
-          if (_sections[i].heading == null || _open.contains(i))
-            MarkdownBody(blocks: _sections[i].blocks, onLink: widget.onLink),
+          if (_sections[i].heading == null)
+            MarkdownBody(blocks: _sections[i].blocks, onLink: widget.onLink)
+          else
+            _fold(i, Motion.asked(context, Motion.fold)),
         ],
       ],
+    );
+  }
+
+  /// One section's body, growing out of its heading and shrinking back into it.
+  ///
+  /// Without that the sections below jump to a new place, and the reader has to work out whether
+  /// what they are now looking at is what they opened.
+  Widget _fold(int i, Duration fold) {
+    final body = _open.contains(i)
+        ? MarkdownBody(blocks: _sections[i].blocks, onLink: widget.onLink)
+        : const SizedBox(width: double.infinity);
+    // No wrapper at all on a phone asked to move less. A size given no time to change in is not a
+    // quicker fold — it is one that re-lays itself out while it is being laid out.
+    if (fold == Duration.zero) return body;
+    return AnimatedSize(
+      duration: fold,
+      curve: Motion.curve,
+      alignment: Alignment.topCenter,
+      child: body,
     );
   }
 }
