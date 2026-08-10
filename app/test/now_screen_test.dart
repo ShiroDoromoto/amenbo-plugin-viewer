@@ -45,12 +45,16 @@ void main() {
     Future<void> Function()? take,
     IntakeFailure? failure,
     bool hours24 = true,
+    bool stillness = false,
   }) => MaterialApp(
     localizationsDelegates: Words.localizationsDelegates,
     supportedLocales: Words.supportedLocales,
     theme: viewerTheme(Brightness.light),
     home: MediaQuery(
-      data: MediaQueryData(alwaysUse24HourFormat: hours24),
+      data: MediaQueryData(
+        alwaysUse24HourFormat: hours24,
+        disableAnimations: stillness,
+      ),
       child: NowScreen(
         store: store,
         take: take,
@@ -518,6 +522,76 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('あとから'), findsOneWidget);
       expect(find.textContaining('New activity'), findsNothing);
+    });
+
+    testWidgets('the pill drops in and leaves, rather than blinking', (
+      tester,
+    ) async {
+      store.applyPage([
+        BacklogChange.put(
+          'task',
+          1,
+          task(id: 1, title: 'よんでいる', updatedAt: '2026-08-09T09:00:00Z'),
+        ),
+      ]);
+      await tester.pumpWidget(screen());
+
+      store.applyPage([
+        BacklogChange.put(
+          'task',
+          2,
+          task(id: 2, title: 'あとから', updatedAt: '2026-08-09T09:05:00Z'),
+        ),
+      ]);
+      arrivals.tick();
+      await tester.pump();
+
+      final pill = find.byType(ActionChip);
+      final coming = tester.getTopLeft(pill).dy;
+      await tester.pumpAndSettle();
+      // It came down from above the top edge — the place it is offering to take the reader back
+      // to — instead of being there all at once.
+      expect(tester.getTopLeft(pill).dy, greaterThan(coming));
+
+      await tester.tap(pill);
+      // Still on its way out one frame later. The list underneath is never animated, so the pill
+      // leaving is the whole of what says the rows went in.
+      await tester.pump();
+      expect(pill, findsOneWidget);
+      await tester.pumpAndSettle();
+      expect(pill, findsNothing);
+    });
+
+    testWidgets('a phone asked to move less is handed the pill in place', (
+      tester,
+    ) async {
+      store.applyPage([
+        BacklogChange.put(
+          'task',
+          1,
+          task(id: 1, title: 'よんでいる', updatedAt: '2026-08-09T09:00:00Z'),
+        ),
+      ]);
+      await tester.pumpWidget(screen(stillness: true));
+
+      store.applyPage([
+        BacklogChange.put(
+          'task',
+          2,
+          task(id: 2, title: 'あとから', updatedAt: '2026-08-09T09:05:00Z'),
+        ),
+      ]);
+      arrivals.tick();
+      await tester.pump();
+
+      final pill = find.byType(ActionChip);
+      final atOnce = tester.getTopLeft(pill).dy;
+      await tester.pumpAndSettle();
+      expect(tester.getTopLeft(pill).dy, atOnce);
+
+      await tester.tap(pill);
+      await tester.pump();
+      expect(pill, findsNothing);
     });
 
     testWidgets('a list with nothing in it fills as the rows land', (

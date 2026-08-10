@@ -3,6 +3,7 @@
 
 import 'package:amenbo_viewer/ui/markdown.dart';
 import 'package:amenbo_viewer/ui/theme.dart';
+import 'package:amenbo_viewer/ui/tokens.dart';
 import 'package:amenbo_viewer/l10n/words.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -125,6 +126,60 @@ void main() {
       await tester.tap(find.text('なぜ'));
       await tester.pumpAndSettle();
       expect(find.text('ふたつめ。'), findsOneWidget);
+    });
+
+    testWidgets('a section grows into place instead of appearing whole', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: Words.localizationsDelegates,
+          supportedLocales: Words.supportedLocales,
+          theme: viewerTheme(Brightness.light),
+          home: const Scaffold(
+            body: SingleChildScrollView(child: MarkdownSections(source: notes)),
+          ),
+        ),
+      );
+      double tall() => tester.getSize(find.byType(MarkdownSections)).height;
+
+      await tester.tap(find.text('なぜ'));
+      await tester.pump();
+      final shut = tall();
+      await tester.pump(Motion.fold ~/ 2);
+      final partway = tall();
+      await tester.pumpAndSettle();
+
+      expect(partway, greaterThan(shut));
+      expect(partway, lessThan(tall()));
+    });
+
+    testWidgets('a phone asked to move less opens it at once', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: Words.localizationsDelegates,
+          supportedLocales: Words.supportedLocales,
+          theme: viewerTheme(Brightness.light),
+          home: Builder(
+            builder: (context) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(disableAnimations: true),
+              child: const Scaffold(
+                body: SingleChildScrollView(
+                  child: MarkdownSections(source: notes),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      double tall() => tester.getSize(find.byType(MarkdownSections)).height;
+
+      await tester.tap(find.text('なぜ'));
+      await tester.pump();
+      final atOnce = tall();
+      await tester.pumpAndSettle();
+
+      expect(tall(), atOnce);
     });
   });
 

@@ -350,18 +350,38 @@ class _NowScreenState extends State<NowScreen>
               alignment: Alignment.topCenter,
               child: LinearProgressIndicator(minHeight: Space.hair),
             ),
-          if (_arrived != null)
-            Align(
-              alignment: Alignment.topCenter,
-              child: Padding(
-                padding: const EdgeInsets.only(top: Space.s3),
-                child: ActionChip(
-                  avatar: const Icon(Icons.arrow_upward, size: Space.s5),
-                  label: Text(NowScreen.arrived(words, _arrived!)),
-                  onPressed: _showWhatArrived,
+          // The one thing on this screen that appears without being asked for, so the one thing
+          // that has to be seen arriving. It drops in from the top edge it is offering to take the
+          // reader back to, and leaves the same way once it has been taken — which is what says
+          // the rows went in, since the list underneath is never animated.
+          Align(
+            alignment: Alignment.topCenter,
+            child: Padding(
+              padding: const EdgeInsets.only(top: Space.s3),
+              child: AnimatedSwitcher(
+                duration: Motion.asked(context, Motion.notice),
+                switchInCurve: Motion.curve,
+                switchOutCurve: Motion.curve,
+                transitionBuilder: (child, coming) => FadeTransition(
+                  opacity: coming,
+                  child: SlideTransition(
+                    position: Tween(
+                      begin: const Offset(0, -1),
+                      end: Offset.zero,
+                    ).animate(coming),
+                    child: child,
+                  ),
                 ),
+                child: _arrived == null
+                    ? const SizedBox.shrink()
+                    : ActionChip(
+                        avatar: const Icon(Icons.arrow_upward, size: Space.s5),
+                        label: Text(NowScreen.arrived(words, _arrived!)),
+                        onPressed: _showWhatArrived,
+                      ),
               ),
             ),
+          ),
         ],
       ),
     );
