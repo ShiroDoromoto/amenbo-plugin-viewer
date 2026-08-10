@@ -127,8 +127,6 @@
     "description": "Why a task cannot start: its day has not come. Also shown on the detail, where it is not a stall but a fact.",
     "placeholders": { "day": { "type": "String" } }
   },
-  "stallBlocked": "Blocked",
-  "@stallBlocked": { "description": "Why a task cannot start, with nothing more useful to say — amenbo's word for a stall nobody wrote down." },
 
 
   "searchHint": "Search",

@@ -342,6 +342,42 @@ void main() {
     });
   });
 
+  group('the state is said once', () {
+    testWidgets('a blocked row with nothing named carries the state alone', (
+      tester,
+    ) async {
+      store.applyPage([
+        BacklogChange.put('task', 1, task(id: 1, status: 'blocked')),
+      ]);
+
+      await tester.pumpWidget(screen());
+
+      // The mark a row standing on its own carries says the state. The place beside it is for
+      // naming what to go and do, and amenbo's bare `blocked` names nothing — put there as well,
+      // it only said the state twice.
+      expect(find.byType(StatusMark), findsOneWidget);
+      expect(find.byType(StallMark), findsNothing);
+    });
+
+    testWidgets('a blocker with a name still gets its own line', (
+      tester,
+    ) async {
+      store.applyPage([
+        BacklogChange.put('task', 1, task(id: 1)),
+        BacklogChange.put('task', 2, task(id: 2, status: 'blocked')),
+        BacklogChange.put(
+          'task_dependency',
+          1,
+          dependency(id: 1, taskId: 2, blockedById: 1),
+        ),
+      ]);
+
+      await tester.pumpWidget(screen());
+
+      expect(find.byType(StallMark), findsOneWidget);
+    });
+  });
+
   group('the same thing is looked up twice', () {
     setUp(
       () => store.applyPage([

@@ -53,7 +53,6 @@
   "stallUndecided": "{ref} n'est pas tranché",
   "stallDraft": "En cours de rédaction",
   "stallStarts": "Démarre {day}",
-  "stallBlocked": "Bloqué",
 
 
   "searchHint": "Rechercher",

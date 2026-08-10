@@ -31,13 +31,16 @@ String labelWithCount(Words words, String name, Counted count) =>
 
 /// Why a task cannot be started, in the words the person needs in order to act.
 ///
-/// A named blocker comes first because it is the only one that says what to go and do. `blocked`
-/// comes last for the same reason from the other end: it is amenbo's word for a stall nobody has
-/// written down, so it is what is left when there is nothing more useful to say.
+/// A named blocker comes first because it is the only one that says what to go and do.
 ///
 /// **Every premise that holds a task back has a line here.** No list divides by them any more, so
 /// this is the only place the person finds out — a start day still ahead included, which is a
 /// stall nobody has to do anything about and therefore the easiest one to leave out.
+///
+/// **amenbo's own `blocked` is not one of them.** It is the state rather than a premise, and every
+/// row already says the state: the switch it is read under, the mark beside it wherever a row
+/// stands on its own, and the sentence it is read aloud as. A line here as well only said it
+/// twice, and in English said the same word twice.
 String? stallReason(TimeFace face, TaskLine line, {required DateTime today}) {
   final words = face.words;
   final blocker = line.blockedBy;
@@ -49,7 +52,6 @@ String? stallReason(TimeFace face, TaskLine line, {required DateTime today}) {
   if (start != null && start.compareTo(isoDay(today)) > 0) {
     return words.stallStarts(dayLabel(face, start, now: today));
   }
-  if (line.status == 'blocked') return words.stallBlocked;
   return null;
 }
 
