@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The dark side of the same ground. The icon's tile does not change with the phone's
+         setting, so it is not repeated here. -->
+    <color name="launch_background">#1B1A17</color>
+</resources>
