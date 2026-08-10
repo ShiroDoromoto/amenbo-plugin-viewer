@@ -6,23 +6,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:amenbo_viewer/pairing_code.dart';
 import 'package:amenbo_viewer/pairing_scan.dart';
 import 'package:amenbo_viewer/pairing_store.dart';
 
 /// A camera that reports what it was asked for and shows whatever it is told to.
 class FakeCamera implements Camera {
-  FakeCamera({this.access = CameraAccess.granted, this.picture});
+  FakeCamera({this.access = CameraAccess.granted});
 
   final CameraAccess access;
 
-  /// What a chosen picture turns out to hold. Null stands for the person backing out of the
-  /// picker; a [PairingCodeException] for a picture with no code in it.
-  final Object? picture;
-
   int asked = 0;
   int sentToSettings = 0;
-  int pictures = 0;
 
   /// The live view's callback, so a test can put a code in front of the camera.
   void Function(String text)? watching;
@@ -40,14 +34,6 @@ class FakeCamera implements Camera {
   Widget view(void Function(String text) onCode) {
     watching = onCode;
     return const ColoredBox(color: Colors.black);
-  }
-
-  @override
-  Future<String?> readAPicture() async {
-    pictures++;
-    final picture = this.picture;
-    if (picture is PairingCodeException) throw picture;
-    return picture as String?;
   }
 }
 
@@ -151,66 +137,23 @@ void main() {
     expect(find.byType(PairingScanScreen), findsNothing);
   });
 
-  group('when the camera is refused', () {
-    testWidgets('both ways on are offered', (tester) async {
-      final camera = FakeCamera(access: CameraAccess.refused);
-      await open(tester, camera);
-      await turnOnTheCamera(tester);
+  testWidgets('a refused camera leaves the settings as the one way back', (
+    tester,
+  ) async {
+    final camera = FakeCamera(access: CameraAccess.refused);
+    await open(tester, camera);
+    await turnOnTheCamera(tester);
 
-      expect(find.text(PairingScanScreen.refused), findsOneWidget);
+    expect(find.text(PairingScanScreen.refused), findsOneWidget);
 
-      // The settings are one way back. The picture needs no permission at all, which is why it
-      // is offered here and not only on the scanning screen.
-      await tester.tap(find.text('Open the settings'));
-      await tester.pumpAndSettle();
-      expect(camera.sentToSettings, 1);
-      expect(find.text(PairingScanScreen.fromAPicture), findsOneWidget);
-    });
+    // One button, and it is the settings. A code read out of a photograph would put the token
+    // and the key in the photo library, so that way back is not offered at all.
+    expect(find.byType(FilledButton), findsOneWidget);
+    expect(find.byType(OutlinedButton), findsNothing);
+    expect(find.textContaining('picture'), findsNothing);
 
-    testWidgets('a picture of the PC screen pairs the phone', (tester) async {
-      final camera = FakeCamera(access: CameraAccess.refused, picture: good);
-      await open(tester, camera);
-      await turnOnTheCamera(tester);
-
-      await tester.tap(find.text(PairingScanScreen.fromAPicture));
-      await tester.pumpAndSettle();
-
-      expect(camera.pictures, 1);
-      expect(find.byType(PairingScanScreen), findsNothing);
-      expect((await const PairingStore().read())?.readToken, 'tok');
-    });
-
-    testWidgets('a picture with no code in it says so', (tester) async {
-      final camera = FakeCamera(
-        access: CameraAccess.refused,
-        picture: const PairingCodeException(
-          CodeProblem.nothingInThePicture,
-          'There is no code in that picture.',
-        ),
-      );
-      await open(tester, camera);
-      await turnOnTheCamera(tester);
-
-      await tester.tap(find.text(PairingScanScreen.fromAPicture));
-      await tester.pumpAndSettle();
-
-      expect(find.text('There is no code in that picture.'), findsOneWidget);
-    });
-
-    testWidgets('backing out of the picker says nothing', (tester) async {
-      final camera = FakeCamera(access: CameraAccess.refused);
-      await open(tester, camera);
-      await turnOnTheCamera(tester);
-
-      await tester.tap(find.text(PairingScanScreen.fromAPicture));
-      await tester.pumpAndSettle();
-
-      // Nothing happened, so nothing is reported — and the button still works.
-      expect(camera.pictures, 1);
-      expect(find.byType(PairingScanScreen), findsOneWidget);
-      await tester.tap(find.text(PairingScanScreen.fromAPicture));
-      await tester.pumpAndSettle();
-      expect(camera.pictures, 2);
-    });
+    await tester.tap(find.text('Open the settings'));
+    await tester.pumpAndSettle();
+    expect(camera.sentToSettings, 1);
   });
 }

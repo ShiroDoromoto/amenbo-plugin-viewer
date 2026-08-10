@@ -30,9 +30,6 @@ enum CodeProblem {
 
   /// Ours, and this build's version, but one of the three things on it will not do.
   unusable,
-
-  /// The picture the person chose has no code in it at all.
-  nothingInThePicture,
 }
 
 /// A code was read and cannot be paired with, and the sentence to show for it.

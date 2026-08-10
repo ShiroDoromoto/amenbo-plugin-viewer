@@ -10,17 +10,17 @@
 /// * **a code that reads is acted on.** No confirm button: scanning is reversible — a wrong code
 ///   is scanned again — so a button between reading and pairing only asks people to approve a
 ///   string of base64 they cannot check.
-/// * **being refused is not the end.** The settings app is one way back, and a photograph of the
-///   PC screen is the other; both are offered, because the second needs no permission at all.
+/// * **being refused is not the end.** The settings app is the way back, and it is the only one:
+///   a code read out of a photograph would put the token and the key in the photo library, and
+///   from there in iCloud and every backup, which is the one place the key is never meant to go.
 /// * **a code that does not fit says what was different.** `pairing_code.dart` keeps those
 ///   sentences.
 ///
-/// The camera and the photo library reach this screen through [Camera], so what is drawn and what
-/// happens after a code is read can be walked in a test. Only [LiveCamera] talks to a device.
+/// The camera reaches this screen through [Camera], so what is drawn and what happens after a
+/// code is read can be walked in a test. Only [LiveCamera] talks to a device.
 library;
 
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -30,7 +30,7 @@ import 'pairing_store.dart';
 /// Whether the camera may be used, once the person has been asked.
 enum CameraAccess { granted, refused }
 
-/// What this screen needs of the phone's camera and its pictures.
+/// What this screen needs of the phone's camera.
 abstract interface class Camera {
   /// Asks the OS for the camera. Called only after the person has been told why.
   Future<CameraAccess> ask();
@@ -40,12 +40,6 @@ abstract interface class Camera {
 
   /// The live view, calling [onCode] with the text of each code it sees.
   Widget view(void Function(String text) onCode);
-
-  /// Reads a code out of a picture the person picks — a photo of the PC screen taken on another
-  /// phone, or a screenshot sent over.
-  ///
-  /// Null when they picked nothing. Throws [PairingCodeException] when the picture holds no code.
-  Future<String?> readAPicture();
 }
 
 /// The camera of the phone this is running on.
@@ -69,31 +63,6 @@ class LiveCamera implements Camera {
 
   @override
   Widget view(void Function(String text) onCode) => _LiveView(onCode: onCode);
-
-  @override
-  Future<String?> readAPicture() async {
-    final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (picked == null) return null;
-
-    final scanner = MobileScannerController(formats: _formats);
-    try {
-      final seen = await scanner.analyzeImage(picked.path, formats: _formats);
-      final text = seen?.barcodes
-          .map((barcode) => barcode.rawValue)
-          .whereType<String>()
-          .firstOrNull;
-      if (text == null) {
-        throw const PairingCodeException(
-          CodeProblem.nothingInThePicture,
-          'There is no code in that picture. A photo of the whole PC screen, '
-          'taken straight on, is the one that reads.',
-        );
-      }
-      return text;
-    } finally {
-      await scanner.dispose();
-    }
-  }
 }
 
 class _LiveView extends StatefulWidget {
@@ -156,7 +125,6 @@ class PairingScanScreen extends StatefulWidget {
       'It is read on this phone and sent nowhere.';
   static const inFrame = 'Hold the code inside the frame.';
   static const refused = 'The camera is off for this app.';
-  static const fromAPicture = 'Read it from a picture';
 
   @override
   State<PairingScanScreen> createState() => _PairingScanScreenState();
@@ -193,28 +161,6 @@ class _PairingScanScreenState extends State<PairingScanScreen> {
       _trouble = null;
     });
     _pairWith(text);
-  }
-
-  Future<void> _fromAPicture() async {
-    if (_busy) return;
-    setState(() {
-      _busy = true;
-      _trouble = null;
-    });
-
-    final String? text;
-    try {
-      text = await widget.camera.readAPicture();
-    } on PairingCodeException catch (problem) {
-      _say(problem.message);
-      return;
-    }
-    if (text == null) {
-      // They backed out of the picker. Nothing happened, so nothing is said about it.
-      if (mounted) setState(() => _busy = false);
-      return;
-    }
-    await _pairWith(text);
   }
 
   Future<void> _pairWith(String text) async {
@@ -258,12 +204,9 @@ class _PairingScanScreenState extends State<PairingScanScreen> {
         _Stage.scanning => _Scanning(
           view: widget.camera.view(_sawACode),
           trouble: _trouble,
-          onPicture: _busy ? null : _fromAPicture,
         ),
         _Stage.refused => _Refused(
-          trouble: _trouble,
           onSettings: _busy ? null : widget.camera.openTheSettings,
-          onPicture: _busy ? null : _fromAPicture,
         ),
       },
     );
@@ -295,15 +238,10 @@ class _Explaining extends StatelessWidget {
 
 /// The camera, with a frame drawn on it and nothing else in the way.
 class _Scanning extends StatelessWidget {
-  const _Scanning({
-    required this.view,
-    required this.trouble,
-    required this.onPicture,
-  });
+  const _Scanning({required this.view, required this.trouble});
 
   final Widget view;
   final String? trouble;
-  final VoidCallback? onPicture;
 
   @override
   Widget build(BuildContext context) {
@@ -327,16 +265,6 @@ class _Scanning extends StatelessWidget {
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: Colors.white,
                     ),
-                  ),
-                ),
-              ),
-              const Spacer(),
-              Padding(
-                padding: const EdgeInsets.all(20),
-                child: _OverTheView(
-                  child: TextButton(
-                    onPressed: onPicture,
-                    child: const Text(PairingScanScreen.fromAPicture),
                   ),
                 ),
               ),
@@ -394,22 +322,15 @@ class _OverTheView extends StatelessWidget {
   }
 }
 
-/// The camera was refused, and there are two ways on from here.
+/// The camera was refused, and the settings are the way on from here.
 class _Refused extends StatelessWidget {
-  const _Refused({
-    required this.trouble,
-    required this.onSettings,
-    required this.onPicture,
-  });
+  const _Refused({required this.onSettings});
 
-  final String? trouble;
   final VoidCallback? onSettings;
-  final VoidCallback? onPicture;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final trouble = this.trouble;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
@@ -418,7 +339,7 @@ class _Refused extends StatelessWidget {
         const SizedBox(height: 12),
         Text(
           'Pairing needs to read one code off your PC screen. Turn the camera '
-          'on in the settings, or use a picture of that screen instead.',
+          'on in the settings, and come back here.',
           style: theme.textTheme.bodyLarge,
         ),
         const SizedBox(height: 28),
@@ -426,20 +347,6 @@ class _Refused extends StatelessWidget {
           onPressed: onSettings,
           child: const Text('Open the settings'),
         ),
-        const SizedBox(height: 12),
-        OutlinedButton(
-          onPressed: onPicture,
-          child: const Text(PairingScanScreen.fromAPicture),
-        ),
-        if (trouble != null) ...[
-          const SizedBox(height: 20),
-          Text(
-            trouble,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.error,
-            ),
-          ),
-        ],
       ],
     );
   }

@@ -28,8 +28,6 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>The camera reads the pairing code shown on your PC. It is read on this phone and sent nowhere.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>A picture of your PC screen can be read instead of the camera, for a phone whose camera is turned off.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
