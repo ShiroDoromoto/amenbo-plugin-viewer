@@ -16,15 +16,16 @@
 /// the phone holds, and everything downstream of it — the count, the pill, the band — is handed the
 /// same report either way.
 ///
-/// **Where the ways out go.** Two of them, across the bottom of a phone, because the thumb of a
+/// **Where the ways out go.** Three of them, across the bottom of a phone, because the thumb of a
 /// hand holding one reaches the bottom half and a menu at the top does not exist for someone
-/// standing on a train. That reach is worth spending on what is read every day, and settings are
-/// three choices opened a handful of times a year — so they sit at the top of the front screen
-/// instead, one tap further away and out of the way of the two that are not. On glass nobody is
-/// holding one-handed the same two move to a rail down the side, where the bottom edge would be
-/// the furthest point on the screen. Everything that opens a list opens the one list face;
-/// everything that opens a task opens the one detail. Where there is width for it, what was opened
-/// sits beside the list it was opened from rather than on top of it.
+/// standing on a train. That reach is worth spending on what is read every day — the tasks, the
+/// decisions, and the way back to what stopped moving — and settings are three choices opened a
+/// handful of times a year, so they sit at the top of the front screen instead, one tap further
+/// away and out of the way of the three that are not. On glass nobody is holding one-handed the
+/// same three move to a rail down the side, where the bottom edge would be the furthest point on
+/// the screen. Everything that opens a list opens the one list face; everything that opens a task
+/// opens the one detail. Where there is width for it, what was opened sits beside the list it was
+/// opened from rather than on top of it.
 library;
 
 import 'package:flutter/material.dart';
@@ -32,6 +33,7 @@ import 'package:flutter/material.dart';
 import 'cloudflare_intake.dart';
 import 'connection.dart';
 import 'decision_detail.dart';
+import 'decisions_screen.dart';
 import 'first_sync.dart';
 import 'icloud_container.dart';
 import 'l10n/words.dart';
@@ -291,7 +293,7 @@ class _ViewerHomeState extends State<ViewerHome> with WidgetsBindingObserver {
   }
 }
 
-/// The two screens, and the destinations they share.
+/// The three screens, and the destinations they share.
 class HomeShell extends StatefulWidget {
   const HomeShell({
     super.key,
@@ -330,9 +332,12 @@ class HomeShell extends StatefulWidget {
 class _HomeShellState extends State<HomeShell> {
   int _tab = 0;
 
-  /// How many times the search tab has been arrived at. It keys the screen, so each visit is a
-  /// fresh one: search starts from everything, and a narrowing carried over from a screen the
-  /// person left would be one they did not ask for.
+  /// How many times one of the two faces that start fresh has been arrived at. It keys both of
+  /// them, so every visit builds them again: search starts from everything, and a narrowing
+  /// carried over from a screen the person left would be one they did not ask for — and the
+  /// decisions list is read off the store as it stands now rather than as it stood when the shell
+  /// was built. The front screen is not one of them: it counts from the moment the app came to the
+  /// front, and would count from a new one every time it was rebuilt.
   int _visits = 0;
 
   /// What is open beside the list, on a screen wide enough to hold both. Null on a phone held
@@ -443,7 +448,7 @@ class _HomeShellState extends State<HomeShell> {
     ),
   );
 
-  /// Moving between the two ways out.
+  /// Moving between the three ways out.
   ///
   /// The same handler whichever side of the screen the destinations were drawn on: what a tab does
   /// is not a fact about where it sits.
@@ -451,7 +456,8 @@ class _HomeShellState extends State<HomeShell> {
     _tab = chosen;
     // What was open belonged to the list being left.
     _besideTaskId = null;
-    if (chosen == 1) _visits += 1;
+    // The front screen is the first, and the only one that is not read fresh on arrival.
+    if (chosen != 0) _visits += 1;
   });
 
   @override
@@ -462,9 +468,10 @@ class _HomeShellState extends State<HomeShell> {
     // furthest point on the glass — so the ways out move to the side the same width the list and
     // the detail split at, both being the same judgement about how it is being held.
     final wide = _wide;
-    // The two keep their state while the person moves between them — the front screen most of
+    // The three keep their state while the person moves between them — the front screen most of
     // all, which counts from the moment the app came to the front and would count from a new one
-    // every time it was rebuilt.
+    // every time it was rebuilt. The two that are keyed on the visit are the exception, and they
+    // are keyed because being read fresh is what they are for.
     final tabs = IndexedStack(
       index: _tab,
       children: [
@@ -485,7 +492,18 @@ class _HomeShellState extends State<HomeShell> {
           ),
         ),
         KeyedSubtree(
-          key: ValueKey(_visits),
+          key: ValueKey(('decisions', _visits)),
+          // Not in a pane: a decision is always pushed, whatever the width, so there is never one
+          // sitting beside this list.
+          child: DecisionsScreen(
+            store: widget.store,
+            clock: widget.clock,
+            take: widget.take,
+            onOpen: (line) => _openDecision(line.id),
+          ),
+        ),
+        KeyedSubtree(
+          key: ValueKey(('search', _visits)),
           child: _pane(_searchFace(const TaskQuery(), opens: _open)),
         ),
       ],
@@ -505,11 +523,11 @@ class _HomeShellState extends State<HomeShell> {
     );
   }
 
-  /// The two ways out, down the side.
+  /// The three ways out, down the side.
   ///
-  /// The labels stay under the icons rather than being shown for the chosen one alone: a list icon
-  /// and a magnifying glass are not two things anybody reads at a glance, and a way out nobody can
-  /// name is one they find by pressing it.
+  /// The labels stay under the icons rather than being shown for the chosen one alone: a list
+  /// icon, a gavel and a magnifying glass are not three things anybody reads at a glance, and a
+  /// way out nobody can name is one they find by pressing it.
   Widget _rail(Words words) => NavigationRail(
     selectedIndex: _tab,
     onDestinationSelected: _goTo,
@@ -518,7 +536,12 @@ class _HomeShellState extends State<HomeShell> {
       NavigationRailDestination(
         icon: const Icon(Icons.list_alt_outlined),
         selectedIcon: const Icon(Icons.list_alt),
-        label: Text(words.tabNow),
+        label: Text(words.tabTasks),
+      ),
+      NavigationRailDestination(
+        icon: const Icon(Icons.gavel_outlined),
+        selectedIcon: const Icon(Icons.gavel),
+        label: Text(words.tabDecisions),
       ),
       NavigationRailDestination(
         icon: const Icon(Icons.search_outlined),
@@ -528,7 +551,7 @@ class _HomeShellState extends State<HomeShell> {
     ],
   );
 
-  /// The same two, across the bottom, where a thumb is what reaches them.
+  /// The same three, across the bottom, where a thumb is what reaches them.
   Widget _bar(Words words) => NavigationBar(
     selectedIndex: _tab,
     onDestinationSelected: _goTo,
@@ -536,7 +559,12 @@ class _HomeShellState extends State<HomeShell> {
       NavigationDestination(
         icon: const Icon(Icons.list_alt_outlined),
         selectedIcon: const Icon(Icons.list_alt),
-        label: words.tabNow,
+        label: words.tabTasks,
+      ),
+      NavigationDestination(
+        icon: const Icon(Icons.gavel_outlined),
+        selectedIcon: const Icon(Icons.gavel),
+        label: words.tabDecisions,
       ),
       NavigationDestination(
         icon: const Icon(Icons.search_outlined),

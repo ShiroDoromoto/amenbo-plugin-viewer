@@ -8,6 +8,8 @@
 import 'dart:async';
 
 import 'package:amenbo_viewer/cloudflare_intake.dart';
+import 'package:amenbo_viewer/decision_detail.dart';
+import 'package:amenbo_viewer/decisions_screen.dart';
 import 'package:amenbo_viewer/first_sync.dart';
 import 'package:amenbo_viewer/home.dart';
 import 'package:amenbo_viewer/now_screen.dart';
@@ -212,7 +214,7 @@ void main() {
     });
   });
 
-  group('the two tabs', () {
+  group('the three tabs', () {
     setUp(() async {
       await const PairingStore().save(aPairing);
       store.applyPage([
@@ -225,22 +227,65 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(NowScreen), findsOneWidget);
-      expect(find.text(words.tabNow), findsOneWidget);
+      expect(find.text(words.tabTasks), findsOneWidget);
+      expect(find.text(words.tabDecisions), findsOneWidget);
       expect(find.text(words.tabSearch), findsOneWidget);
-      // The bottom bar is the thumb's, and it is spent on the two things read every day.
-      expect(find.byType(NavigationDestination), findsNWidgets(2));
+      // The bottom bar is the thumb's, and it is spent on the three things read every day.
+      expect(find.byType(NavigationDestination), findsNWidgets(3));
     });
 
     testWidgets('each destination is one press away', (tester) async {
       await tester.pumpWidget(home());
       await tester.pumpAndSettle();
 
+      await tester.tap(find.text(words.tabDecisions));
+      await tester.pumpAndSettle();
+      expect(find.byType(DecisionsScreen), findsOneWidget);
+
       await tester.tap(find.text(words.tabSearch));
       await tester.pumpAndSettle();
       expect(find.byType(SearchScreen), findsOneWidget);
     });
 
-    testWidgets('a wide screen puts the two down the side instead', (
+    testWidgets('the decisions are read off the store on arriving at them', (
+      tester,
+    ) async {
+      await tester.pumpWidget(home());
+      await tester.pumpAndSettle();
+
+      // Landed while the front screen was being read — the shell built the decisions face against
+      // a store that did not have this yet.
+      store.applyPage([
+        BacklogChange.put('decision', 1, decision(id: 1, title: 'あとからきめた')),
+      ]);
+
+      await tester.tap(find.text(words.tabDecisions));
+      await tester.pumpAndSettle();
+
+      expect(find.text('あとからきめた'), findsOneWidget);
+    });
+
+    testWidgets('a decision opens on top, whatever the width', (tester) async {
+      const wide = Size(1000, 800);
+      glass(tester, wide);
+      store.applyPage([
+        BacklogChange.put('decision', 1, decision(id: 1, title: 'ひらくきめごと')),
+      ]);
+
+      await tester.pumpWidget(home(size: wide));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(words.tabDecisions));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('ひらくきめごと'));
+      await tester.pumpAndSettle();
+
+      // Pushed rather than swapped in beside the list: what a decision is opened from is a detail
+      // as often as a list, and the way back has to be the same one every time.
+      expect(find.byType(DecisionDetailScreen), findsOneWidget);
+      expect(find.byType(DecisionsScreen), findsNothing);
+    });
+
+    testWidgets('a wide screen puts the three down the side instead', (
       tester,
     ) async {
       const wide = Size(1000, 800);
@@ -248,11 +293,12 @@ void main() {
       await tester.pumpWidget(home(size: wide));
       await tester.pumpAndSettle();
 
-      // The bottom edge is the furthest point on glass nobody is holding one-handed, so the two
-      // move to the side — and they are still the same two, named.
+      // The bottom edge is the furthest point on glass nobody is holding one-handed, so the three
+      // move to the side — and they are still the same three, named.
       expect(find.byType(NavigationRail), findsOneWidget);
       expect(find.byType(NavigationBar), findsNothing);
-      expect(find.text(words.tabNow), findsOneWidget);
+      expect(find.text(words.tabTasks), findsOneWidget);
+      expect(find.text(words.tabDecisions), findsOneWidget);
       expect(find.text(words.tabSearch), findsOneWidget);
 
       await tester.tap(find.text(words.tabSearch));
@@ -297,7 +343,7 @@ void main() {
       await tester.enterText(find.byType(TextField), 'のこらない');
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text(words.tabNow));
+      await tester.tap(find.text(words.tabTasks));
       await tester.pumpAndSettle();
       await tester.tap(find.text(words.tabSearch));
       await tester.pumpAndSettle();

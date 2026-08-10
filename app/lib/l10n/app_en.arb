@@ -1,8 +1,6 @@
 {
   "@@locale": "en",
 
-  "tabNow": "Now",
-  "@tabNow": { "description": "Bottom tab. The front screen, with the four bundles." },
   "tabSearch": "Search",
   "@tabSearch": { "description": "Bottom tab. The one list face." },
   "nothingOpen": "Open something to read it here",
@@ -184,9 +182,9 @@
   "searchClear": "Clear",
   "@searchClear": { "description": "Empties the search field." },
   "tabTasks": "Tasks",
-  "@tabTasks": { "description": "The list face's first half." },
+  "@tabTasks": { "description": "Bottom tab, the front screen — and the list face's first half. The same word, because it is the same kind of row either way." },
   "tabDecisions": "Decisions",
-  "@tabDecisions": { "description": "The list face's second half." },
+  "@tabDecisions": { "description": "Bottom tab, and the title of that screen — and the list face's second half." },
   "recentTerms": "Recent searches",
   "@recentTerms": { "description": "Heading over the words the person typed last time." },
   "recentlyOpened": "Recently opened",
