@@ -37,6 +37,13 @@ dependencies:
   flutter_localizations:
     sdk: flutter
 
+  # How a date and a clock are written in each of the nineteen languages — the month names, and
+  # whether the day comes before the month or after it. Those are not choices a translator should
+  # be asked to make key by key; they are the same in every app that language is read in.
+  # `any` is what flutter_localizations asks for: it pins its own version, and a second constraint
+  # here would only be a way for the two to disagree.
+  intl: any
+
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8

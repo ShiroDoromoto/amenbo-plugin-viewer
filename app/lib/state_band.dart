@@ -20,7 +20,6 @@ import 'package:flutter/material.dart';
 
 import 'cloudflare_intake.dart';
 import 'l10n/words.dart';
-import 'ui/time.dart';
 import 'ui/tokens.dart';
 
 /// Which single line is owed, out of everything that is true at once.
@@ -138,40 +137,19 @@ class StateBand extends StatelessWidget {
   const StateBand({
     super.key,
     required this.standing,
-    this.lastTakenAt,
     this.onPairAgain,
     this.onOpenSettings,
     this.whole = false,
-    this.clock = DateTime.now,
   });
 
   final Standing standing;
 
-  /// When the last round finished, which is what says how old the picture underneath is.
-  final DateTime? lastTakenAt;
-
   final VoidCallback? onPairAgain;
   final VoidCallback? onOpenSettings;
-
-  /// Passed in rather than read here, so the band and the rows under it cannot disagree about
-  /// what day it is — which is the whole of what [takenAt] needs it for.
-  final DateTime Function() clock;
 
   /// True where there is no picture to sit above — a device that has never had anything. Then the
   /// same words take the screen instead of a strip of it.
   final bool whole;
-
-  /// The clock, not "3 h ago".
-  ///
-  /// This is the one place the app spells a time out. What the person is judging here is how old
-  /// what they are reading is, and a phone whose clock is wrong can still say the hour it took
-  /// something at — where "3 h ago" would be wrong by exactly the amount the clock is out.
-  ///
-  /// The day comes with it once it is not today's. This line is the only thing a phone with no
-  /// signal has to date what it is reading by, and out of signal is exactly where a picture stops
-  /// being hours old and starts being days old.
-  static String takenAt(Words words, DateTime when, {required DateTime now}) =>
-      words.takenAt(clockOnDay(words, when, now: now));
 
   @override
   Widget build(BuildContext context) {
@@ -179,7 +157,6 @@ class StateBand extends StatelessWidget {
     final theme = Theme.of(context);
     final words = Words.of(context);
     final detail = standingDetail(words, standing);
-    final taken = lastTakenAt;
     final action = switch (standing) {
       Standing.unreadable || Standing.refused =>
         onPairAgain == null
@@ -223,14 +200,6 @@ class StateBand extends StatelessWidget {
             detail,
             textAlign: whole ? TextAlign.center : TextAlign.start,
             style: theme.textTheme.bodySmall?.copyWith(color: under),
-          ),
-        if (taken != null)
-          TimeOnHold(
-            when: taken,
-            child: Text(
-              takenAt(words, taken, now: clock()),
-              style: theme.textTheme.bodySmall?.copyWith(color: under),
-            ),
           ),
         // A way out that is drawn as one. The three that carry a button are the three worth
         // pressing, so nothing is gained by making them look like text.

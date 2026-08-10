@@ -157,7 +157,7 @@ class _Details extends StatelessWidget {
             when: taken.at!,
             child: _Fact(
               label: words.factLastTaken,
-              value: relativeTime(words, taken.at!, now: now),
+              value: relativeTime(TimeFace.of(context), taken.at!, now: now),
               detail: [
                 if (taken.version case final version?)
                   words.lastTakenVersion(version),

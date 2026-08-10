@@ -179,7 +179,7 @@ class DueMark extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colours = palette(context);
-    final label = dueLabel(Words.of(context), dueOn, today: today);
+    final label = dueLabel(TimeFace.of(context), dueOn, today: today);
     final late = isOverdue(dueOn, today: today);
     return _Mark(
       icon: late ? Icons.priority_high : Icons.event_outlined,
@@ -192,13 +192,14 @@ class DueMark extends StatelessWidget {
 bool isOverdue(String dueOn, {required DateTime today}) =>
     dueOn.compareTo(isoDay(today)) < 0;
 
-String dueLabel(Words words, String dueOn, {required DateTime today}) {
+String dueLabel(TimeFace face, String dueOn, {required DateTime today}) {
+  final words = face.words;
   final day = isoDay(today);
   if (dueOn.compareTo(day) < 0) {
-    return words.dueOverdue(dayLabel(words, dueOn, now: today));
+    return words.dueOverdue(dayLabel(face, dueOn, now: today));
   }
   if (dueOn == day) return words.dueToday;
-  return words.dueOn(dayLabel(words, dueOn, now: today));
+  return words.dueOn(dayLabel(face, dueOn, now: today));
 }
 
 /// Not read since the person last looked.
