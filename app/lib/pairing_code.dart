@@ -1,14 +1,18 @@
-/// What the pairing code carries, and what to say when it carries something else.
+/// What the pairing code carries, and which refusal it is when it carries something else.
 ///
 /// The PC draws the code and this reads it, so the two halves of one line of JSON live a repo
 /// apart. Nothing else in the app knows the shape: the screen hands over text and gets back either
-/// a [Pairing] or a sentence saying what was different about the code it just read.
+/// a [Pairing] or a [PairingCodeException] naming what was different about the code it just read.
 ///
 /// **A code that does not fit is answered, not refused.** "Could not read that" leaves the person
 /// pointing a camera at a thing that is definitely in frame and definitely not working, with
 /// nothing to act on. A code from another app, a code from an amenbo newer than this build, and a
 /// key of the wrong size are three different problems with three different next steps, and the
 /// only place that difference is still visible is here.
+///
+/// The difference is carried as [CodeProblem] and the numbers that go with it. The sentence it
+/// becomes is the scanning screen's, so that a person reading a code in Portuguese is refused in
+/// Portuguese.
 library;
 
 import 'dart:convert';
@@ -18,6 +22,10 @@ import 'pairing_store.dart';
 import 'record_envelope.dart';
 
 /// Why a code that was read cannot pair this phone.
+///
+/// Six, and each one has a next step the others do not: get the right code, update the app,
+/// update amenbo, ask the PC for a fresh one, and — for the two the code itself is wrong about —
+/// nothing this phone can do at all.
 enum CodeProblem {
   /// Not one of ours. Some other app's code, or a URL, or a shopping barcode.
   notAPairingCode,
@@ -28,21 +36,33 @@ enum CodeProblem {
   /// Ours, from an amenbo that speaks an earlier one.
   tooOld,
 
-  /// Ours, and this build's version, but one of the three things on it will not do.
-  unusable,
+  /// Ours, and this build's version, with one of the three things it carries not there.
+  incomplete,
+
+  /// Ours, and it would have this phone send its token in the clear.
+  notHttps,
+
+  /// Ours, and the key on it is not one records open with.
+  keyWillNotOpen,
 }
 
-/// A code was read and cannot be paired with, and the sentence to show for it.
+/// A code was read and cannot be paired with.
+///
+/// It carries which refusal it is and the values that belong in the sentence — the two versions,
+/// the address — and never the sentence itself.
 class PairingCodeException implements Exception {
-  const PairingCodeException(this.problem, this.message);
+  const PairingCodeException(this.problem, {this.saidVersion, this.url});
 
   final CodeProblem problem;
 
-  /// One sentence, saying what was different and what to do about it. It is shown as written.
-  final String message;
+  /// The contract version the code says it speaks, where that is what it was refused for.
+  final int? saidVersion;
+
+  /// Where the code would have this phone read from, where that is what it was refused for.
+  final Uri? url;
 
   @override
-  String toString() => 'PairingCodeException: $message';
+  String toString() => 'PairingCodeException(${problem.name})';
 }
 
 /// Reads what a code carries into the three things a pairing is, and the name it goes by.
@@ -55,37 +75,19 @@ Pairing readPairingCode(String text) {
   try {
     decoded = jsonDecode(text);
   } on FormatException {
-    throw const PairingCodeException(
-      CodeProblem.notAPairingCode,
-      'That is not an amenbo pairing code. The one you want is the code amenbo '
-      'put on your PC screen.',
-    );
+    throw const PairingCodeException(CodeProblem.notAPairingCode);
   }
 
   if (decoded is! Map<String, Object?> || decoded['v'] is! int) {
-    throw const PairingCodeException(
-      CodeProblem.notAPairingCode,
-      'That is not an amenbo pairing code. The one you want is the code amenbo '
-      'put on your PC screen.',
-    );
+    throw const PairingCodeException(CodeProblem.notAPairingCode);
   }
 
   final version = decoded['v'] as int;
   if (version > contractVersion) {
-    throw PairingCodeException(
-      CodeProblem.tooNew,
-      'That code was made by a newer amenbo than this app reads (it speaks '
-      'version $version, this app reads $contractVersion). Update the app, '
-      'then show the code again.',
-    );
+    throw PairingCodeException(CodeProblem.tooNew, saidVersion: version);
   }
   if (version < contractVersion) {
-    throw PairingCodeException(
-      CodeProblem.tooOld,
-      'That code was made by an older amenbo than this app reads (it speaks '
-      'version $version, this app reads $contractVersion). Update amenbo on '
-      'the PC and show a fresh code.',
-    );
+    throw PairingCodeException(CodeProblem.tooOld, saidVersion: version);
   }
 
   final url = Uri.tryParse(decoded['url'] as String? ?? '');
@@ -96,21 +98,13 @@ Pairing readPairingCode(String text) {
       readToken.isEmpty ||
       encryptionKey is! String ||
       encryptionKey.isEmpty) {
-    throw const PairingCodeException(
-      CodeProblem.unusable,
-      'That code is an amenbo pairing code with something missing from it. Show '
-      'a fresh one from the PC.',
-    );
+    throw const PairingCodeException(CodeProblem.incomplete);
   }
 
   if (!url.isScheme('https') || url.host.isEmpty) {
     // The token on the code is what gets this phone in. Sent in the clear it is not this phone's
     // any more, and a pairing that starts by giving itself away is worth stopping at the camera.
-    throw PairingCodeException(
-      CodeProblem.unusable,
-      'That code reads from $url, and this app will only send its token over '
-      'https.',
-    );
+    throw PairingCodeException(CodeProblem.notHttps, url: url);
   }
 
   // The name is not one of the three things a pairing is, so a code without one still pairs. It
@@ -130,12 +124,8 @@ Pairing readPairingCode(String text) {
   // the screen is the one moment they can do something about it.
   try {
     pairing.cipher();
-  } on EnvelopeException catch (wrong) {
-    throw PairingCodeException(
-      CodeProblem.unusable,
-      'The key on that code is not one this app can open records with '
-      '(${wrong.message}). Show a fresh code from the PC.',
-    );
+  } on EnvelopeException {
+    throw const PairingCodeException(CodeProblem.keyWillNotOpen);
   }
 
   return pairing;

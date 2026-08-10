@@ -573,10 +573,7 @@ void main() {
                 startedOver: false,
               );
             }
-            throw const IntakeException(
-              IntakeFailure.unreachable,
-              'iCloud is not available on this device',
-            );
+            throw const IntakeException(IntakeFailure.unreachable);
           },
           settings: asked(Refresh.automatic),
         ),

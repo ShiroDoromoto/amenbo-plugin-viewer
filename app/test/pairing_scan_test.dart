@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:amenbo_viewer/pairing_code.dart';
 import 'package:amenbo_viewer/pairing_scan.dart';
 import 'package:amenbo_viewer/pairing_store.dart';
 
@@ -109,6 +110,37 @@ void main() {
     expect(find.byType(PairingScanScreen), findsNothing);
     expect((await const PairingStore().read())?.readToken, 'tok');
     expect(paired()?.url, Uri.parse('https://viewer.example.workers.dev'));
+  });
+
+  test('every refusal has a sentence of its own, and says what to do next', () {
+    // "Could not read that" is the failure this screen cannot afford: the code is plainly in
+    // frame, and there is nothing left to try. Six refusals, six lines, each ending in a full
+    // stop because each of them is a sentence rather than a label.
+    final said = {
+      for (final problem in CodeProblem.values)
+        troubleWith(
+          words,
+          PairingCodeException(
+            problem,
+            saidVersion: 2,
+            url: Uri.parse('http://a.b'),
+          ),
+        ),
+    };
+
+    expect(said, hasLength(CodeProblem.values.length));
+    for (final line in said) {
+      expect(line, matches(RegExp(r'\.$')));
+    }
+  });
+
+  test('a refusal that lost its number still says something', () {
+    // The value and the refusal travel together, so this cannot happen — but a screen that threw
+    // over it would leave a person staring at a camera with nothing on it at all.
+    expect(
+      troubleWith(words, const PairingCodeException(CodeProblem.tooNew)),
+      words.codeIncomplete,
+    );
   });
 
   testWidgets('a code that is something else says what was different', (

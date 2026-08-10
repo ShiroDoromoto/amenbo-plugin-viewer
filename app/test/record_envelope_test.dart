@@ -95,25 +95,16 @@ void main() {
     test('is optional', () {
       // Go's RawURLEncoding writes none and Dart's encoder writes it; both have to be readable,
       // or the envelope would carry a detail neither side chose on purpose.
-      expect(
-        decodeBase64Url('AAEC', what: 'x'),
-        decodeBase64Url('AAEC', what: 'x'),
-      );
-      expect(
-        decodeBase64Url('AAECAw', what: 'x'),
-        decodeBase64Url('AAECAw==', what: 'x'),
-      );
+      expect(decodeBase64Url('AAEC'), decodeBase64Url('AAEC'));
+      expect(decodeBase64Url('AAECAw'), decodeBase64Url('AAECAw=='));
     });
 
     test('does not make a malformed field readable', () {
       expect(
-        () => decodeBase64Url('not base64!', what: 'the key'),
+        () => decodeBase64Url('not base64!'),
         throwsA(isA<EnvelopeException>()),
       );
-      expect(
-        () => decodeBase64Url(null, what: 'the key'),
-        throwsA(isA<EnvelopeException>()),
-      );
+      expect(() => decodeBase64Url(null), throwsA(isA<EnvelopeException>()));
     });
   });
 

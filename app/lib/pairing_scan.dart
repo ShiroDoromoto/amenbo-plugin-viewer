@@ -13,8 +13,8 @@
 /// * **being refused is not the end.** The settings app is the way back, and it is the only one:
 ///   a code read out of a photograph would put the token and the key in the photo library, and
 ///   from there in iCloud and every backup, which is the one place the key is never meant to go.
-/// * **a code that does not fit says what was different.** `pairing_code.dart` keeps those
-///   sentences.
+/// * **a code that does not fit says what was different.** `pairing_code.dart` says which refusal
+///   it is; [troubleWith] turns that into the sentence this screen shows.
 ///
 /// The camera reaches this screen through [Camera], so what is drawn and what happens after a
 /// code is read can be walked in a test. Only [LiveCamera] talks to a device.
@@ -24,10 +24,36 @@ import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import 'cloudflare_intake.dart' show contractVersion;
 import 'l10n/words.dart';
 import 'pairing_code.dart';
 import 'pairing_store.dart';
 import 'ui/tokens.dart';
+
+/// What was wrong with a code, in words.
+///
+/// `pairing_code.dart` says which refusal it is and carries the numbers; the sentence is chosen
+/// here, where the language the phone is set to is known. The last arm takes the two that lost
+/// the value their sentence needed along with the plain incomplete code — all three are answered
+/// by showing a fresh code, so none of them leaves the person without a next step.
+String troubleWith(Words words, PairingCodeException code) {
+  final said = code.saidVersion;
+  final url = code.url;
+  return switch (code.problem) {
+    CodeProblem.notAPairingCode => words.codeNotOurs,
+    CodeProblem.tooNew when said != null => words.codeTooNew(
+      said,
+      contractVersion,
+    ),
+    CodeProblem.tooOld when said != null => words.codeTooOld(
+      said,
+      contractVersion,
+    ),
+    CodeProblem.notHttps when url != null => words.codeNotHttps('$url'),
+    CodeProblem.keyWillNotOpen => words.codeKeyWillNotOpen,
+    _ => words.codeIncomplete,
+  };
+}
 
 /// Whether the camera may be used, once the person has been asked.
 enum CameraAccess { granted, refused }
@@ -162,7 +188,8 @@ class _PairingScanScreenState extends State<PairingScanScreen> {
     try {
       pairing = readPairingCode(text);
     } on PairingCodeException catch (problem) {
-      _say(problem.message);
+      if (!mounted) return;
+      _say(troubleWith(Words.of(context), problem));
       return;
     }
 

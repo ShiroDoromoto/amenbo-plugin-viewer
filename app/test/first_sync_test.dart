@@ -31,8 +31,8 @@ class Round {
     IntakeReport(records: records, pages: 1, seq: 100, startedOver: false),
   );
 
-  void stop(IntakeFailure failure, String said) =>
-      _finished.completeError(IntakeException(failure, said));
+  void stop(IntakeFailure failure) =>
+      _finished.completeError(IntakeException(failure));
 }
 
 /// A round that fails once and then succeeds, so the resume can be walked.
@@ -95,6 +95,17 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
     return () => finished;
   }
+
+  test('every way a round can stop has a line of its own', () {
+    // A single "something went wrong" would send everybody to the same next step, and only one
+    // of the five would be at the right one.
+    final said = {
+      for (final failure in IntakeFailure.values) whatStopped(words, failure),
+    };
+
+    expect(said, hasLength(IntakeFailure.values.length));
+    expect(said.any((line) => line.isEmpty), isFalse);
+  });
 
   testWidgets('the count climbs with what has landed', (tester) async {
     final round = Round();
@@ -162,10 +173,10 @@ void main() {
 
     round.reached(120, seq: 5);
     await tester.pump();
-    round.stop(IntakeFailure.unreachable, 'the place could not be reached');
+    round.stop(IntakeFailure.unreachable);
     await tester.pumpAndSettle();
 
-    expect(find.text('the place could not be reached'), findsOneWidget);
+    expect(find.text(words.stopUnreachable), findsOneWidget);
     expect(find.textContaining('Nothing was lost'), findsOneWidget);
     expect(find.text(words.tryAgain), findsOneWidget);
     // Nothing was celebrated, so nothing was felt.
@@ -178,7 +189,7 @@ void main() {
     final round = Round();
     await open(tester, round.take);
 
-    round.stop(IntakeFailure.refused, 'the place refused this device');
+    round.stop(IntakeFailure.refused);
     await tester.pumpAndSettle();
 
     // Retrying a refusal cannot work — the way out is the PC, so there is no button offering it.
@@ -195,7 +206,7 @@ void main() {
     final round = Round();
     await open(tester, round.take);
 
-    round.stop(IntakeFailure.tooNew, 'the place writes a newer contract');
+    round.stop(IntakeFailure.tooNew);
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Update this app'), findsOneWidget);
@@ -210,7 +221,7 @@ void main() {
 
     flaky.rounds[0].reached(800, seq: 30);
     await tester.pump();
-    flaky.rounds[0].stop(IntakeFailure.unreachable, 'gone');
+    flaky.rounds[0].stop(IntakeFailure.unreachable);
     await tester.pumpAndSettle();
 
     await tester.tap(find.text(words.tryAgain));

@@ -115,6 +115,10 @@ class ICloudIntake {
   /// Where the records live, one file each.
   static const recordsDir = 'records';
 
+  /// What a round names when what it could not read was the folder itself rather than anything
+  /// inside it.
+  static const _container = 'iCloud';
+
   /// How many records are written at once.
   ///
   /// The version is kept only after the last one, so a batch is not a commit point for the round —
@@ -133,11 +137,8 @@ class ICloudIntake {
   Future<IntakeReport> run({
     void Function(IntakeProgress reached)? watching,
   }) async {
-    if (!await _within(drop.available(), 'whether iCloud is there')) {
-      throw const IntakeException(
-        IntakeFailure.unreachable,
-        'iCloud is not available on this device',
-      );
+    if (!await _within(drop.available(), _container)) {
+      throw const IntakeException(IntakeFailure.unreachable, at: _container);
     }
 
     final standing = await readStanding();
@@ -219,16 +220,10 @@ class ICloudIntake {
     try {
       return await asked.timeout(timeout);
     } on TimeoutException {
-      throw IntakeException(
-        IntakeFailure.unreachable,
-        'iCloud did not hand $what over in time',
-      );
+      throw IntakeException(IntakeFailure.unreachable, at: what);
     } on PlatformException {
       // The iOS side called its own read off, which is the same event seen a moment earlier.
-      throw IntakeException(
-        IntakeFailure.unreachable,
-        'iCloud did not hand $what over',
-      );
+      throw IntakeException(IntakeFailure.unreachable, at: what);
     }
   }
 
@@ -243,22 +238,17 @@ class ICloudIntake {
     try {
       decoded = jsonDecode(said);
     } on FormatException {
-      throw const IntakeException(
-        IntakeFailure.unreadable,
-        'what the folder says it holds is not a document',
-      );
+      throw const IntakeException(IntakeFailure.unreadable, at: metaName);
     }
     if (decoded is! Map<String, Object?>) {
-      throw const IntakeException(
-        IntakeFailure.unreadable,
-        'what the folder says it holds is not a document',
-      );
+      throw const IntakeException(IntakeFailure.unreadable, at: metaName);
     }
     final specVersion = decoded['spec_v'];
     if (specVersion != contractVersion) {
       throw IntakeException(
         IntakeFailure.tooNew,
-        'this folder is written to version $specVersion of the contract, and this app reads $contractVersion',
+        at: metaName,
+        placeVersion: specVersion is int ? specVersion : null,
       );
     }
     final version = decoded['version'];
@@ -303,16 +293,10 @@ class ICloudIntake {
     try {
       decoded = jsonDecode(said);
     } on FormatException {
-      throw IntakeException(
-        IntakeFailure.unreadable,
-        '${file.key} is not a record this app can read',
-      );
+      throw IntakeException(IntakeFailure.unreadable, at: file.key);
     }
     if (decoded is! Map<String, Object?>) {
-      throw IntakeException(
-        IntakeFailure.unreadable,
-        '${file.key} is not a record this app can read',
-      );
+      throw IntakeException(IntakeFailure.unreadable, at: file.key);
     }
 
     // The key is written twice — once as the file's place, once in the record — and they have to
@@ -320,10 +304,7 @@ class ICloudIntake {
     // check is the whole of what says a row is where it says it is.
     final key = decoded['k'];
     if (key != file.key) {
-      throw IntakeException(
-        IntakeFailure.unreadable,
-        '${file.key} carries a record that calls itself $key',
-      );
+      throw IntakeException(IntakeFailure.unreadable, at: file.key);
     }
 
     // A deletion is not written here — the file simply goes away — but a route that says it in
@@ -332,10 +313,7 @@ class ICloudIntake {
 
     final row = decoded['r'];
     if (row is! Map<String, Object?>) {
-      throw IntakeException(
-        IntakeFailure.unreadable,
-        '${file.key} does not carry a row this app can read',
-      );
+      throw IntakeException(IntakeFailure.unreadable, at: file.key);
     }
     return BacklogChange.fromKey(file.key, row: row);
   }

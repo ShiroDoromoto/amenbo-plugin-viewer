@@ -36,6 +36,19 @@ typedef TakeTheBacklog =
       void Function(IntakeProgress reached) watching,
     );
 
+/// What stopped the round, in words.
+///
+/// The intake carries which refusal it is and no sentence, so this is where one is chosen. Five
+/// of them, and no "something went wrong": the line under this one says what to do next, and it
+/// is a different thing to do in every case.
+String whatStopped(Words words, IntakeFailure failure) => switch (failure) {
+  IntakeFailure.unreachable => words.stopUnreachable,
+  IntakeFailure.refused => words.stopRefused,
+  IntakeFailure.tooNew => words.stopTooNew,
+  IntakeFailure.rebuilt => words.stopRebuilt,
+  IntakeFailure.unreadable => words.stopUnreadable,
+};
+
 class FirstSyncScreen extends StatefulWidget {
   const FirstSyncScreen({super.key, required this.take});
 
@@ -142,7 +155,7 @@ class _FirstSyncScreenState extends State<FirstSyncScreen> {
           if (stopped != null) ...[
             const SizedBox(height: Space.s7),
             Text(
-              stopped.message,
+              whatStopped(words, stopped.failure),
               style: theme.textTheme.bodyLarge?.copyWith(
                 color: theme.colorScheme.error,
               ),

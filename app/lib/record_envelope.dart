@@ -17,18 +17,44 @@ import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart';
 
+/// Why a record could not be opened.
+///
+/// Four, because four is what the reading side can honestly tell apart. Anything finer would be a
+/// guess about what happened at the other end.
+enum SealProblem {
+  /// The envelope is not the shape one is: a field missing, not base64url, or the wrong number of
+  /// bytes.
+  malformed,
+
+  /// The tag did not verify. Altered bytes, a record sealed under another name, and a key that is
+  /// not the one it was sealed with are indistinguishable here by design.
+  wrongKey,
+
+  /// It opened, and what came out is not the row a record carries.
+  notARow,
+
+  /// The key this device holds is not a key of the size records are sealed with. It is its own
+  /// answer because it is the one the pairing screen has something to say about — the code in
+  /// front of the camera is where it can still be fixed.
+  unusableKey,
+}
+
 /// The record could not be opened, and no plaintext should be inferred from it.
 ///
-/// This covers both a malformed envelope and one whose tag does not verify — from the reading
-/// side they are the same event, "this did not come from the key we hold", and the app has one
-/// thing to say about it.
+/// It carries which of the four it is and nothing written out: what a person is shown about a
+/// record that will not open is the screen's to say, in the reader's own language.
 class EnvelopeException implements Exception {
-  const EnvelopeException(this.message);
+  const EnvelopeException(this.problem, {this.at});
 
-  final String message;
+  final SealProblem problem;
+
+  /// Which record it happened on — `"<table>/<row id>"` — or null before there is a record to
+  /// name. A locator for whoever is reading a stack trace, never a sentence and never shown.
+  final String? at;
 
   @override
-  String toString() => 'EnvelopeException: $message';
+  String toString() =>
+      'EnvelopeException(${problem.name})${at == null ? '' : ' on $at'}';
 }
 
 /// One record as it arrives, still sealed.
@@ -67,32 +93,23 @@ class SealedRecord {
   factory SealedRecord.fromJson(Map<String, Object?> json) {
     final key = json['k'];
     if (key is! String || key.isEmpty) {
-      throw const EnvelopeException('a record arrived without a key');
+      throw const EnvelopeException(SealProblem.malformed);
     }
 
     final op = json['op'];
     if (op == 'del') return SealedRecord.deleted(key: key);
     if (op != 'put') {
-      throw EnvelopeException(
-        'record $key asks for an operation nobody knows: $op',
-      );
+      throw EnvelopeException(SealProblem.malformed, at: key);
     }
 
-    final nonce = decodeBase64Url(json['n'], what: 'the nonce of $key');
+    final nonce = decodeBase64Url(json['n'], at: key);
     if (nonce.length != _nonceLength) {
-      throw EnvelopeException(
-        'the nonce of $key is ${nonce.length} bytes, not $_nonceLength',
-      );
+      throw EnvelopeException(SealProblem.malformed, at: key);
     }
 
-    final ciphertext = decodeBase64Url(
-      json['c'],
-      what: 'the ciphertext of $key',
-    );
+    final ciphertext = decodeBase64Url(json['c'], at: key);
     if (ciphertext.length < _tagLength) {
-      throw EnvelopeException(
-        'the ciphertext of $key is too short to carry a tag',
-      );
+      throw EnvelopeException(SealProblem.malformed, at: key);
     }
 
     return SealedRecord.put(key: key, nonce: nonce, ciphertext: ciphertext);
@@ -108,12 +125,18 @@ class RecordCipher {
   RecordCipher._(this._secretKey);
 
   /// Restores the key from the form it is issued and stored in.
+  ///
+  /// Everything that can be wrong with it comes back as the one answer: a key that is not
+  /// base64url and a key of the wrong length are the same thing to whoever is holding the code.
   factory RecordCipher.fromBase64Key(String encodedKey) {
-    final key = decodeBase64Url(encodedKey, what: 'the key');
+    final Uint8List key;
+    try {
+      key = decodeBase64Url(encodedKey);
+    } on EnvelopeException {
+      throw const EnvelopeException(SealProblem.unusableKey);
+    }
     if (key.length != _keyLength) {
-      throw EnvelopeException(
-        'the key is ${key.length} bytes, not $_keyLength',
-      );
+      throw const EnvelopeException(SealProblem.unusableKey);
     }
     return RecordCipher._(SecretKey(key));
   }
@@ -134,9 +157,7 @@ class RecordCipher {
     final nonce = record.nonce;
     final sealed = record.ciphertext;
     if (nonce == null || sealed == null) {
-      throw EnvelopeException(
-        '${record.key} is a deletion and carries nothing to open',
-      );
+      throw EnvelopeException(SealProblem.malformed, at: record.key);
     }
 
     final split = sealed.length - _tagLength;
@@ -157,9 +178,7 @@ class RecordCipher {
       // The bytes were altered, or they were sealed under another name, or this is not the key
       // they were sealed with. All three are indistinguishable here by design, and saying which
       // one it was would be a guess.
-      throw EnvelopeException(
-        '${record.key} did not open with the key this device holds',
-      );
+      throw EnvelopeException(SealProblem.wrongKey, at: record.key);
     }
   }
 
@@ -169,15 +188,11 @@ class RecordCipher {
     final Object? decoded;
     try {
       decoded = jsonDecode(utf8.decode(clear));
-    } on FormatException catch (error) {
-      throw EnvelopeException(
-        '${record.key} opened but is not JSON: ${error.message}',
-      );
+    } on FormatException {
+      throw EnvelopeException(SealProblem.notARow, at: record.key);
     }
     if (decoded is! Map<String, Object?>) {
-      throw EnvelopeException(
-        '${record.key} opened to a ${decoded.runtimeType}, not a row',
-      );
+      throw EnvelopeException(SealProblem.notARow, at: record.key);
     }
     return decoded;
   }
@@ -192,15 +207,15 @@ const _tagLength = 16;
 /// The padding is what differs between the two sides' standard libraries — Go's `RawURLEncoding`
 /// leaves it off, Dart's decoder wants it — and neither is worth making the other's problem.
 ///
-/// Exposed for the pairing screen, which decodes the same fields out of a QR code before there is
-/// a cipher to hand them to.
-Uint8List decodeBase64Url(Object? value, {required String what}) {
+/// [at] is the record it was read out of, carried into the refusal for whoever reads one. Null
+/// where what is being decoded is the key itself, which belongs to no record.
+Uint8List decodeBase64Url(Object? value, {String? at}) {
   if (value is! String || value.isEmpty) {
-    throw EnvelopeException('$what is missing');
+    throw EnvelopeException(SealProblem.malformed, at: at);
   }
   try {
     return base64Url.decode(base64Url.normalize(value));
   } on FormatException {
-    throw EnvelopeException('$what is not base64url');
+    throw EnvelopeException(SealProblem.malformed, at: at);
   }
 }

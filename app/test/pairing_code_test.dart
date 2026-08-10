@@ -78,7 +78,9 @@ void main() {
       final thrown = catchIt(() => readPairingCode('{"v":2,"nothing":"else"}'));
 
       expect(thrown.problem, CodeProblem.tooNew);
-      expect(thrown.message, contains('Update the app'));
+      // The number travels with the refusal: the screen is where it becomes a sentence, and it
+      // cannot write one that names a version nobody handed it.
+      expect(thrown.saidVersion, 2);
     });
 
     test('an older one asks for amenbo to be updated', () {
@@ -89,7 +91,7 @@ void main() {
       );
 
       expect(thrown.problem, CodeProblem.tooOld);
-      expect(thrown.message, contains('Update amenbo on the PC'));
+      expect(thrown.saidVersion, 0);
     });
   });
 
@@ -97,14 +99,14 @@ void main() {
     test('one with a field missing', () {
       expect(
         () => readPairingCode('{"v":1,"url":"https://a.b","t":"tok"}'),
-        throwsA(problem(CodeProblem.unusable)),
+        throwsA(problem(CodeProblem.incomplete)),
       );
     });
 
     test('one with an empty token', () {
       expect(
         () => readPairingCode('{"v":1,"url":"https://a.b","t":"","k":"$key"}'),
-        throwsA(problem(CodeProblem.unusable)),
+        throwsA(problem(CodeProblem.incomplete)),
       );
     });
 
@@ -117,8 +119,10 @@ void main() {
         ),
       );
 
-      expect(thrown.problem, CodeProblem.unusable);
-      expect(thrown.message, contains('https'));
+      expect(thrown.problem, CodeProblem.notHttps);
+      // The address comes with it — it is the one thing that explains why a code that looks
+      // right was turned down.
+      expect(thrown.url?.scheme, 'http');
     });
 
     test('one carrying a key of the wrong size', () {
@@ -130,24 +134,26 @@ void main() {
         ),
       );
 
-      expect(thrown.problem, CodeProblem.unusable);
-      expect(thrown.message, contains('key'));
+      expect(thrown.problem, CodeProblem.keyWillNotOpen);
     });
   });
 
-  test('every refusal says what to do next', () {
-    // "Could not read that" is the failure this screen cannot afford: the code is plainly in
-    // frame, and there is nothing left to try.
-    for (final code in [
-      'not json at all',
-      '{"ssid":"home"}',
-      '{"v":9}',
-      '{"v":1,"url":"http://a.b","t":"t","k":"$key"}',
-    ]) {
-      final said = catchIt(() => readPairingCode(code)).message;
-      expect(said, isNot(isEmpty));
-      expect(said, matches(RegExp(r'\.$')));
-    }
+  test('a refusal carries which one it is, and never a sentence', () {
+    // "Could not read that" is the failure this screen cannot afford, and the guard against it is
+    // that every code below is refused as something the screen has its own words for.
+    final refusals = {
+      for (final code in [
+        'not json at all',
+        '{"ssid":"home"}',
+        '{"v":9}',
+        '{"v":1,"url":"http://a.b","t":"t","k":"$key"}',
+        '{"v":1,"url":"https://a.b","t":"t"}',
+        '{"v":1,"url":"https://a.b","t":"t","k":"c2hvcnQ"}',
+      ])
+        catchIt(() => readPairingCode(code)).problem,
+    };
+
+    expect(refusals, hasLength(5));
   });
 }
 

@@ -61,16 +61,40 @@ bool worthAnotherRound(IntakeFailure failure) =>
     failure != IntakeFailure.refused && failure != IntakeFailure.tooNew;
 
 /// A round of the intake did not finish, and why.
+///
+/// It carries which refusal this is and the values that go with it, and never a sentence. What
+/// the person waiting is told is the screen's to say — there are five of these and one line for
+/// each, written in whichever language the phone is set to.
 class IntakeException implements Exception {
-  const IntakeException(this.failure, this.message);
+  const IntakeException(
+    this.failure, {
+    this.at,
+    this.status,
+    this.placeVersion,
+  });
 
   final IntakeFailure failure;
 
-  /// One sentence, for whoever has to do something about it.
-  final String message;
+  /// Where the round stopped — an endpoint, a file, or a record's key. A locator for whoever is
+  /// reading a stack trace, never a sentence and never shown to anybody.
+  final String? at;
+
+  /// What the place answered with, where it answered something no reading was expected of.
+  final int? status;
+
+  /// The contract version the other end speaks, where that is what stopped the round.
+  ///
+  /// Not shown either, and deliberately: the way out of it is the same number or another
+  /// ([worthAnotherRound] says there is none), and which version this build reads is on the about
+  /// screen for whoever wants to compare the two.
+  final int? placeVersion;
 
   @override
-  String toString() => 'IntakeException(${failure.name}): $message';
+  String toString() =>
+      'IntakeException(${failure.name})'
+      '${at == null ? '' : ' at $at'}'
+      '${status == null ? '' : ' answered $status'}'
+      '${placeVersion == null ? '' : ' speaking version $placeVersion'}';
 }
 
 /// What one round of the intake did.
@@ -235,10 +259,7 @@ class CloudflareIntake {
       // A page that promises more and does not move is one this device would ask for again, and
       // again. Whatever is wrong at the other end, the loop is not the place to find out.
       if (page.more && page.seq <= since) {
-        throw const IntakeException(
-          IntakeFailure.unreadable,
-          'the place says there is more, and hands back the same point in the order',
-        );
+        throw const IntakeException(IntakeFailure.unreadable, at: _records);
       }
       records += await _write(page);
       pages += 1;
@@ -257,16 +278,18 @@ class CloudflareIntake {
     );
   }
 
+  /// The two the place answers on. Named once, so what a stopped round says it stopped at is the
+  /// address it was really asking.
+  static const _meta = '/meta';
+  static const _records = '/records';
+
   /// `GET /meta` — the cheap question.
   Future<PlaceStanding> readStanding() async {
-    final answered = await _get(_at('/meta'));
-    final specVersion = _readContractVersion(answered);
+    final answered = await _get(_at(_meta), from: _meta);
+    final specVersion = _readContractVersion(answered, from: _meta);
     final seq = answered['seq'];
     if (seq is! int) {
-      throw const IntakeException(
-        IntakeFailure.unreadable,
-        'the place did not say where it stands',
-      );
+      throw const IntakeException(IntakeFailure.unreadable, at: _meta);
     }
     return PlaceStanding(
       specVersion: specVersion,
@@ -278,29 +301,32 @@ class CloudflareIntake {
 
   /// `GET /records?since=` — one page of what came after a point in the order.
   Future<RecordPage> readPage(int since) async {
-    final answered = await _get(_at('/records', {'since': '$since'}));
-    final specVersion = _readContractVersion(answered);
+    final answered = await _get(
+      _at(_records, {'since': '$since'}),
+      from: _records,
+    );
+    final specVersion = _readContractVersion(answered, from: _records);
     final seq = answered['seq'];
     final listed = answered['records'];
     if (seq is! int || listed is! List) {
-      throw const IntakeException(
-        IntakeFailure.unreadable,
-        'the place answered with something that is not a page of records',
-      );
+      throw const IntakeException(IntakeFailure.unreadable, at: _records);
     }
 
     final records = <SealedRecord>[];
     try {
       for (final entry in listed) {
         if (entry is! Map<String, Object?>) {
-          throw const EnvelopeException('a record arrived as something else');
+          throw const EnvelopeException(SealProblem.malformed);
         }
         records.add(SealedRecord.fromJson(entry));
       }
     } on EnvelopeException catch (broken) {
       // A record that does not fit is not skipped: leaving it out would show a backlog with a
       // hole in it and nothing to say a hole was there.
-      throw IntakeException(IntakeFailure.unreadable, broken.message);
+      throw IntakeException(
+        IntakeFailure.unreadable,
+        at: broken.at ?? _records,
+      );
     }
 
     return RecordPage(
@@ -342,7 +368,10 @@ class CloudflareIntake {
     try {
       return await _cipher.openJson(record);
     } on EnvelopeException catch (shut) {
-      throw IntakeException(IntakeFailure.unreadable, shut.message);
+      throw IntakeException(
+        IntakeFailure.unreadable,
+        at: shut.at ?? record.key,
+      );
     }
   }
 
@@ -352,12 +381,16 @@ class CloudflareIntake {
 
   /// The one place this class reads a contract version, so a place that has moved past this
   /// build is refused at the door rather than at the first field that is not there.
-  int _readContractVersion(Map<String, Object?> answered) {
+  int _readContractVersion(
+    Map<String, Object?> answered, {
+    required String from,
+  }) {
     final specVersion = answered['spec_v'];
     if (specVersion != contractVersion) {
       throw IntakeException(
         IntakeFailure.tooNew,
-        'this place speaks version $specVersion of the contract, and this app reads $contractVersion',
+        at: from,
+        placeVersion: specVersion is int ? specVersion : null,
       );
     }
     return contractVersion;
@@ -373,72 +406,41 @@ class CloudflareIntake {
   }
 
   /// One GET, with this device's token on it, read as the JSON object every answer is.
-  Future<Map<String, Object?>> _get(Uri url) async {
+  Future<Map<String, Object?>> _get(Uri url, {required String from}) async {
     final http.Response answered;
     try {
       answered = await _client
           .get(url, headers: {'Authorization': 'Bearer ${pairing.readToken}'})
           .timeout(timeout);
     } on TimeoutException {
-      throw const IntakeException(
-        IntakeFailure.unreachable,
-        'the place did not answer in time',
-      );
+      throw IntakeException(IntakeFailure.unreachable, at: from);
     } catch (_) {
       // Whatever the platform called it, from here it is one thing: the place was not reached.
       // The detail is the socket's, and repeating it to the person explains nothing they can act
       // on.
-      throw const IntakeException(
-        IntakeFailure.unreachable,
-        'the place could not be reached',
-      );
+      throw IntakeException(IntakeFailure.unreachable, at: from);
     }
 
-    if (answered.statusCode == 401 || answered.statusCode == 403) {
-      throw const IntakeException(
-        IntakeFailure.refused,
-        'the place refused this device — pair it again',
-      );
+    final status = answered.statusCode;
+    if (status == 401 || status == 403) {
+      throw IntakeException(IntakeFailure.refused, at: from, status: status);
     }
-    if (answered.statusCode == 409) {
-      throw IntakeException(
-        IntakeFailure.rebuilt,
-        _said(answered) ??
-            'this device is reading on from a point the place has not reached',
-      );
+    if (status == 409) {
+      throw IntakeException(IntakeFailure.rebuilt, at: from, status: status);
     }
-    if (answered.statusCode != 200) {
-      throw IntakeException(
-        IntakeFailure.unreadable,
-        _said(answered) ?? 'the place answered ${answered.statusCode}',
-      );
+    if (status != 200) {
+      throw IntakeException(IntakeFailure.unreadable, at: from, status: status);
     }
 
-    const notADocument = IntakeException(
-      IntakeFailure.unreadable,
-      'the place answered with something that is not a document',
-    );
     final Object? decoded;
     try {
       decoded = jsonDecode(utf8.decode(answered.bodyBytes));
     } on FormatException {
-      throw notADocument;
+      throw IntakeException(IntakeFailure.unreadable, at: from, status: status);
     }
-    if (decoded is! Map<String, Object?>) throw notADocument;
+    if (decoded is! Map<String, Object?>) {
+      throw IntakeException(IntakeFailure.unreadable, at: from, status: status);
+    }
     return decoded;
-  }
-
-  /// The sentence the place put in a refusal, when it put one there.
-  String? _said(http.Response answered) {
-    try {
-      final decoded = jsonDecode(utf8.decode(answered.bodyBytes));
-      if (decoded is Map && decoded['error'] is String) {
-        return decoded['error'] as String;
-      }
-    } catch (_) {
-      // A body that is not the shape refusals come in says nothing extra; the status stands on
-      // its own.
-    }
-    return null;
   }
 }

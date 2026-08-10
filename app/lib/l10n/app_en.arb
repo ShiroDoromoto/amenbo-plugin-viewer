@@ -388,6 +388,16 @@
   "@firstSyncCarriesOn": { "description": "The cursor moves page by page, so an interruption costs the page it was on." },
   "tryAgain": "Try again",
   "@tryAgain": { "description": "Only where another round could end differently." },
+  "stopUnreachable": "This phone could not reach your PC",
+  "@stopUnreachable": { "description": "What stopped the first round, said above what to do about it. Not a fault: out of signal is one of the shapes ordinary use takes." },
+  "stopRefused": "Your PC turned this device away",
+  "@stopRefused": { "description": "What stopped the first round: the token this phone was paired with is no longer allowed to read." },
+  "stopTooNew": "Your PC writes a format this app does not read",
+  "@stopTooNew": { "description": "What stopped the first round: the contract the two sides speak does not match. The version numbers are not said — the way out is the same one whatever they are, and the app's own is on the about screen." },
+  "stopRebuilt": "Your PC's copy was made again from nothing",
+  "@stopRebuilt": { "description": "What stopped the first round: the place no longer matches the point this phone had read to." },
+  "stopUnreadable": "What arrived could not be read as records",
+  "@stopUnreadable": { "description": "What stopped the first round: the answer came back, and it is not the shape records come in." },
   "wayOutUnreachable": "Nothing was lost. Trying again picks up where this stopped.",
   "@wayOutUnreachable": { "description": "What to do about a round that could not reach the place." },
   "wayOutRefused": "This phone is no longer allowed to read. Show it a fresh code from the PC.",
@@ -444,9 +454,30 @@
   "@pairOpenSettings": { "description": "Sends the person to this app's own page in the system settings." },
   "pairCouldNotKeep": "This phone could not keep the pairing: {error}",
   "@pairCouldNotKeep": {
-    "description": "The code was right and the phone would not keep it. Better than going on scanning a code already read correctly.",
+    "description": "The code was right and the phone would not keep it. Better than going on scanning a code already read correctly. The reason comes from the phone's own keychain and is not translated.",
     "placeholders": { "error": { "type": "String" } }
   },
+  "codeNotOurs": "That is not an amenbo pairing code. The one you want is the code amenbo put on your PC screen.",
+  "@codeNotOurs": { "description": "Over the camera. What was read is some other code entirely, so the next step is to point the phone at the right one." },
+  "codeTooNew": "That code was made by a newer amenbo than this app reads (it speaks version {said}, this app reads {read}). Update the app, then show the code again.",
+  "@codeTooNew": {
+    "description": "Over the camera. Both numbers are said here, unlike on the first sync: the person is standing between two machines and the answer is which of them to update.",
+    "placeholders": { "said": { "type": "int" }, "read": { "type": "int" } }
+  },
+  "codeTooOld": "That code was made by an older amenbo than this app reads (it speaks version {said}, this app reads {read}). Update amenbo on the PC and show a fresh code.",
+  "@codeTooOld": {
+    "description": "Over the camera. The other side of the same mismatch, and the other machine to update.",
+    "placeholders": { "said": { "type": "int" }, "read": { "type": "int" } }
+  },
+  "codeIncomplete": "That code is an amenbo pairing code with something missing from it. Show a fresh one from the PC.",
+  "@codeIncomplete": { "description": "Over the camera. Ours, this version, and one of the three things a pairing is did not travel." },
+  "codeNotHttps": "That code reads from {url}, and this app will only send its token over https.",
+  "@codeNotHttps": {
+    "description": "Over the camera. The address is said because it is the one thing that explains why a code that looks right was refused.",
+    "placeholders": { "url": { "type": "String" } }
+  },
+  "codeKeyWillNotOpen": "The key on that code is not one this app can open records with. Show a fresh code from the PC.",
+  "@codeKeyWillNotOpen": { "description": "Over the camera. Caught while the phone is still pointed at the screen, rather than at the first sync where nothing can be done about it." },
 
   "refCopy": "copy",
   "@refCopy": { "description": "Read out after a ref, which copies itself when it is tapped." },
