@@ -13,6 +13,7 @@ import 'marks.dart';
 import 'refs.dart';
 import 'theme.dart';
 import 'time.dart';
+import 'tokens.dart';
 
 class DecisionRow extends StatelessWidget {
   const DecisionRow({
@@ -57,13 +58,16 @@ class DecisionRow extends StatelessWidget {
       child: InkWell(
         onTap: onOpen,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+          padding: const EdgeInsets.symmetric(
+            horizontal: Space.gutter,
+            vertical: Space.s4,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               RowTitle(line.title),
               Padding(
-                padding: const EdgeInsets.only(top: 2),
+                padding: const EdgeInsets.only(top: Space.hair),
                 child: Row(
                   children: [
                     DecisionStatusMark(line.status),
@@ -87,7 +91,7 @@ class DecisionRow extends StatelessWidget {
               ),
               if (excerpt != null && excerpt.isNotEmpty)
                 Padding(
-                  padding: const EdgeInsets.only(top: 2),
+                  padding: const EdgeInsets.only(top: Space.hair),
                   child: Text(
                     excerpt,
                     style: quiet,
@@ -103,7 +107,7 @@ class DecisionRow extends StatelessWidget {
   }
 
   Widget _dot(TextStyle? style) => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 6),
+    padding: const EdgeInsets.symmetric(horizontal: Space.s2),
     child: Text('·', style: style),
   );
 }

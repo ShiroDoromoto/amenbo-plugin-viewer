@@ -22,6 +22,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import 'icloud_container.dart';
+import 'ui/theme.dart';
+import 'ui/tokens.dart';
 
 void main() {
   runApp(const ProbeApp());
@@ -34,11 +36,8 @@ class ProbeApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'iCloud container probe',
-      theme: ThemeData(colorSchemeSeed: Colors.teal),
-      darkTheme: ThemeData(
-        colorSchemeSeed: Colors.teal,
-        brightness: Brightness.dark,
-      ),
+      theme: viewerTheme(Brightness.light),
+      darkTheme: viewerTheme(Brightness.dark),
       home: const ProbeScreen(),
     );
   }
@@ -140,15 +139,15 @@ class _ProbeScreenState extends State<ProbeScreen> {
         bottom: _busy
             ? const PreferredSize(
                 preferredSize: Size.fromHeight(2),
-                child: LinearProgressIndicator(minHeight: 2),
+                child: LinearProgressIndicator(minHeight: Space.hair),
               )
             : null,
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(Space.gutter),
         children: [
           _StatusCard(status: _status),
-          const SizedBox(height: 12),
+          const SizedBox(height: Space.s4),
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -163,7 +162,7 @@ class _ProbeScreenState extends State<ProbeScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: Space.s5),
           if (_entries.isNotEmpty) ...[
             Text('Entries', style: Theme.of(context).textTheme.titleMedium),
             for (final entry in _entries)
@@ -179,15 +178,18 @@ class _ProbeScreenState extends State<ProbeScreen> {
                 ),
                 onTap: entry.isDirectory || _busy ? null : () => _read(entry),
               ),
-            const SizedBox(height: 16),
+            const SizedBox(height: Space.s5),
           ],
           Text('Log', style: Theme.of(context).textTheme.titleMedium),
           for (final line in _log)
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
+              padding: const EdgeInsets.symmetric(vertical: Space.s1),
               child: SelectableText(
                 line,
-                style: const TextStyle(fontFamily: 'Menlo', fontSize: 12),
+                style: const TextStyle(
+                  fontFamily: Lettering.mono,
+                  fontSize: Lettering.xs,
+                ),
               ),
             ),
         ],
@@ -205,7 +207,7 @@ class _StatusCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(Space.gutter),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -215,7 +217,7 @@ class _StatusCard extends StatelessWidget {
                   : 'iCloud is not available',
               style: Theme.of(context).textTheme.titleMedium,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: Space.s3),
             SelectableText(status.path ?? 'nothing to read from'),
           ],
         ),

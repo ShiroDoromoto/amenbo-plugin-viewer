@@ -26,6 +26,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 import 'pairing_code.dart';
 import 'pairing_store.dart';
+import 'ui/tokens.dart';
 
 /// Whether the camera may be used, once the person has been asked.
 enum CameraAccess { granted, refused }
@@ -224,12 +225,17 @@ class _Explaining extends StatelessWidget {
     final theme = Theme.of(context);
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
+      padding: const EdgeInsets.fromLTRB(
+        Space.pageGutter,
+        Space.pageGutter,
+        Space.pageGutter,
+        Space.s7,
+      ),
       children: [
         Text(PairingScanScreen.heading, style: theme.textTheme.headlineSmall),
-        const SizedBox(height: 12),
+        const SizedBox(height: Space.s4),
         Text(PairingScanScreen.why, style: theme.textTheme.bodyLarge),
-        const SizedBox(height: 28),
+        const SizedBox(height: Space.s7),
         FilledButton(onPressed: onAsk, child: const Text('Turn on the camera')),
       ],
     );
@@ -257,13 +263,13 @@ class _Scanning extends StatelessWidget {
           child: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(Space.pageGutter),
                 child: _OverTheView(
                   child: Text(
                     trouble ?? PairingScanScreen.inFrame,
                     textAlign: TextAlign.center,
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      color: Colors.white,
+                      color: OverCamera.frame,
                     ),
                   ),
                 ),
@@ -290,8 +296,8 @@ class _Frame extends StatelessWidget {
           aspectRatio: 1,
           child: DecoratedBox(
             decoration: BoxDecoration(
-              border: Border.all(color: Colors.white, width: 3),
-              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: OverCamera.frame, width: Stroke.thick),
+              borderRadius: Corner.wide,
             ),
           ),
         ),
@@ -311,11 +317,14 @@ class _OverTheView extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(12),
+        color: OverCamera.scrim,
+        borderRadius: Corner.wide,
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding: const EdgeInsets.symmetric(
+          horizontal: Space.gutter,
+          vertical: Space.s4,
+        ),
         child: child,
       ),
     );
@@ -333,16 +342,21 @@ class _Refused extends StatelessWidget {
     final theme = Theme.of(context);
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
+      padding: const EdgeInsets.fromLTRB(
+        Space.pageGutter,
+        Space.pageGutter,
+        Space.pageGutter,
+        Space.s7,
+      ),
       children: [
         Text(PairingScanScreen.refused, style: theme.textTheme.headlineSmall),
-        const SizedBox(height: 12),
+        const SizedBox(height: Space.s4),
         Text(
           'Pairing needs to read one code off your PC screen. Turn the camera '
           'on in the settings, and come back here.',
           style: theme.textTheme.bodyLarge,
         ),
-        const SizedBox(height: 28),
+        const SizedBox(height: Space.s7),
         FilledButton(
           onPressed: onSettings,
           child: const Text('Open the settings'),

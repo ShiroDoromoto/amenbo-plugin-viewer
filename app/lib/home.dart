@@ -41,6 +41,7 @@ import 'settings_screen.dart';
 import 'store/backlog_queries.dart';
 import 'store/backlog_store.dart';
 import 'task_detail.dart';
+import 'ui/tokens.dart';
 import 'ui/two_pane.dart';
 
 /// One round against the place, for the pairing this phone holds.
@@ -341,7 +342,7 @@ class _HomeShellState extends State<HomeShell> {
   /// upright, where opening pushes instead and the back gesture is the way out.
   int? _besideTaskId;
 
-  bool get _wide => MediaQuery.sizeOf(context).width >= twoPaneWidth;
+  bool get _wide => MediaQuery.sizeOf(context).width >= Layout.twoPane;
 
   /// Opens a task from one of the tabs: beside the list where there is room, on top of it where
   /// there is not.
@@ -417,7 +418,7 @@ class _HomeShellState extends State<HomeShell> {
           ),
     placeholder: Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(Space.pageGutter),
         child: Text(
           HomeShell.nothingOpen,
           textAlign: TextAlign.center,

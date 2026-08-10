@@ -27,6 +27,7 @@ import 'store/backlog_queries.dart';
 import 'store/backlog_store.dart';
 import 'ui/task_row.dart';
 import 'ui/theme.dart';
+import 'ui/tokens.dart';
 import 'ui/touch.dart';
 
 /// What the screen calls each bundle.
@@ -373,8 +374,8 @@ class _NowScreenState extends State<NowScreen> with WidgetsBindingObserver {
         // until a newer one exists.
         bottom: _taking
             ? const PreferredSize(
-                preferredSize: Size.fromHeight(2),
-                child: LinearProgressIndicator(minHeight: 2),
+                preferredSize: Size.fromHeight(Space.hair),
+                child: LinearProgressIndicator(minHeight: Space.hair),
               )
             : null,
       ),
@@ -388,9 +389,9 @@ class _NowScreenState extends State<NowScreen> with WidgetsBindingObserver {
             Align(
               alignment: Alignment.topCenter,
               child: Padding(
-                padding: const EdgeInsets.only(top: 8),
+                padding: const EdgeInsets.only(top: Space.s3),
                 child: ActionChip(
-                  avatar: const Icon(Icons.arrow_upward, size: 16),
+                  avatar: const Icon(Icons.arrow_upward, size: Space.s5),
                   label: Text(NowScreen.arrived(_arrived!)),
                   onPressed: _showWhatArrived,
                 ),
@@ -548,14 +549,19 @@ class _SinceCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Card(
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      margin: const EdgeInsets.fromLTRB(
+        Space.gutter,
+        Space.s4,
+        Space.gutter,
+        Space.s1,
+      ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+        padding: const EdgeInsets.all(Space.s4),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(NowScreen.sinceLastLook, style: theme.textTheme.titleSmall),
-            const SizedBox(height: 4),
+            const SizedBox(height: Space.s1),
             Wrap(
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
@@ -601,7 +607,7 @@ class _SinceNumber extends StatelessWidget {
         child: InkWell(
           onTap: onOpen,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+            padding: const EdgeInsets.all(Space.s2),
             child: Text(
               label,
               style: theme.textTheme.bodyMedium?.copyWith(
@@ -628,7 +634,12 @@ class _MoreRow extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+        padding: const EdgeInsets.fromLTRB(
+          Space.gutter,
+          Space.s4,
+          Space.gutter,
+          Space.s4,
+        ),
         child: Row(
           children: [
             Text(
@@ -637,10 +648,11 @@ class _MoreRow extends StatelessWidget {
                 color: theme.colorScheme.primary,
               ),
             ),
-            const SizedBox(width: 4),
+            const SizedBox(width: Space.s1),
             Icon(
               Icons.chevron_right,
-              size: (theme.textTheme.bodyMedium?.fontSize ?? 14) * 1.2,
+              size:
+                  (theme.textTheme.bodyMedium?.fontSize ?? Lettering.md) * 1.2,
               color: theme.colorScheme.primary,
             ),
           ],

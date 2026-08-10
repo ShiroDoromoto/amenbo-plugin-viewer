@@ -10,6 +10,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 
+import 'tokens.dart';
+
 /// The namespace amenbo puts on everything it shows. A bare number belongs to any tracker;
 /// this is what makes it belong to one.
 const _namespace = 'AMB-';
@@ -61,17 +63,22 @@ class RefChip extends StatelessWidget {
             final messenger = ScaffoldMessenger.maybeOf(context);
             messenger?.showSnackBar(SnackBar(content: Text('Copied $ref')));
           },
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: Corner.smooth,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            padding: const EdgeInsets.symmetric(
+              horizontal: Space.s2,
+              vertical: Space.hair,
+            ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(ref, style: theme.textTheme.labelLarge),
-                const SizedBox(width: 4),
+                const SizedBox(width: Space.s1),
                 Icon(
                   Icons.copy_outlined,
-                  size: (theme.textTheme.labelLarge?.fontSize ?? 14) * 1.1,
+                  size:
+                      (theme.textTheme.labelLarge?.fontSize ?? Lettering.md) *
+                      1.1,
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
               ],

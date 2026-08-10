@@ -8,6 +8,7 @@ library;
 import 'package:flutter/material.dart';
 
 import 'cloudflare_intake.dart';
+import 'ui/tokens.dart';
 
 /// This build's version, as the stores show it.
 ///
@@ -37,11 +38,16 @@ class AboutScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text(title)),
       body: ListView(
-        padding: const EdgeInsets.only(bottom: 32),
+        padding: const EdgeInsets.only(bottom: Space.s7),
         children: [
           ListTile(title: Text(appName), subtitle: Text('Version $appVersion')),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            padding: const EdgeInsets.fromLTRB(
+              Space.gutter,
+              Space.s3,
+              Space.gutter,
+              Space.s5,
+            ),
             child: Text(
               contractLine(contractVersion),
               style: theme.textTheme.bodyMedium?.copyWith(
@@ -49,7 +55,7 @@ class AboutScreen extends StatelessWidget {
               ),
             ),
           ),
-          const Divider(height: 1),
+          const Divider(height: Stroke.rule),
           ListTile(
             title: const Text(licences),
             onTap: () => showLicensePage(

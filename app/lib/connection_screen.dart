@@ -17,6 +17,7 @@ import 'connection.dart';
 import 'pairing_scan.dart';
 import 'pairing_store.dart';
 import 'ui/time.dart';
+import 'ui/tokens.dart';
 
 /// The connection screen. Pops `true` when the person erased this phone's copy, so whoever pushed
 /// it can go back to the guide — there is nothing left to show a backlog from.
@@ -133,7 +134,7 @@ class _Details extends StatelessWidget {
     final taken = connection.lastTaken;
 
     return ListView(
-      padding: const EdgeInsets.only(bottom: 32),
+      padding: const EdgeInsets.only(bottom: Space.s7),
       children: [
         if (connection.label case final named?)
           _Fact(
@@ -175,7 +176,7 @@ class _Details extends StatelessWidget {
               ].join(' · '),
             ),
           ),
-        const Divider(height: 32),
+        const Divider(),
         if (connection.canPairAgain)
           ListTile(
             title: const Text(ConnectionScreen.pairAgain),
@@ -214,7 +215,10 @@ class _Fact extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      padding: const EdgeInsets.symmetric(
+        horizontal: Space.gutter,
+        vertical: Space.s4,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -224,10 +228,10 @@ class _Fact extends StatelessWidget {
               color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: Space.hair),
           Text(value, style: theme.textTheme.bodyLarge),
           if (detail case final detail?) ...[
-            const SizedBox(height: 2),
+            const SizedBox(height: Space.hair),
             Text(
               detail,
               style: theme.textTheme.bodySmall?.copyWith(

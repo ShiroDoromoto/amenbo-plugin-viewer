@@ -16,6 +16,7 @@ import 'about_screen.dart';
 import 'connection.dart';
 import 'connection_screen.dart';
 import 'settings.dart';
+import 'ui/tokens.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({
@@ -67,7 +68,7 @@ class SettingsScreen extends StatelessWidget {
         builder: (context, _) {
           final chosen = settings.value;
           return ListView(
-            padding: const EdgeInsets.only(bottom: 32),
+            padding: const EdgeInsets.only(bottom: Space.s7),
             children: [
               const _Heading(refreshHeading),
               RadioGroup<Refresh>(
@@ -118,7 +119,7 @@ class SettingsScreen extends StatelessWidget {
                   ],
                 ),
               ),
-              const Divider(height: 32),
+              const Divider(),
               ListTile(
                 title: const Text(ConnectionScreen.title),
                 trailing: const Icon(Icons.chevron_right),
@@ -152,7 +153,12 @@ class _Heading extends StatelessWidget {
     return Semantics(
       header: true,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
+        padding: const EdgeInsets.fromLTRB(
+          Space.gutter,
+          Space.s6,
+          Space.gutter,
+          Space.s1,
+        ),
         child: Text(
           text,
           style: theme.textTheme.titleSmall?.copyWith(
@@ -174,7 +180,12 @@ class _Note extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+      padding: const EdgeInsets.fromLTRB(
+        Space.gutter,
+        Space.s1,
+        Space.gutter,
+        0,
+      ),
       child: Text(
         text,
         style: theme.textTheme.bodySmall?.copyWith(

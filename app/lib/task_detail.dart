@@ -20,6 +20,7 @@ import 'ui/marks.dart';
 import 'ui/refs.dart';
 import 'ui/task_row.dart';
 import 'ui/time.dart';
+import 'ui/tokens.dart';
 
 class TaskDetailScreen extends StatefulWidget {
   const TaskDetailScreen({
@@ -175,7 +176,12 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       body: task == null
           ? Center(child: Text(TaskDetailScreen.gone))
           : ListView(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+              padding: const EdgeInsets.fromLTRB(
+                Space.gutter,
+                Space.s3,
+                Space.gutter,
+                Space.s7,
+              ),
               children: [
                 _header(context, task, today),
                 ..._stall(context, task, today),
@@ -204,7 +210,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                 ? null
                 : () => widget.onProject!(task.projectId),
             child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
+              padding: const EdgeInsets.symmetric(vertical: Space.s1),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -217,7 +223,10 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                   if (widget.onProject != null)
                     Icon(
                       Icons.chevron_right,
-                      size: (theme.textTheme.labelLarge?.fontSize ?? 14) * 1.2,
+                      size:
+                          (theme.textTheme.labelLarge?.fontSize ??
+                              Lettering.md) *
+                          1.2,
                       color: theme.colorScheme.primary,
                     ),
                 ],
@@ -225,7 +234,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             ),
           ),
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
+          padding: const EdgeInsets.symmetric(vertical: Space.s1),
           child: Text(task.title, style: theme.textTheme.headlineSmall),
         ),
         Wrap(
@@ -255,7 +264,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               ),
           ],
         ),
-        const Divider(height: 24),
+        const Divider(),
       ],
     );
   }
@@ -266,16 +275,16 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     final theme = Theme.of(context);
     return [
       Container(
-        padding: const EdgeInsets.all(12),
-        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(Space.s4),
+        margin: const EdgeInsets.only(bottom: Space.s5),
         decoration: BoxDecoration(
           color: theme.colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: Corner.smooth,
         ),
         child: Row(
           children: [
             Icon(Icons.report_outlined, color: theme.colorScheme.error),
-            const SizedBox(width: 8),
+            const SizedBox(width: Space.s3),
             Expanded(
               child: Text(
                 reason,
@@ -323,7 +332,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           state: decisionStatusWords(one.status),
           onTap: () => widget.onOpenDecision(one.id),
         ),
-      const SizedBox(height: 8),
+      const SizedBox(height: Space.s3),
     ];
   }
 
@@ -341,11 +350,11 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.symmetric(vertical: Space.s3),
           child: Row(
             children: [
               SizedBox(
-                width: 110,
+                width: Layout.leadColumn,
                 child: Text(
                   lead,
                   style: theme.textTheme.labelMedium?.copyWith(
@@ -386,7 +395,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             ),
         ],
       ),
-      const SizedBox(height: 8),
+      const SizedBox(height: Space.s3),
     ];
   }
 
@@ -405,15 +414,17 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         // Deliberately not a button. A row that looks pressable and does nothing is worse than a
         // row that never offered.
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6),
+          padding: const EdgeInsets.symmetric(vertical: Space.s2),
           child: Row(
             children: [
               Icon(
                 Icons.attach_file,
-                size: (theme.textTheme.bodyMedium?.fontSize ?? 14) * 1.2,
+                size:
+                    (theme.textTheme.bodyMedium?.fontSize ?? Lettering.md) *
+                    1.2,
                 color: theme.colorScheme.onSurfaceVariant,
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: Space.s3),
               Expanded(child: Text(file.filename)),
               Text(
                 fileSize(file.bytes),
@@ -424,7 +435,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             ],
           ),
         ),
-      const SizedBox(height: 8),
+      const SizedBox(height: Space.s3),
     ];
   }
 
@@ -435,7 +446,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       InkWell(
         onTap: () => setState(() => _commitsOpen = !_commitsOpen),
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.symmetric(vertical: Space.s3),
           child: Row(
             children: [
               Expanded(
@@ -452,7 +463,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       if (_commitsOpen)
         for (final sha in _commits)
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 2),
+            padding: const EdgeInsets.symmetric(vertical: Space.hair),
             child: Text(
               // Nothing here can open one. The short form is what a person types on the PC.
               sha.substring(0, sha.length < 12 ? sha.length : 12),
@@ -461,7 +472,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               ),
             ),
           ),
-      const SizedBox(height: 8),
+      const SizedBox(height: Space.s3),
     ];
   }
 
@@ -480,7 +491,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         ),
       for (final one in _comments)
         Padding(
-          padding: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.only(bottom: Space.s4),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -491,7 +502,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                     one.authorKind == 'ai' ? 'AI' : 'You',
                     style: theme.textTheme.labelMedium,
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: Space.s3),
                   TimeOnHold(
                     when: DateTime.parse(one.createdAt),
                     child: Text(
@@ -514,7 +525,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   }
 
   Widget _sectionHeading(BuildContext context, String title) => Padding(
-    padding: const EdgeInsets.only(top: 8, bottom: 4),
+    padding: const EdgeInsets.only(top: Space.s3, bottom: Space.s1),
     child: Semantics(
       header: true,
       child: Text(title, style: Theme.of(context).textTheme.titleSmall),

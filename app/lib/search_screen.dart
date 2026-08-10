@@ -28,6 +28,7 @@ import 'store/recents.dart';
 import 'ui/decision_row.dart';
 import 'ui/task_row.dart';
 import 'ui/theme.dart';
+import 'ui/tokens.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({
@@ -393,12 +394,15 @@ class _SearchScreenState extends State<SearchScreen>
     List<({String label, VoidCallback off})> narrowings,
   ) => SingleChildScrollView(
     scrollDirection: Axis.horizontal,
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+    padding: const EdgeInsets.symmetric(
+      horizontal: Space.s4,
+      vertical: Space.s1,
+    ),
     child: Row(
       children: [
         for (final narrowing in narrowings)
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
+            padding: const EdgeInsets.symmetric(horizontal: Space.s1),
             child: InputChip(
               label: Text(narrowing.label),
               // Named rather than left to the theme: the way off is the point of the chip
@@ -466,7 +470,7 @@ class _SearchScreenState extends State<SearchScreen>
     if (_terms.isNotEmpty) ...[
       const BundleHeading(title: SearchScreen.recentTerms),
       Padding(
-        padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
+        padding: const EdgeInsets.fromLTRB(Space.s4, 0, Space.s4, Space.s1),
         child: Wrap(
           spacing: 8,
           runSpacing: 4,
@@ -528,7 +532,12 @@ class _SearchScreenState extends State<SearchScreen>
         physics: const AlwaysScrollableScrollPhysics(),
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 64, 24, 24),
+            padding: const EdgeInsets.fromLTRB(
+              Space.pageGutter,
+              Space.emptyScreenTop,
+              Space.pageGutter,
+              Space.pageGutter,
+            ),
             child: Text(
               _asked ? SearchScreen.nothingMatched : SearchScreen.nothingYet,
               textAlign: TextAlign.center,
@@ -547,7 +556,7 @@ class _SearchScreenState extends State<SearchScreen>
         final place = index - header.length;
         if (place < rows) return row(place);
         onWiden();
-        return const SizedBox(height: 1);
+        return const SizedBox(height: Stroke.rule);
       },
     );
   }

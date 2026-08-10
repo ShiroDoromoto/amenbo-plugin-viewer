@@ -7,12 +7,7 @@ library;
 
 import 'package:flutter/material.dart';
 
-/// Where one pane becomes two.
-///
-/// Below it, no phone held upright qualifies; above it, a phone turned sideways and every tablet
-/// do. It is a width, not a device: asking what kind of machine this is gets the answer wrong for
-/// the same machine held the other way.
-const twoPaneWidth = 720.0;
+import 'tokens.dart';
 
 class TwoPane extends StatelessWidget {
   const TwoPane({
@@ -34,7 +29,7 @@ class TwoPane extends StatelessWidget {
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
-      if (constraints.maxWidth < twoPaneWidth) {
+      if (constraints.maxWidth < Layout.twoPane) {
         return detail ?? list;
       }
       return Row(
@@ -42,8 +37,8 @@ class TwoPane extends StatelessWidget {
         children: [
           // The list keeps a readable measure and the detail takes the rest — a half-and-half
           // split gives the list more width than a row of text wants.
-          SizedBox(width: 360, child: list),
-          const VerticalDivider(width: 1),
+          SizedBox(width: Layout.listPane, child: list),
+          const VerticalDivider(width: Stroke.rule),
           Expanded(child: detail ?? placeholder ?? const SizedBox.shrink()),
         ],
       );

@@ -22,6 +22,7 @@ library;
 import 'package:flutter/material.dart';
 
 import 'cloudflare_intake.dart';
+import 'ui/tokens.dart';
 import 'ui/touch.dart';
 
 /// One round of the intake, reporting as it goes.
@@ -123,7 +124,12 @@ class _FirstSyncScreenState extends State<FirstSyncScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text(FirstSyncScreen.title)),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 32, 20, 32),
+        padding: const EdgeInsets.fromLTRB(
+          Space.pageGutter,
+          Space.s7,
+          Space.pageGutter,
+          Space.s7,
+        ),
         children: [
           Text(
             _records == 0
@@ -131,35 +137,35 @@ class _FirstSyncScreenState extends State<FirstSyncScreen> {
                 : FirstSyncScreen.taken(_records),
             style: theme.textTheme.headlineSmall,
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: Space.s6),
           // Determinate once there is a position worth pointing at, and indeterminate while there
           // is not — a bar sitting at zero would read as stuck rather than as still going. A round
           // that stopped holds still at where it got to.
           LinearProgressIndicator(
             value: _running && (_through ?? 0) == 0 ? null : (_through ?? 0),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: Space.s6),
           // Promising that it carries on is only true while carrying on is still what happens
           // next. Under a refusal it is the sentence that keeps somebody sitting here.
           if (stopped == null || worthAnotherRound(stopped.failure))
             Text(
               FirstSyncScreen.carriesOn,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.outline,
+                color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
           if (stopped != null) ...[
-            const SizedBox(height: 28),
+            const SizedBox(height: Space.s7),
             Text(
               stopped.message,
               style: theme.textTheme.bodyLarge?.copyWith(
                 color: theme.colorScheme.error,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: Space.s3),
             Text(_wayOut(stopped.failure), style: theme.textTheme.bodyMedium),
             if (worthAnotherRound(stopped.failure)) ...[
-              const SizedBox(height: 20),
+              const SizedBox(height: Space.s6),
               FilledButton(
                 onPressed: _running ? null : _take,
                 child: const Text(FirstSyncScreen.tryAgain),

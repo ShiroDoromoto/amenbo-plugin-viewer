@@ -24,6 +24,8 @@ import 'package:flutter/material.dart';
 
 import 'pairing_scan.dart';
 import 'pairing_store.dart';
+import 'ui/theme.dart';
+import 'ui/tokens.dart';
 
 /// One of the two ways a snapshot reaches the phone.
 ///
@@ -128,22 +130,27 @@ class PairingGuideScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: Text(appName)),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+        padding: const EdgeInsets.fromLTRB(
+          Space.pageGutter,
+          Space.s4,
+          Space.pageGutter,
+          Space.s7,
+        ),
         children: [
           Text(heading, style: theme.textTheme.headlineSmall),
-          const SizedBox(height: 12),
+          const SizedBox(height: Space.s4),
           Text(
             routes.length > 1
                 ? 'Set up either route on the PC that runs amenbo, and your tasks turn up here.'
                 : 'Set this up on the PC that runs amenbo, and your tasks turn up here.',
             style: theme.textTheme.bodyLarge,
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: Space.s6),
           for (final route in routes) ...[
             _RouteCard(route: route, onAction: () => _pair(context)),
-            const SizedBox(height: 16),
+            const SizedBox(height: Space.s5),
           ],
-          const SizedBox(height: 8),
+          const SizedBox(height: Space.s3),
           const _Assurance(),
         ],
       ),
@@ -166,12 +173,12 @@ class _RouteCard extends StatelessWidget {
     return Card(
       margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(Space.pageGutter),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(route.name, style: theme.textTheme.titleLarge),
-            const SizedBox(height: 8),
+            const SizedBox(height: Space.s3),
             Text(route.who, style: theme.textTheme.bodyMedium),
             Text(
               route.cost,
@@ -179,11 +186,11 @@ class _RouteCard extends StatelessWidget {
                 color: theme.colorScheme.primary,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: Space.s5),
             for (var i = 0; i < route.steps.length; i++)
               _Step(number: i + 1, text: route.steps[i]),
             if (route.action case final action?) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: Space.s3),
               // Left where the steps are, not stretched across the card: it is the last step's
               // other half, not a decision about the whole screen.
               Align(
@@ -209,16 +216,18 @@ class _Step extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: Space.s4),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 26,
+            width: Layout.stepNumber,
             child: Text(
               '$number.',
+              // Quieter than the step it numbers: the number is a place-keeper, and the sentence
+              // beside it is the thing to read.
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.outline,
+                color: palette(context).textFaint,
               ),
             ),
           ),
@@ -241,14 +250,18 @@ class _Assurance extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(Icons.lock_outline, size: 18, color: theme.colorScheme.outline),
-        const SizedBox(width: 10),
+        Icon(
+          Icons.lock_outline,
+          size: (theme.textTheme.bodyMedium?.fontSize ?? Lettering.md) * 1.2,
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+        const SizedBox(width: Space.s4),
         Expanded(
           child: Text(
             'Either way, the snapshot goes to a place you own and nowhere else. '
             'This app only reads it, and never writes anything back.',
             style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.outline,
+              color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
         ),

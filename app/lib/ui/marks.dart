@@ -11,7 +11,9 @@ library;
 
 import 'package:flutter/material.dart';
 
+import 'theme.dart';
 import 'time.dart';
+import 'tokens.dart';
 
 /// amenbo's `high` / `medium` / `low`, or none at all.
 class PriorityMark extends StatelessWidget {
@@ -22,12 +24,12 @@ class PriorityMark extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (priority == null) return const SizedBox.shrink();
-    final scheme = Theme.of(context).colorScheme;
+    final colours = palette(context);
     // Shape carries the ranking on its own: full, half, hollow.
     final (icon, colour) = switch (priority) {
-      'high' => (Icons.circle, scheme.error),
-      'medium' => (Icons.contrast, scheme.onSurface),
-      _ => (Icons.circle_outlined, scheme.onSurfaceVariant),
+      'high' => (Icons.circle, colours.priorityHigh),
+      'medium' => (Icons.contrast, colours.priorityMedium),
+      _ => (Icons.circle_outlined, colours.priorityLow),
     };
     return _Mark(
       icon: icon,
@@ -48,13 +50,13 @@ class StatusMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final colours = palette(context);
     final (icon, colour) = switch (status) {
-      'in_progress' => (Icons.play_arrow, scheme.primary),
-      'done' => (Icons.check, scheme.onSurfaceVariant),
-      'rejected' => (Icons.close, scheme.onSurfaceVariant),
-      'blocked' => (Icons.block, scheme.error),
-      _ => (Icons.radio_button_unchecked, scheme.onSurfaceVariant),
+      'in_progress' => (Icons.play_arrow, colours.statusInProgress),
+      'done' => (Icons.check, colours.statusDone),
+      'rejected' => (Icons.close, colours.statusTodo),
+      'blocked' => (Icons.block, colours.statusBlocked),
+      _ => (Icons.radio_button_unchecked, colours.statusTodo),
     };
     return _Mark(icon: icon, colour: colour, text: statusWords(status));
   }
@@ -112,12 +114,12 @@ class DueMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final colours = palette(context);
     final label = dueLabel(dueOn, today: today);
     final late = isOverdue(dueOn, today: today);
     return _Mark(
       icon: late ? Icons.priority_high : Icons.event_outlined,
-      colour: late ? scheme.error : scheme.onSurfaceVariant,
+      colour: late ? colours.dueOverdue : colours.dueFuture,
       text: label,
     );
   }
@@ -146,11 +148,11 @@ class UnreadDot extends StatelessWidget {
   @override
   Widget build(BuildContext context) => ExcludeSemantics(
     child: SizedBox(
-      width: 16,
+      width: Space.s5,
       child: unread
           ? Icon(
               Icons.circle,
-              size: 8,
+              size: Space.s3,
               color: Theme.of(context).colorScheme.primary,
             )
           : null,
@@ -177,8 +179,12 @@ class _Mark extends StatelessWidget {
         children: [
           // The glyph follows the text size rather than sitting at a fixed one, or it shrinks
           // away as soon as someone turns their text up.
-          Icon(icon, size: (style?.fontSize ?? 12) * 1.1, color: colour),
-          const SizedBox(width: 4),
+          Icon(
+            icon,
+            size: (style?.fontSize ?? Lettering.xs) * 1.1,
+            color: colour,
+          ),
+          const SizedBox(width: Space.s1),
           Text(text, style: style),
         ],
       ),

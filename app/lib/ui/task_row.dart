@@ -18,6 +18,7 @@ import 'marks.dart';
 import 'refs.dart';
 import 'theme.dart';
 import 'time.dart';
+import 'tokens.dart';
 
 /// A count as a heading prints it.
 String countLabel(Counted counted) =>
@@ -146,7 +147,10 @@ class TaskRow extends StatelessWidget {
       child: InkWell(
         onTap: onOpen,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+          padding: const EdgeInsets.symmetric(
+            horizontal: Space.gutter,
+            vertical: Space.s4,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -155,18 +159,18 @@ class TaskRow extends StatelessWidget {
                 children: [
                   UnreadDot(unread: unread),
                   PriorityMark(line.priority),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: Space.s3),
                   Expanded(child: RowTitle(line.title)),
                 ],
               ),
               if (second.isNotEmpty)
                 Padding(
-                  padding: const EdgeInsets.only(top: 2),
+                  padding: const EdgeInsets.only(top: Space.hair),
                   child: _Separated(children: second),
                 ),
               if (excerpt != null && excerpt.isNotEmpty)
                 Padding(
-                  padding: const EdgeInsets.only(top: 2),
+                  padding: const EdgeInsets.only(top: Space.hair),
                   child: Text(
                     excerpt,
                     style: quiet,
@@ -191,7 +195,7 @@ class _Separated extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dot = Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 6),
+      padding: const EdgeInsets.symmetric(horizontal: Space.s2),
       child: Text(
         '·',
         style: Theme.of(context).textTheme.bodySmall?.copyWith(

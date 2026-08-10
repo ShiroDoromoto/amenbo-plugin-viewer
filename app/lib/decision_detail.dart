@@ -20,6 +20,7 @@ import 'ui/marks.dart';
 import 'ui/refs.dart';
 import 'ui/task_row.dart';
 import 'ui/time.dart';
+import 'ui/tokens.dart';
 
 class DecisionDetailScreen extends StatefulWidget {
   const DecisionDetailScreen({
@@ -160,7 +161,12 @@ class _DecisionDetailScreenState extends State<DecisionDetailScreen> {
       body: decision == null
           ? Center(child: Text(DecisionDetailScreen.gone))
           : ListView(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+              padding: const EdgeInsets.fromLTRB(
+                Space.gutter,
+                Space.s3,
+                Space.gutter,
+                Space.s7,
+              ),
               children: [
                 _header(context, decision, today),
                 ..._undecided(context, decision),
@@ -191,7 +197,7 @@ class _DecisionDetailScreenState extends State<DecisionDetailScreen> {
                 ? null
                 : () => widget.onProject!(decision.projectId),
             child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
+              padding: const EdgeInsets.symmetric(vertical: Space.s1),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -204,7 +210,10 @@ class _DecisionDetailScreenState extends State<DecisionDetailScreen> {
                   if (widget.onProject != null)
                     Icon(
                       Icons.chevron_right,
-                      size: (theme.textTheme.labelLarge?.fontSize ?? 14) * 1.2,
+                      size:
+                          (theme.textTheme.labelLarge?.fontSize ??
+                              Lettering.md) *
+                          1.2,
                       color: theme.colorScheme.primary,
                     ),
                 ],
@@ -212,7 +221,7 @@ class _DecisionDetailScreenState extends State<DecisionDetailScreen> {
             ),
           ),
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
+          padding: const EdgeInsets.symmetric(vertical: Space.s1),
           child: Text(decision.title, style: theme.textTheme.headlineSmall),
         ),
         Wrap(
@@ -232,7 +241,7 @@ class _DecisionDetailScreenState extends State<DecisionDetailScreen> {
               ),
           ],
         ),
-        const Divider(height: 24),
+        const Divider(),
       ],
     );
   }
@@ -250,16 +259,16 @@ class _DecisionDetailScreenState extends State<DecisionDetailScreen> {
         : '${DecisionDetailScreen.waiting} · ${DecisionDetailScreen.held(held)}';
     return [
       Container(
-        padding: const EdgeInsets.all(12),
-        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(Space.s4),
+        margin: const EdgeInsets.only(bottom: Space.s5),
         decoration: BoxDecoration(
           color: theme.colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: Corner.smooth,
         ),
         child: Row(
           children: [
             Icon(Icons.help_outline, color: theme.colorScheme.primary),
-            const SizedBox(width: 8),
+            const SizedBox(width: Space.s3),
             Expanded(child: Text(line, style: theme.textTheme.bodyMedium)),
           ],
         ),
@@ -280,7 +289,7 @@ class _DecisionDetailScreenState extends State<DecisionDetailScreen> {
           state: decisionStatusWords(edge.status),
           onTap: () => widget.onOpenDecision(edge.targetId),
         ),
-      const SizedBox(height: 8),
+      const SizedBox(height: Space.s3),
     ];
   }
 
@@ -298,11 +307,11 @@ class _DecisionDetailScreenState extends State<DecisionDetailScreen> {
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.symmetric(vertical: Space.s3),
           child: Row(
             children: [
               SizedBox(
-                width: 110,
+                width: Layout.leadColumn,
                 child: Text(
                   lead,
                   style: theme.textTheme.labelMedium?.copyWith(
@@ -339,7 +348,7 @@ class _DecisionDetailScreenState extends State<DecisionDetailScreen> {
           today: today,
           onOpen: () => widget.onOpenTask(task.id),
         ),
-      const SizedBox(height: 8),
+      const SizedBox(height: Space.s3),
     ];
   }
 
@@ -356,15 +365,17 @@ class _DecisionDetailScreenState extends State<DecisionDetailScreen> {
       ),
       for (final file in _attachments)
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6),
+          padding: const EdgeInsets.symmetric(vertical: Space.s2),
           child: Row(
             children: [
               Icon(
                 Icons.attach_file,
-                size: (theme.textTheme.bodyMedium?.fontSize ?? 14) * 1.2,
+                size:
+                    (theme.textTheme.bodyMedium?.fontSize ?? Lettering.md) *
+                    1.2,
                 color: theme.colorScheme.onSurfaceVariant,
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: Space.s3),
               Expanded(child: Text(file.filename)),
               Text(
                 fileSize(file.bytes),
@@ -375,7 +386,7 @@ class _DecisionDetailScreenState extends State<DecisionDetailScreen> {
             ],
           ),
         ),
-      const SizedBox(height: 8),
+      const SizedBox(height: Space.s3),
     ];
   }
 
@@ -394,7 +405,7 @@ class _DecisionDetailScreenState extends State<DecisionDetailScreen> {
         ),
       for (final one in _comments)
         Padding(
-          padding: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.only(bottom: Space.s4),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -405,7 +416,7 @@ class _DecisionDetailScreenState extends State<DecisionDetailScreen> {
                     one.authorKind == 'ai' ? 'AI' : 'You',
                     style: theme.textTheme.labelMedium,
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: Space.s3),
                   TimeOnHold(
                     when: DateTime.parse(one.createdAt),
                     child: Text(
@@ -428,7 +439,7 @@ class _DecisionDetailScreenState extends State<DecisionDetailScreen> {
   }
 
   Widget _sectionHeading(BuildContext context, String title) => Padding(
-    padding: const EdgeInsets.only(top: 8, bottom: 4),
+    padding: const EdgeInsets.only(top: Space.s3, bottom: Space.s1),
     child: Semantics(
       header: true,
       child: Text(title, style: Theme.of(context).textTheme.titleSmall),

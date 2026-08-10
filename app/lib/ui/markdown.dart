@@ -20,6 +20,8 @@ library;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
+import 'tokens.dart';
+
 // --------------------------------------------------------------------------- the shapes
 
 /// A run of text and what is on it. The marks combine, so `**a `b`**` is bold and code at once.
@@ -409,7 +411,7 @@ class MarkdownBody extends StatelessWidget {
     children: [
       for (final block in blocks)
         Padding(
-          padding: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.only(bottom: Space.s3),
           child: _block(context, block),
         ),
     ],
@@ -431,12 +433,12 @@ class MarkdownBody extends StatelessWidget {
         return Text.rich(_spans(context, spans));
       case MdQuote(:final spans):
         return Container(
-          padding: const EdgeInsets.only(left: 12),
+          padding: const EdgeInsets.only(left: Space.s4),
           decoration: BoxDecoration(
             border: Border(
               left: BorderSide(
                 color: theme.colorScheme.outlineVariant,
-                width: 3,
+                width: Stroke.thick,
               ),
             ),
           ),
@@ -465,22 +467,24 @@ class MarkdownBody extends StatelessWidget {
     final theme = Theme.of(context);
     final box = item.checked;
     return Padding(
-      padding: EdgeInsets.only(left: 12.0 * item.depth, bottom: 2),
+      padding: EdgeInsets.only(left: Space.s4 * item.depth, bottom: Space.hair),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (box != null)
             Padding(
-              padding: const EdgeInsets.only(right: 6, top: 2),
+              padding: const EdgeInsets.only(right: Space.s2, top: Space.hair),
               child: Icon(
                 box ? Icons.check_box_outlined : Icons.check_box_outline_blank,
-                size: (theme.textTheme.bodyMedium?.fontSize ?? 14) * 1.1,
+                size:
+                    (theme.textTheme.bodyMedium?.fontSize ?? Lettering.md) *
+                    1.1,
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             )
           else
             Padding(
-              padding: const EdgeInsets.only(right: 6),
+              padding: const EdgeInsets.only(right: Space.s2),
               child: Text(item.marker == null ? '•' : '${item.marker}.'),
             ),
           Expanded(child: Text.rich(_spans(context, item.spans))),
@@ -503,8 +507,8 @@ class MarkdownBody extends StatelessWidget {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: DataTable(
-        headingRowHeight: 36,
-        dataRowMinHeight: 32,
+        headingRowHeight: Space.s7,
+        dataRowMinHeight: Space.s7,
         dataRowMaxHeight: double.infinity,
         columns: [
           for (final cell in header)
@@ -536,16 +540,18 @@ class MarkdownBody extends StatelessWidget {
     final theme = Theme.of(context);
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.all(Space.s4),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: Corner.smooth,
       ),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Text(
           text,
-          style: theme.textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
+          style: theme.textTheme.bodySmall?.copyWith(
+            fontFamily: Lettering.mono,
+          ),
         ),
       ),
     );
@@ -554,15 +560,15 @@ class MarkdownBody extends StatelessWidget {
   Widget _imageRow(BuildContext context, String alt, String url) {
     final theme = Theme.of(context);
     return Container(
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.all(Space.s4),
       decoration: BoxDecoration(
         border: Border.all(color: theme.colorScheme.outlineVariant),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: Corner.smooth,
       ),
       child: Row(
         children: [
           Icon(Icons.image_outlined, color: theme.colorScheme.onSurfaceVariant),
-          const SizedBox(width: 8),
+          const SizedBox(width: Space.s3),
           Expanded(
             child: Text(
               alt.isEmpty ? url : '$alt — $url',
@@ -585,9 +591,9 @@ class MarkdownBody extends StatelessWidget {
           TextSpan(
             text: span.text,
             style: TextStyle(
-              fontWeight: span.bold ? FontWeight.w700 : null,
+              fontWeight: span.bold ? Lettering.bold : null,
               fontStyle: span.italic ? FontStyle.italic : null,
-              fontFamily: span.code ? 'monospace' : null,
+              fontFamily: span.code ? Lettering.mono : null,
               backgroundColor: span.code
                   ? theme.colorScheme.surfaceContainerHighest
                   : null,
@@ -656,7 +662,7 @@ class _MarkdownSectionsState extends State<MarkdownSections> {
                 () => _open.contains(i) ? _open.remove(i) : _open.add(i),
               ),
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 6),
+                padding: const EdgeInsets.symmetric(vertical: Space.s2),
                 child: Row(
                   children: [
                     Expanded(

@@ -18,6 +18,7 @@ import 'package:flutter/material.dart';
 
 import 'cloudflare_intake.dart';
 import 'ui/time.dart';
+import 'ui/tokens.dart';
 
 /// Which single line is owed, out of everything that is true at once.
 enum Standing {
@@ -200,7 +201,12 @@ class StateBand extends StatelessWidget {
 
     if (whole) {
       return Padding(
-        padding: const EdgeInsets.fromLTRB(24, 64, 24, 24),
+        padding: const EdgeInsets.fromLTRB(
+          Space.pageGutter,
+          Space.emptyScreenTop,
+          Space.pageGutter,
+          Space.pageGutter,
+        ),
         child: lines,
       );
     }
@@ -209,7 +215,10 @@ class StateBand extends StatelessWidget {
       // The same quiet surface for all seven. None of them is an error, and a band that turned
       // red for some of them would teach the person to read the colour instead of the words.
       color: theme.colorScheme.surfaceContainerHighest,
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      padding: const EdgeInsets.symmetric(
+        horizontal: Space.gutter,
+        vertical: Space.s3,
+      ),
       child: lines,
     );
   }

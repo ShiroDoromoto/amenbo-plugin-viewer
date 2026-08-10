@@ -1,6 +1,8 @@
 // The rules that hold across every screen, checked where they are decided rather than once per
 // screen — a screen that forgets one of them looks right to whoever wrote it.
 
+import 'dart:io';
+
 import 'package:amenbo_viewer/main.dart';
 import 'package:amenbo_viewer/settings.dart';
 import 'package:amenbo_viewer/store/backlog_store.dart';
@@ -8,6 +10,7 @@ import 'package:amenbo_viewer/ui/marks.dart';
 import 'package:amenbo_viewer/ui/refs.dart';
 import 'package:amenbo_viewer/ui/theme.dart';
 import 'package:amenbo_viewer/ui/time.dart';
+import 'package:amenbo_viewer/ui/tokens.dart';
 import 'package:amenbo_viewer/ui/two_pane.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -18,16 +21,48 @@ final now = DateTime(2026, 8, 9, 12, 0);
 
 void main() {
   group('one look, both platforms', () {
-    test('light and dark come from the same seed', () {
+    test('both brightnesses are drawn from the one sheet', () {
       for (final brightness in Brightness.values) {
         final theme = viewerTheme(brightness);
+        final colours = paletteFor(brightness);
         expect(theme.colorScheme.brightness, brightness);
+        // amenbo's own colours, not ones Material derived for us: the two tools read the same
+        // backlog, and someone who uses both must not meet two products.
+        expect(theme.colorScheme.primary, colours.accent);
+        expect(theme.colorScheme.surface, colours.bg);
+        expect(theme.colorScheme.onSurface, colours.text);
+        expect(theme.colorScheme.onSurfaceVariant, colours.textMuted);
+        expect(theme.colorScheme.outlineVariant, colours.border);
       }
-      // The colour the app already shipped with. Changing it is changing what people have seen.
+      // Both sides are written out. A dark theme that came out equal to the light one would mean
+      // one of them was never copied.
       expect(
-        viewerTheme(Brightness.light).colorScheme.primary,
-        ColorScheme.fromSeed(seedColor: seedColour).primary,
+        viewerTheme(Brightness.dark).colorScheme.surface,
+        isNot(viewerTheme(Brightness.light).colorScheme.surface),
       );
+    });
+
+    test('the text sizes are the sheet\'s, so the OS setting scales them', () {
+      final text = viewerTheme(Brightness.light).textTheme;
+      expect(text.titleMedium?.fontSize, Lettering.lg);
+      expect(text.bodyMedium?.fontSize, Lettering.md);
+      expect(text.labelMedium?.fontSize, Lettering.xs);
+    });
+
+    test('no typeface is shipped with the app', () {
+      // Nineteen languages are coming, and carrying their glyphs would put tens of megabytes into
+      // a thing that is opened for half a minute. Every one of them is drawn in the phone's own
+      // face, which is what a pubspec with nothing under `fonts:` means.
+      expect(
+        File('pubspec.yaml').readAsStringSync(),
+        isNot(contains('fonts:')),
+      );
+    });
+
+    testWidgets('a mark takes its colour from the sheet too', (tester) async {
+      await tester.pumpWidget(_wrap(const PriorityMark('high')));
+      final icon = tester.widget<Icon>(find.byType(Icon));
+      expect(icon.color, lightPalette.priorityHigh);
     });
 
     testWidgets('the platform does not get a look of its own', (tester) async {
