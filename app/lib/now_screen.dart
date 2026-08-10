@@ -1,12 +1,18 @@
-/// "Now" — the four bundles, in one scroll.
+/// "Tasks" — the four states, one at a time.
 ///
-/// This is the screen the app is opened for. Three of the four things a person wants while they
-/// are away from the PC are answered here, and the fourth is a search away, so what matters is not
-/// how much fits but how few seconds pass before the one line they came for is under their eyes.
-/// Hence one scroll rather than four tabs: a bundle behind a tab is a bundle nobody glances at.
+/// This is the screen the app is opened for, and what it is asked is nearly always one of four
+/// questions: what is being worked on, what is stuck, what is next, what got finished. So the
+/// screen is divided the way the backlog itself is — by amenbo's own status — and the person moves
+/// between the four rather than scrolling past them. The same four they read on the PC, in the
+/// same words, so there is nothing to learn twice.
 ///
-/// Three rules shape everything below.
+/// Four rules shape everything below.
 ///
+/// * **Divided by state, not by whether it can be started.** Whether a task's premises are met is
+///   derived, and it changes overnight without the task moving. A row waiting on something stays
+///   in `todo` and says what it is waiting on.
+/// * **One state is read to its end.** A window at a time, asked for by reaching the bottom —
+///   there is no "N more" that hands the rest to another screen.
 /// * **The floor is never swapped while someone is standing on it.** Rows that arrive on their own
 ///   are counted, not applied — the person presses a pill when they are ready. The exception is a
 ///   list that is still empty, where there is nothing to pull out from under anyone and a first
@@ -31,27 +37,16 @@ import 'ui/time.dart';
 import 'ui/tokens.dart';
 import 'ui/touch.dart';
 
-/// What the screen calls each bundle.
+/// What the switch calls each state.
 ///
-/// "Stalled" and "Next" are the two the person is really scanning: one is what to unblock, the
-/// other is what to pick up. The words are plain rather than amenbo's own, because a status name
-/// answers "what is this row" and a heading has to answer "why am I being shown these".
-///
-/// The finished one says its reach, because it is the one bundle that is not everything there is:
-/// a person who set it to a month and reads "7 days" would take the setting for broken. With no
-/// cut-off there is nothing to say, so it says nothing.
-String bundleHeading(
-  Words words,
-  Bundle bundle, {
-  int? finishedDays = finishedDaysDefault,
-}) => switch (bundle) {
-  Bundle.moving => words.bundleMoving,
-  Bundle.stalled => words.bundleStalled,
-  Bundle.next => words.bundleNext,
-  Bundle.finished =>
-    finishedDays == null
-        ? words.bundleFinished
-        : words.bundleFinishedWithin(finishedDays),
+/// amenbo's own words, and the same ones a row wears — a switch named one thing holding rows
+/// marked another would be two names for one fact. The closed one is said as "done" because that
+/// is what nearly all of it is; a rejected row says so on itself.
+String stateHeading(Words words, TaskState state) => switch (state) {
+  TaskState.todo => words.statusTodo,
+  TaskState.inProgress => words.statusInProgress,
+  TaskState.blocked => words.statusBlocked,
+  TaskState.finished => words.statusDone,
 };
 
 /// Says that rows arrived. Nothing about which — the screen that cares reads the store itself.
@@ -77,7 +72,6 @@ class NowScreen extends StatefulWidget {
     super.key,
     required this.store,
     required this.onOpen,
-    required this.onMore,
     this.failure,
     this.iCloudAvailable,
     this.onPairAgain,
@@ -92,13 +86,6 @@ class NowScreen extends StatefulWidget {
 
   /// Opening a row.
   final void Function(TaskLine line) onOpen;
-
-  /// The rest of a bundle, past the window the screen holds.
-  ///
-  /// It hands over a query rather than a bundle because what the person is holding is the bundle
-  /// *and* whatever project they narrowed to, and a list that quietly widened back out would not
-  /// be the rest of what they were reading.
-  final void Function(TaskQuery narrowing) onMore;
 
   /// How the last round of the intake ended, or null where it did not fail. It decides the band
   /// at the top; it never decides whether the list is drawn.
@@ -118,7 +105,7 @@ class NowScreen extends StatefulWidget {
   /// Ticks when a fetch this screen did not run has written rows.
   final Arrivals? arrivals;
 
-  /// How far back the finished bundle reaches. Handed in rather than read from the settings here,
+  /// How far back the finished state reaches. Handed in rather than read from the settings here,
   /// and required rather than defaulted, because a screen that quietly kept its own week would
   /// leave the person with a choice that changes nothing.
   final DoneWindow doneWindow;
@@ -127,15 +114,9 @@ class NowScreen extends StatefulWidget {
   /// "today" was.
   final DateTime Function() clock;
 
-  /// How many are left behind the window.
-  ///
-  /// Two messages rather than one, because they are two different sentences to write: a real
-  /// number, which a language makes its words agree with, and `999+`, which is not a number at
-  /// all and cannot be agreed with.
-  static String more(Words words, int rest, {bool overflowed = false}) =>
-      overflowed
-      ? words.moreCapped(words.countOverflow(Counted.cap))
-      : words.more(rest);
+  /// One state on the switch: its name, and how many are in it.
+  static String tab(Words words, TaskState state, Counted count) =>
+      labelWithCount(words, stateHeading(words, state), count);
 
   static String arrived(Words words, Counted count) =>
       words.newActivity(countLabel(words, count));
@@ -159,14 +140,26 @@ class NowScreen extends StatefulWidget {
   State<NowScreen> createState() => _NowScreenState();
 }
 
-class _NowScreenState extends State<NowScreen> {
+class _NowScreenState extends State<NowScreen>
+    with SingleTickerProviderStateMixin {
+  /// Built here rather than lazily beside its declaration: a screen taken down before it ever
+  /// drew the switch — a phone with nothing on it — would otherwise create the controller inside
+  /// `dispose`, which is the one place it cannot be created.
+  late final TabController _tabs;
+
   /// Null is every project at once, and it is where the screen starts. Narrowing is a state of
   /// the screen, not a setting — coming back tomorrow shows everything again.
   int? _projectId;
 
   var _projects = const <({int id, String name})>[];
   var _names = const <int, String>{};
-  final _bundles = <Bundle, ({List<TaskLine> rows, Counted total})>{};
+
+  /// What each state holds: the windows read so far, how many there are in all, and whether the
+  /// last window came back full. A full window is the only honest sign that there is more.
+  final _rows = <TaskState, List<TaskLine>>{};
+  final _totals = <TaskState, Counted>{};
+  final _more = <TaskState, bool>{};
+  bool _widening = false;
 
   /// The newest change the drawn rows include, stamped by the PC. What arrived after it is what
   /// the pill offers.
@@ -180,12 +173,10 @@ class _NowScreenState extends State<NowScreen> {
   Counted? _arrived;
   bool _taking = false;
 
-  /// Closed work is history, and history is not what the screen is opened for.
-  bool _finishedOpen = false;
-
   @override
   void initState() {
     super.initState();
+    _tabs = TabController(length: TaskState.values.length, vsync: this);
     _load();
     widget.arrivals?.addListener(_rowsArrived);
   }
@@ -205,6 +196,7 @@ class _NowScreenState extends State<NowScreen> {
   @override
   void dispose() {
     widget.arrivals?.removeListener(_rowsArrived);
+    _tabs.dispose();
     super.dispose();
   }
 
@@ -217,21 +209,22 @@ class _NowScreenState extends State<NowScreen> {
     if (_projectId != null && !_names.containsKey(_projectId)) {
       _projectId = null;
     }
-    _bundles
-      ..clear()
-      ..addEntries(
-        Bundle.values.map(
-          (bundle) => MapEntry(
-            bundle,
-            widget.store.bundle(
-              bundle,
-              today: today,
-              projectId: _projectId,
-              finishedDays: widget.doneWindow.days,
-            ),
-          ),
-        ),
+    for (final state in TaskState.values) {
+      final rows = widget.store.inState(
+        state,
+        today: today,
+        projectId: _projectId,
+        finishedDays: widget.doneWindow.days,
       );
+      _rows[state] = rows;
+      _totals[state] = widget.store.stateCount(
+        state,
+        today: today,
+        projectId: _projectId,
+        finishedDays: widget.doneWindow.days,
+      );
+      _more[state] = rows.length == Windows.list;
+    }
     _drawnAt = widget.store.latestTaskChange(projectId: _projectId);
     _takenAt = DateTime.tryParse(
       widget.store.meta(MetaKey.fetchedAt) ?? '',
@@ -239,9 +232,37 @@ class _NowScreenState extends State<NowScreen> {
     _arrived = null;
   }
 
+  /// Asks for the next window of one state, once the end of this one has been reached.
+  ///
+  /// The rows come from a file on the device, so there is nothing to wait for and no spinner to
+  /// show. What it must not do is ask twice for the same window.
+  void _widen(TaskState state) {
+    if (_widening) return;
+    _widening = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        _widening = false;
+        return;
+      }
+      final held = _rows[state] ?? const <TaskLine>[];
+      setState(() {
+        final next = widget.store.inState(
+          state,
+          today: widget.clock(),
+          projectId: _projectId,
+          finishedDays: widget.doneWindow.days,
+          offset: held.length,
+        );
+        _rows[state] = [...held, ...next];
+        _more[state] = next.length == Windows.list;
+      });
+      _widening = false;
+    });
+  }
+
   void _apply() => setState(_load);
 
-  bool get _empty => _bundles.values.every((held) => held.rows.isEmpty);
+  bool get _empty => _rows.values.every((rows) => rows.isEmpty);
 
   void _rowsArrived() {
     if (!mounted) return;
@@ -300,24 +321,46 @@ class _NowScreenState extends State<NowScreen> {
               onPressed: widget.onOpenSettings,
             ),
         ],
-        // While a fetch runs, a line and nothing else. A spinner over the list, or a skeleton in
-        // place of it, would take away the old picture — which is the correct thing to be reading
-        // until a newer one exists.
-        bottom: _taking
-            ? const PreferredSize(
-                preferredSize: Size.fromHeight(Space.hair),
-                child: LinearProgressIndicator(minHeight: Space.hair),
-              )
-            : null,
+        // A phone that holds nothing is not in one of four states — it is a phone with nothing on
+        // it, and four empty switches would be four ways of finding that out.
+        bottom: _empty
+            ? null
+            : TabBar(
+                controller: _tabs,
+                isScrollable: true,
+                tabAlignment: TabAlignment.start,
+                tabs: [
+                  for (final state in TaskState.values)
+                    Tab(
+                      text: NowScreen.tab(
+                        words,
+                        state,
+                        _totals[state] ?? const Counted(0, false),
+                      ),
+                    ),
+                ],
+              ),
       ),
       body: Stack(
         children: [
-          RefreshIndicator(
-            onRefresh: _pull,
-            child: _empty
-                ? _nothing(words, standing)
-                : _scroll(words, today, standing),
-          ),
+          if (_empty)
+            RefreshIndicator(onRefresh: _pull, child: _nothing(words, standing))
+          else
+            TabBarView(
+              controller: _tabs,
+              children: [
+                for (final state in TaskState.values)
+                  _state(state, words, today, standing),
+              ],
+            ),
+          // While a fetch runs, a line and nothing else. A spinner over the list, or a skeleton in
+          // place of it, would take away the old picture — which is the correct thing to be
+          // reading until a newer one exists.
+          if (_taking)
+            const Align(
+              alignment: Alignment.topCenter,
+              child: LinearProgressIndicator(minHeight: Space.hair),
+            ),
           if (_arrived != null)
             Align(
               alignment: Alignment.topCenter,
@@ -443,121 +486,81 @@ class _NowScreenState extends State<NowScreen> {
     );
   }
 
-  Widget _scroll(Words words, DateTime today, Standing standing) {
-    final rows = <Widget>[
-      // Above the card and above the bundles: what is being read is only worth reading once the
-      // person knows how old it is — and, where there is something in the way, why.
+  /// One state, read to its end.
+  ///
+  /// What stands above the rows — how old the picture is, and how things stand — is the same on
+  /// all four and scrolls away with them, because it is about the screen rather than about the
+  /// state being read.
+  Widget _state(
+    TaskState state,
+    Words words,
+    DateTime today,
+    Standing standing,
+  ) {
+    final rows = _rows[state] ?? const <TaskLine>[];
+    final days = widget.doneWindow.days;
+    final header = <Widget>[
       _takeLine(words),
       _band(standing),
+      // The one state that is not everything there is. A person who set it to a month and read
+      // nothing about a reach would take the list for the whole of what they finished.
+      if (state == TaskState.finished && days != null)
+        ListHeading(title: words.bundleFinishedWithin(days)),
     ];
-    for (final bundle in Bundle.values) {
-      final held = _bundles[bundle]!;
-      // A heading over nothing is a line that says only that a question was asked.
-      if (held.rows.isEmpty) continue;
-      final folds = bundle == Bundle.finished;
-      rows.add(
-        BundleHeading(
-          title: bundleHeading(
-            words,
-            bundle,
-            finishedDays: widget.doneWindow.days,
-          ),
-          count: countLabel(words, held.total),
-          expanded: folds ? _finishedOpen : null,
-          onToggle: folds
-              ? () => setState(() => _finishedOpen = !_finishedOpen)
-              : null,
-        ),
-      );
-      if (folds && !_finishedOpen) continue;
-      rows.addAll(
-        held.rows.map(
-          (line) => TaskRow(
-            line: line,
-            today: today,
-            // Movement is what this bundle is about, so freshness earns its width here and
-            // nowhere else.
-            movedAt: bundle == Bundle.moving
-                ? DateTime.tryParse(line.updatedAt)
-                : null,
-            // Only where it tells the person something the title has not: narrowed to one, or
-            // on a machine that holds only one, every row would carry the same name.
-            projectName: _projectId == null && _projects.length > 1
-                ? _names[line.projectId]
-                : null,
-            onOpen: () => widget.onOpen(line),
-          ),
-        ),
-      );
-      final rest = held.total.value - held.rows.length;
-      if (rest > 0) {
-        rows.add(
-          _MoreRow(
-            label: NowScreen.more(
-              words,
-              rest,
-              overflowed: held.total.overflowed,
-            ),
-            onTap: () => widget.onMore(
-              TaskQuery(
-                bundle: bundle,
-                projectId: _projectId,
-                // The reach the person set, carried with the bundle: the rest of a list that
-                // stopped at a different day would not be the rest of this one.
-                finishedDays: widget.doneWindow.days,
-              ),
-            ),
-          ),
-        );
-      }
-    }
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      children: rows,
-    );
-  }
-}
-
-/// The way out of a bundle's window and into the one list face.
-class _MoreRow extends StatelessWidget {
-  const _MoreRow({required this.label, required this.onTap});
-
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return InkWell(
-      onTap: onTap,
-      child: TapTarget(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-            Space.gutter,
-            Space.s4,
-            Space.gutter,
-            Space.s4,
-          ),
-          child: Row(
-            children: [
-              Text(
-                label,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.primary,
-                ),
-              ),
-              const SizedBox(width: Space.s1),
-              Icon(
-                Icons.chevron_right,
-                size:
-                    (theme.textTheme.bodyMedium?.fontSize ?? Lettering.md) *
-                    1.2,
-                color: theme.colorScheme.primary,
-              ),
-            ],
-          ),
-        ),
+    return RefreshIndicator(
+      onRefresh: _pull,
+      child: ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        itemCount:
+            header.length +
+            (rows.isEmpty ? 1 : rows.length) +
+            ((_more[state] ?? false) ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (index < header.length) return header[index];
+          final place = index - header.length;
+          if (rows.isEmpty) return _none(words);
+          if (place < rows.length) {
+            final line = rows[place];
+            return TaskRow(
+              line: line,
+              today: today,
+              // Movement is what this state is about, so freshness earns its width here and
+              // nowhere else.
+              movedAt: state == TaskState.inProgress
+                  ? DateTime.tryParse(line.updatedAt)
+                  : null,
+              // Only where it tells the person something the title has not: narrowed to one, or
+              // on a machine that holds only one, every row would carry the same name.
+              projectName: _projectId == null && _projects.length > 1
+                  ? _names[line.projectId]
+                  : null,
+              onOpen: () => widget.onOpen(line),
+            );
+          }
+          _widen(state);
+          return const SizedBox(height: Stroke.rule);
+        },
       ),
     );
   }
+
+  /// A state with nothing in it.
+  ///
+  /// One quiet line rather than the empty face the app shows elsewhere: the switch above is still
+  /// there with the other three states and their numbers on it, so the person is neither told
+  /// nothing nor left without a way on. Nothing being blocked is good news, and good news does not
+  /// need a screen of its own.
+  Widget _none(Words words) => Padding(
+    padding: const EdgeInsets.symmetric(
+      horizontal: Space.pageGutter,
+      vertical: Space.s7,
+    ),
+    child: Text(
+      words.nothingInState,
+      textAlign: TextAlign.center,
+      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
+    ),
+  );
 }

@@ -4,17 +4,11 @@
   "tabSearch": "Поиск",
   "nothingOpen": "Откройте что-нибудь, чтобы прочитать здесь",
 
-  "bundleMoving": "В работе",
-  "bundleStalled": "Стоят",
-  "bundleNext": "Дальше",
-  "bundleFinished": "Завершённые",
   "bundleFinishedWithin": "{days, plural, one{Завершённые (1 день)} few{Завершённые ({days} дня)} many{Завершённые ({days} дней)} other{Завершённые ({days} дня)}}",
 
   "allProjects": "Все проекты",
   "chooseProject": "Выбрать проект",
   "refresh": "Загрузить",
-  "more": "{count, plural, one{ещё 1} few{ещё {count}} many{ещё {count}} other{ещё {count}}}",
-  "moreCapped": "ещё {count}",
   "newActivity": "Новое · {count}",
 
   "standingTooNew": "Компьютер пишет в более новом формате, чем читает это приложение",
@@ -37,7 +31,7 @@
   "priorityLow": "Низкий",
   "rowPriority": "приоритет: {name}",
 
-  "statusTodo": "Дальше",
+  "statusTodo": "К выполнению",
   "statusInProgress": "В работе",
   "statusDone": "Готово",
   "statusRejected": "Отклонено",
@@ -63,8 +57,6 @@
   "stallStarts": "Начало {day}",
   "stallBlocked": "Заблокировано",
 
-  "headingShowing": "развёрнуто",
-  "headingFolded": "свёрнуто",
 
   "searchHint": "Поиск",
   "searchClear": "Очистить",
@@ -79,6 +71,7 @@
   "showEverything": "Показать всё",
   "nothingHereYet": "Здесь пока пусто",
   "nothingHereYetDetail": "Компьютер пришлёт то, что у него есть, при следующем изменении бэклога. Потянуть вниз на первом экране — попросить прямо сейчас.",
+  "nothingInState": "В этом состоянии ничего нет",
   "valueChip": "{dimension}: {value}",
 
   "detailStalled": "Не может начаться",

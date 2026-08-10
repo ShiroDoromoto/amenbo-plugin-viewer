@@ -101,7 +101,7 @@ void main() {
       await type(tester, 'ペアリング');
 
       final hit = store
-          .tasks(const TaskQuery(text: 'ペアリング'), today: today)
+          .tasks(const TaskQuery(text: 'ペアリング'))
           .singleWhere((row) => row.id == 2);
       expect(hit.matchedIn, 'title');
       // Matched in the title: the row is already the line, and printing it twice would say only
@@ -111,7 +111,7 @@ void main() {
 
       await type(tester, 'QR を読んで');
       final body = store
-          .tasks(const TaskQuery(text: 'QR を読んで'), today: today)
+          .tasks(const TaskQuery(text: 'QR を読んで'))
           .singleWhere((row) => row.id == 2);
       expect(body.matchLine, isNotNull);
       expect(find.text(body.matchLine!.trim()), findsOneWidget);
@@ -185,15 +185,12 @@ void main() {
       ]),
     );
 
-    testWidgets('the rest of a bundle opens here, holding the bundle', (
+    testWidgets('a chip from a detail opens here, holding what was pressed', (
       tester,
     ) async {
-      await tester.pumpWidget(
-        screen(narrowing: const TaskQuery(bundle: Bundle.next)),
-      );
+      await tester.pumpWidget(screen(narrowing: const TaskQuery(valueId: 1)));
 
       expect(find.byType(TaskRow), findsOneWidget);
-      expect(find.text('つぎのしごと'), findsOneWidget);
 
       await tester.tap(find.byIcon(Icons.cancel));
       await tester.pumpAndSettle();
@@ -239,10 +236,8 @@ void main() {
         BacklogChange.put('task', 1, task(id: 1, title: 'つぎのしごと')),
       ]);
 
-      // Stalled, arrived at from the front screen, and nothing on this phone is stalled.
-      await tester.pumpWidget(
-        screen(narrowing: const TaskQuery(bundle: Bundle.stalled)),
-      );
+      // A category value nothing on this phone wears, arrived at from a detail.
+      await tester.pumpWidget(screen(narrowing: const TaskQuery(valueId: 99)));
       expect(find.text(words.nothingMatched), findsOneWidget);
 
       await tester.tap(find.text(words.showEverything));
@@ -394,10 +389,7 @@ void main() {
 
     await tester.pumpWidget(screen());
     // One window is what the screen asked for; the tail of the backlog is not there yet.
-    expect(
-      store.tasks(const TaskQuery(), today: today),
-      hasLength(Windows.list),
-    );
+    expect(store.tasks(const TaskQuery()), hasLength(Windows.list));
     expect(find.text('しごと 1', skipOffstage: false), findsNothing);
 
     // Reaching the end of the window asks for the next one, and the oldest row turns up.

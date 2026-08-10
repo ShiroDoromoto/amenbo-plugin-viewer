@@ -4,17 +4,11 @@
   "tabSearch": "Buscar",
   "nothingOpen": "Abre algo para leerlo aquí",
 
-  "bundleMoving": "En curso",
-  "bundleStalled": "Parado",
-  "bundleNext": "Siguiente",
-  "bundleFinished": "Terminado",
   "bundleFinishedWithin": "{days, plural, one{Terminado (1 día)} other{Terminado ({days} días)}}",
 
   "allProjects": "Todos los proyectos",
   "chooseProject": "Elegir un proyecto",
   "refresh": "Traer",
-  "more": "{count, plural, one{1 más} other{{count} más}}",
-  "moreCapped": "{count} más",
   "newActivity": "Novedades · {count}",
 
   "standingTooNew": "Tu PC escribe un formato más nuevo del que lee esta app",
@@ -37,7 +31,7 @@
   "priorityLow": "Baja",
   "rowPriority": "prioridad {name}",
 
-  "statusTodo": "Siguiente",
+  "statusTodo": "Pendiente",
   "statusInProgress": "En curso",
   "statusDone": "Hecho",
   "statusRejected": "Descartado",
@@ -63,8 +57,6 @@
   "stallStarts": "Empieza {day}",
   "stallBlocked": "Bloqueado",
 
-  "headingShowing": "desplegado",
-  "headingFolded": "plegado",
 
   "searchHint": "Buscar",
   "searchClear": "Borrar",
@@ -79,6 +71,7 @@
   "showEverything": "Mostrar todo",
   "nothingHereYet": "Aquí todavía no hay nada",
   "nothingHereYetDetail": "Tu PC enviará lo que tenga la próxima vez que cambie tu backlog. Tirar hacia abajo en la pantalla principal lo pide ahora mismo.",
+  "nothingInState": "Nada en este estado",
   "valueChip": "{dimension}: {value}",
 
   "detailStalled": "No puede empezar",

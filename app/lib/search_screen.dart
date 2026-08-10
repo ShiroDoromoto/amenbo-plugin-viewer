@@ -3,7 +3,7 @@
 /// Three of the four things a person opens this app for start with something the PC did, and the
 /// front screen answers those. This one answers the fourth, which starts in their own head: "how
 /// did that thing end up". What they are after is almost always finished, often months ago, and
-/// therefore in none of the bundles.
+/// therefore behind the one state on the front screen that does not reach that far back.
 ///
 /// Three rules shape it.
 ///
@@ -11,10 +11,10 @@
 ///   Filtering them out would remove exactly what is being looked for.
 /// * **Newest first, never by relevance.** A relevance order cannot explain why one row is above
 ///   another, and memory reaches for things by when they happened.
-/// * **It is the only list face there is.** Search words, a bundle's remainder, a category value,
-///   one project — four inputs into one screen, so that arriving from somewhere narrower does not
-///   need a screen of its own. Whatever narrowing the person arrived with is shown as a chip they
-///   can take off, which turns any of those into plain search.
+/// * **It is the only list face there is.** Search words, a category value, one project — three
+///   inputs into one screen, so that arriving from somewhere narrower does not need a screen of
+///   its own. Whatever narrowing the person arrived with is shown as a chip they can take off,
+///   which turns any of those into plain search.
 library;
 
 import 'dart:async';
@@ -22,7 +22,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'l10n/words.dart';
-import 'now_screen.dart' show bundleHeading;
 import 'store/backlog_queries.dart';
 import 'store/backlog_store.dart';
 import 'store/recents.dart';
@@ -48,8 +47,8 @@ class SearchScreen extends StatefulWidget {
   final void Function(TaskLine line) onOpenTask;
   final void Function(DecisionLine line) onOpenDecision;
 
-  /// What the person arrived holding — the rest of a bundle, a chip from a detail, the project the
-  /// front screen was narrowed to. Empty when they came here to type.
+  /// What the person arrived holding — a chip from a detail, the project the front screen was
+  /// narrowed to. Empty when they came here to type.
   final TaskQuery narrowing;
 
   /// Passed in rather than read here, so every row on the screen agrees about what today was.
@@ -61,7 +60,7 @@ class SearchScreen extends StatefulWidget {
   final Duration settle;
 
   static String tab(Words words, String name, Counted count) =>
-      '$name ${countLabel(words, count)}';
+      labelWithCount(words, name, count);
 
   @override
   State<SearchScreen> createState() => _SearchScreenState();
@@ -75,15 +74,10 @@ class _SearchScreenState extends State<SearchScreen>
 
   String _text = '';
 
-  // The three narrowings that can arrive with the person. Each one is held here rather than read
-  // from the widget, because taking one off is the point of showing it.
-  Bundle? _bundle;
+  // The narrowings that can arrive with the person. Each one is held here rather than read from
+  // the widget, because taking one off is the point of showing it.
   int? _valueId;
   int? _projectId;
-
-  /// The reach the finished bundle was read with on the screen behind this one. It travels with
-  /// the narrowing, or "the rest" would be a different set of rows than the one it is the rest of.
-  int? _finishedDays;
 
   var _projects = const <({int id, String name})>[];
   var _names = const <int, String>{};
@@ -106,14 +100,12 @@ class _SearchScreenState extends State<SearchScreen>
   @override
   void initState() {
     super.initState();
-    _bundle = widget.narrowing.bundle;
     _valueId = widget.narrowing.valueId;
     _projectId = widget.narrowing.projectId;
-    _finishedDays = widget.narrowing.finishedDays;
     _text = widget.narrowing.text ?? '';
     _field.text = _text;
-    // Archived projects included: a project nobody adds to any more is dropped from the bundles
-    // and kept here, because how something ended up is what it is remembered for.
+    // Archived projects included: a project nobody adds to any more is dropped from the front
+    // screen and kept here, because how something ended up is what it is remembered for.
     _projects = widget.store.projects(includeArchived: true);
     _names = {for (final project in _projects) project.id: project.name};
     _load();
@@ -127,22 +119,16 @@ class _SearchScreenState extends State<SearchScreen>
     super.dispose();
   }
 
-  TaskQuery get _query => TaskQuery(
-    text: _text,
-    bundle: _bundle,
-    valueId: _valueId,
-    projectId: _projectId,
-    finishedDays: _finishedDays,
-  );
+  TaskQuery get _query =>
+      TaskQuery(text: _text, valueId: _valueId, projectId: _projectId);
 
   void _load() {
-    final today = widget.clock();
     final query = _query;
-    _tasks = widget.store.tasks(query, today: today);
-    _taskTotal = widget.store.taskCount(query, today: today);
+    _tasks = widget.store.tasks(query);
+    _taskTotal = widget.store.taskCount(query);
     _moreTasks = _tasks.length == Windows.list;
-    // The other two inputs are a task's — a decision is in no bundle and wears no category value.
-    // Words and project are what both halves share.
+    // The other input is a task's — a decision wears no category value. Words and project are
+    // what both halves share.
     _decisions = widget.store.decisions(text: _text, projectId: _projectId);
     _decisionTotal = widget.store.decisionCount(
       text: _text,
@@ -200,7 +186,6 @@ class _SearchScreenState extends State<SearchScreen>
     _field.clear();
     setState(() {
       _text = '';
-      _bundle = null;
       _valueId = null;
       _projectId = null;
       _load();
@@ -231,14 +216,9 @@ class _SearchScreenState extends State<SearchScreen>
         _widening = false;
         return;
       }
-      final today = widget.clock();
       setState(() {
         if (tasks) {
-          final next = widget.store.tasks(
-            _query,
-            today: today,
-            offset: _tasks.length,
-          );
+          final next = widget.store.tasks(_query, offset: _tasks.length);
           _tasks = [..._tasks, ...next];
           _moreTasks = next.length == Windows.list;
         } else {
@@ -257,14 +237,6 @@ class _SearchScreenState extends State<SearchScreen>
 
   /// Every narrowing in force, in the form that lets it be taken off.
   List<({String label, VoidCallback off})> _narrowings(Words words) => [
-    if (_bundle != null)
-      (
-        label: bundleHeading(words, _bundle!, finishedDays: _finishedDays),
-        off: () => setState(() {
-          _bundle = null;
-          _load();
-        }),
-      ),
     if (_valueId != null)
       (
         label: _valueLabel(words, _valueId!),
@@ -291,8 +263,7 @@ class _SearchScreenState extends State<SearchScreen>
   }
 
   /// Whether the screen is showing what it holds rather than an answer to something.
-  bool get _asked =>
-      _text.trim().isNotEmpty || _bundle != null || _valueId != null;
+  bool get _asked => _text.trim().isNotEmpty || _valueId != null;
 
   @override
   Widget build(BuildContext context) {
@@ -395,7 +366,7 @@ class _SearchScreenState extends State<SearchScreen>
     final header = <Widget>[
       if (!_asked) ..._recent(words, _seenTasks.map(_seenTaskRow).toList()),
       if (!_asked && _tasks.isNotEmpty && _headed)
-        BundleHeading(title: words.allTasksNewest),
+        ListHeading(title: words.allTasksNewest),
     ];
     return _window(
       header: header,
@@ -406,8 +377,8 @@ class _SearchScreenState extends State<SearchScreen>
         line: _tasks[index],
         today: today,
         showStatus: true,
-        // Results are not a bundle, so nothing above the row says when it last moved — and a
-        // memory reaches for things by when they happened.
+        // Nothing above a result says when it last moved, the way a state on the front screen
+        // does — and a memory reaches for things by when they happened.
         movedAt: DateTime.tryParse(
           _tasks[index].closedAt ?? _tasks[index].updatedAt,
         ),
@@ -424,7 +395,7 @@ class _SearchScreenState extends State<SearchScreen>
       if (!_asked)
         ..._recent(words, _seenDecisions.map(_seenDecisionRow).toList()),
       if (!_asked && _decisions.isNotEmpty && _headed)
-        BundleHeading(title: words.allDecisionsNewest),
+        ListHeading(title: words.allDecisionsNewest),
     ];
     return _window(
       header: header,
@@ -445,7 +416,7 @@ class _SearchScreenState extends State<SearchScreen>
   /// typed again on Wednesday — so the two shortcuts are the words and the rows themselves.
   List<Widget> _recent(Words words, List<Widget> seen) => [
     if (_terms.isNotEmpty) ...[
-      BundleHeading(title: words.recentTerms),
+      ListHeading(title: words.recentTerms),
       Padding(
         padding: const EdgeInsets.fromLTRB(Space.s4, 0, Space.s4, Space.s1),
         child: Wrap(
@@ -468,10 +439,7 @@ class _SearchScreenState extends State<SearchScreen>
         ),
       ),
     ],
-    if (seen.isNotEmpty) ...[
-      BundleHeading(title: words.recentlyOpened),
-      ...seen,
-    ],
+    if (seen.isNotEmpty) ...[ListHeading(title: words.recentlyOpened), ...seen],
   ];
 
   Widget _seenTaskRow(TaskLine line) => TaskRow(

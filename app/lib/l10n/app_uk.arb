@@ -4,17 +4,11 @@
   "tabSearch": "Пошук",
   "nothingOpen": "Відкрийте щось, щоб прочитати тут",
 
-  "bundleMoving": "У роботі",
-  "bundleStalled": "Стоять",
-  "bundleNext": "Далі",
-  "bundleFinished": "Завершені",
   "bundleFinishedWithin": "{days, plural, one{Завершені (1 день)} few{Завершені ({days} дні)} many{Завершені ({days} днів)} other{Завершені ({days} дня)}}",
 
   "allProjects": "Усі проєкти",
   "chooseProject": "Вибрати проєкт",
   "refresh": "Завантажити",
-  "more": "{count, plural, one{ще 1} few{ще {count}} many{ще {count}} other{ще {count}}}",
-  "moreCapped": "ще {count}",
   "newActivity": "Нове · {count}",
 
   "standingTooNew": "Комп'ютер пише новішим форматом, ніж читає цей застосунок",
@@ -37,7 +31,7 @@
   "priorityLow": "Низький",
   "rowPriority": "пріоритет: {name}",
 
-  "statusTodo": "Далі",
+  "statusTodo": "До виконання",
   "statusInProgress": "У роботі",
   "statusDone": "Готово",
   "statusRejected": "Відхилено",
@@ -63,8 +57,6 @@
   "stallStarts": "Початок {day}",
   "stallBlocked": "Заблоковано",
 
-  "headingShowing": "розгорнуто",
-  "headingFolded": "згорнуто",
 
   "searchHint": "Пошук",
   "searchClear": "Очистити",
@@ -79,6 +71,7 @@
   "showEverything": "Показати все",
   "nothingHereYet": "Тут поки порожньо",
   "nothingHereYetDetail": "Комп'ютер надішле те, що має, при наступній зміні беклогу. Потягнути вниз на першому екрані — попросити просто зараз.",
+  "nothingInState": "У цьому стані нічого немає",
   "valueChip": "{dimension}: {value}",
 
   "detailStalled": "Не може початися",

@@ -1,5 +1,5 @@
-// The front screen: four bundles in one scroll, every project at once unless the person says
-// otherwise, and a floor that is never swapped while they are standing on it.
+// The front screen: the four states switched between, every project at once unless the person
+// says otherwise, and a floor that is never swapped while they are standing on it.
 
 import 'package:amenbo_viewer/cloudflare_intake.dart';
 import 'package:amenbo_viewer/now_screen.dart';
@@ -10,7 +10,6 @@ import 'package:amenbo_viewer/store/backlog_store.dart';
 import 'package:amenbo_viewer/ui/task_row.dart';
 import 'package:amenbo_viewer/ui/theme.dart';
 import 'package:amenbo_viewer/ui/time.dart';
-import 'package:amenbo_viewer/ui/tokens.dart';
 import 'package:amenbo_viewer/l10n/words.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -30,13 +29,11 @@ void main() {
   late BacklogStore store;
   late Arrivals arrivals;
   late List<int> opened;
-  late List<TaskQuery> widened;
 
   setUp(() {
     store = BacklogStore.openInMemory();
     arrivals = Arrivals();
     opened = [];
-    widened = [];
   });
   tearDown(() {
     arrivals.dispose();
@@ -64,24 +61,28 @@ void main() {
         doneWindow: doneWindow,
         clock: () => today,
         onOpen: (line) => opened.add(line.id),
-        onMore: widened.add,
       ),
     ),
   );
 
-  group('how many are left', () {
-    test('one of them is said the way one of anything is said', () {
-      // English only changes the noun; several of the languages this sheet is written for change
-      // the number's own words too, which is why the message carries the arms rather than the
-      // caller carrying an `if`.
-      expect(NowScreen.more(words, 1), '1 more');
-      expect(NowScreen.more(words, 3), '3 more');
+  group('what the switch says', () {
+    test('a state is named and counted in one', () {
+      expect(
+        NowScreen.tab(words, TaskState.todo, const Counted(3, false)),
+        'To do 3',
+      );
     });
 
-    test('a count that stopped counting is a different sentence', () {
-      // `999+` is not a number, so nothing in any language can agree with it. It gets its own
-      // message rather than being pushed through the one that expects to count.
-      expect(NowScreen.more(words, Counted.cap, overflowed: true), '999+ more');
+    test('a count that stopped counting says so instead of lying', () {
+      // `999+` is not a number, so nothing in any language can agree with it. It arrives as text.
+      expect(
+        NowScreen.tab(
+          words,
+          TaskState.finished,
+          const Counted(Counted.cap, true),
+        ),
+        'Done 999+',
+      );
     });
   });
 
@@ -95,8 +96,8 @@ void main() {
       expect(find.text('Taken 12:34'), findsOneWidget);
       // And the way to a newer one beside it: the circling arrows, wearing the word rather than
       // printing it, so the one-line top spends its width on the hour.
-      expect(find.byIcon(Icons.refresh), findsOneWidget);
-      await tester.tap(find.byTooltip(words.refresh));
+      expect(find.byIcon(Icons.refresh), findsWidgets);
+      await tester.tap(find.byTooltip(words.refresh).first);
       await tester.pumpAndSettle();
       expect(takes, 1);
     });
@@ -140,7 +141,7 @@ void main() {
       // Nothing to date yet, and the way to go and get something is still on the screen — an
       // operation nobody can find until it has already happened is one nobody finds.
       expect(find.textContaining('Taken'), findsNothing);
-      expect(find.byTooltip(words.refresh), findsOneWidget);
+      expect(find.byTooltip(words.refresh), findsWidgets);
     });
 
     testWidgets('a phone with no route to take is offered nothing to press', (
@@ -177,8 +178,8 @@ void main() {
     });
   });
 
-  group('the four bundles, stacked', () {
-    testWidgets('each one that has anything in it says how many', (
+  group('the four states, switched between', () {
+    testWidgets('every state is on the switch, with how many are in it', (
       tester,
     ) async {
       store.applyPage([
@@ -189,14 +190,63 @@ void main() {
 
       await tester.pumpWidget(screen());
 
-      for (final bundle in [Bundle.moving, Bundle.stalled, Bundle.next]) {
-        expect(find.text(bundleHeading(words, bundle)), findsOneWidget);
-      }
-      // A heading over nothing would say only that a question had been asked.
-      expect(find.text(bundleHeading(words, Bundle.finished)), findsNothing);
+      // Including the one with nothing in it: a state is not on the switch because it has rows,
+      // and "0 blocked" is the answer somebody came to read.
+      expect(
+        find.text(
+          NowScreen.tab(words, TaskState.todo, const Counted(1, false)),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.text(
+          NowScreen.tab(words, TaskState.inProgress, const Counted(1, false)),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.text(
+          NowScreen.tab(words, TaskState.blocked, const Counted(1, false)),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.text(
+          NowScreen.tab(words, TaskState.finished, const Counted(0, false)),
+        ),
+        findsOneWidget,
+      );
     });
 
-    testWidgets('a stalled row says the reason, by number', (tester) async {
+    testWidgets('it opens on what is next, and the rest is one press away', (
+      tester,
+    ) async {
+      store.applyPage([
+        BacklogChange.put('task', 1, task(id: 1, title: 'これから')),
+        BacklogChange.put(
+          'task',
+          2,
+          task(id: 2, title: 'いま動いている', status: 'in_progress'),
+        ),
+      ]);
+
+      await tester.pumpWidget(screen());
+      expect(find.text('これから'), findsOneWidget);
+      expect(find.text('いま動いている'), findsNothing);
+
+      await tester.tap(
+        find.text(
+          NowScreen.tab(words, TaskState.inProgress, const Counted(1, false)),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('いま動いている'), findsOneWidget);
+      expect(find.text('これから'), findsNothing);
+    });
+
+    testWidgets('a row waiting on something stays in todo and says so', (
+      tester,
+    ) async {
       store.applyPage([
         BacklogChange.put('task', 1, task(id: 1)),
         BacklogChange.put('task', 5, task(id: 5)),
@@ -210,10 +260,12 @@ void main() {
       await tester.pumpWidget(screen());
 
       final line = store
-          .bundle(Bundle.stalled, today: today)
-          .rows
+          .inState(TaskState.todo, today: today)
           .singleWhere((row) => row.id == 5);
       expect(find.text(stallReason(face, line, today: today)!), findsOneWidget);
+      // Both rows are here — the one that can be started is not lifted out of the list, it is
+      // simply the one with no waiting mark on it.
+      expect(find.byType(TaskRow), findsNWidgets(2));
     });
 
     testWidgets('a day that has not come is a reason like any other', (
@@ -225,13 +277,12 @@ void main() {
 
       await tester.pumpWidget(screen());
 
-      // It lands in the stalled bundle, so the row owes an answer for why — even the one stall
-      // nobody has to do anything about.
-      expect(find.text(bundleHeading(words, Bundle.stalled)), findsOneWidget);
+      // Even the one stall nobody has to do anything about: a row that says nothing about why it
+      // is waiting is the row that wastes its second line.
       expect(find.textContaining('Starts'), findsOneWidget);
     });
 
-    testWidgets('only the moving rows carry a time', (tester) async {
+    testWidgets('only the rows in progress carry a time', (tester) async {
       const moved = '2026-08-01T00:00:00Z';
       store.applyPage([
         BacklogChange.put(
@@ -243,39 +294,22 @@ void main() {
       ]);
 
       await tester.pumpWidget(screen());
-
-      expect(
-        find.text(relativeTime(face, DateTime.parse(moved), now: today)),
-        findsOneWidget,
+      final when = find.text(
+        relativeTime(face, DateTime.parse(moved), now: today),
       );
-    });
+      // Not on the state it opens on.
+      expect(when, findsNothing);
 
-    testWidgets('closed work is folded away until it is asked for', (
-      tester,
-    ) async {
-      store.applyPage([
-        BacklogChange.put(
-          'task',
-          1,
-          task(
-            id: 1,
-            title: 'ぜんぶ終わった',
-            status: 'done',
-            completedAt: '2026-08-08T00:00:00Z',
-          ),
+      await tester.tap(
+        find.text(
+          NowScreen.tab(words, TaskState.inProgress, const Counted(1, false)),
         ),
-      ]);
-
-      await tester.pumpWidget(screen());
-      expect(find.text(bundleHeading(words, Bundle.finished)), findsOneWidget);
-      expect(find.text('ぜんぶ終わった'), findsNothing);
-
-      await tester.tap(find.text(bundleHeading(words, Bundle.finished)));
+      );
       await tester.pumpAndSettle();
-      expect(find.text('ぜんぶ終わった'), findsOneWidget);
+      expect(when, findsOneWidget);
     });
 
-    testWidgets('the finished bundle reaches as far as the setting says', (
+    testWidgets('the finished state reaches as far as the setting says', (
       tester,
     ) async {
       store.applyPage([
@@ -289,78 +323,99 @@ void main() {
             completedAt: '2026-07-20T00:00:00Z',
           ),
         ),
+        // So the phone is not one with nothing on it, which is a screen of its own.
+        BacklogChange.put('task', 2, task(id: 2)),
       ]);
 
-      // A week back does not reach it, so there is no bundle at all.
+      Future<void> openFinished(WidgetTester tester, int count) async {
+        await tester.tap(
+          find.text(
+            NowScreen.tab(words, TaskState.finished, Counted(count, false)),
+          ),
+        );
+        await tester.pumpAndSettle();
+      }
+
+      // A week back does not reach it, so the state is empty and says so.
       await tester.pumpWidget(screen());
-      expect(find.text(bundleHeading(words, Bundle.finished)), findsNothing);
+      await openFinished(tester, 0);
+      expect(find.text('せんげつ終わった'), findsNothing);
+      expect(find.text(words.nothingInState), findsOneWidget);
 
       await tester.pumpWidget(screen(doneWindow: DoneWindow.thirtyDays));
-      final heading = bundleHeading(words, Bundle.finished, finishedDays: 30);
-      // The heading says the reach it was read with, or the setting would look like it missed.
-      expect(find.text(heading), findsOneWidget);
-      await tester.tap(find.text(heading));
-      await tester.pumpAndSettle();
+      await openFinished(tester, 1);
+      // The reach is written above the rows, or the setting would look like it missed.
+      expect(find.text(words.bundleFinishedWithin(30)), findsOneWidget);
       expect(find.text('せんげつ終わった'), findsOneWidget);
     });
 
-    testWidgets('everything keeps the window and what is behind it', (
-      tester,
-    ) async {
+    testWidgets('no cut-off says nothing about a reach', (tester) async {
       store.applyPage([
-        for (var id = 1; id <= Windows.bundle + 3; id++)
-          BacklogChange.put(
-            'task',
-            id,
-            task(
-              id: id,
-              status: 'done',
-              // Long past any cut-off: only "everything" holds these.
-              completedAt: '2025-01-0${id % 9 + 1}T00:00:00Z',
-            ),
+        BacklogChange.put(
+          'task',
+          1,
+          task(
+            id: 1,
+            status: 'done',
+            // Long past any cut-off: only "everything" holds it.
+            completedAt: '2025-01-01T00:00:00Z',
           ),
+        ),
+        BacklogChange.put('task', 2, task(id: 2)),
       ]);
 
       await tester.pumpWidget(screen(doneWindow: DoneWindow.everything));
-      final heading = bundleHeading(words, Bundle.finished, finishedDays: null);
-      expect(find.text(heading), findsOneWidget);
-      await tester.tap(find.text(heading));
+      await tester.tap(
+        find.text(
+          NowScreen.tab(words, TaskState.finished, const Counted(1, false)),
+        ),
+      );
       await tester.pumpAndSettle();
 
-      await tester.scrollUntilVisible(find.text(NowScreen.more(words, 3)), 200);
-      await tester.tap(find.text(NowScreen.more(words, 3)));
-      expect(widened.single.bundle, Bundle.finished);
-      // The reach travels with it: the rest of a list that stopped at a different day would not
-      // be the rest of this one.
-      expect(widened.single.finishedDays, isNull);
+      expect(find.text(words.bundleFinishedWithin(30)), findsNothing);
+      expect(find.byType(TaskRow), findsOneWidget);
     });
 
-    testWidgets('past the window the bundle offers the rest', (tester) async {
+    testWidgets('one state is read to its end, not handed to another face', (
+      tester,
+    ) async {
       store.applyPage([
-        for (var id = 1; id <= Windows.bundle + 3; id++)
-          BacklogChange.put('task', id, task(id: id)),
+        for (var id = 1; id <= Windows.list + 3; id++)
+          BacklogChange.put('task', id, task(id: id, title: 'しごと $id')),
       ]);
 
       await tester.pumpWidget(screen());
-      await tester.scrollUntilVisible(find.text(NowScreen.more(words, 3)), 200);
+      await tester.pumpAndSettle();
+      expect(find.text('しごと ${Windows.list + 3}'), findsNothing);
 
-      // The last row of a bundle, and the one a thumb reaches for on the way past.
-      expect(
-        tester
-            .getSize(
-              find
-                  .ancestor(
-                    of: find.text(NowScreen.more(words, 3)),
-                    matching: find.byType(InkWell),
-                  )
-                  .first,
+      // Reaching the bottom is the whole of asking for more. The list being read is named, or
+      // the switch and the row of states are scrollables too.
+      await tester.scrollUntilVisible(
+        find.text('しごと ${Windows.list + 3}'),
+        400,
+        scrollable: find
+            .descendant(
+              of: find.byType(TabBarView),
+              matching: find.byType(Scrollable),
             )
-            .height,
-        greaterThanOrEqualTo(Layout.touch),
+            .last,
       );
+      await tester.pumpAndSettle();
+      expect(find.text('しごと ${Windows.list + 3}'), findsOneWidget);
+    });
 
-      await tester.tap(find.text(NowScreen.more(words, 3)));
-      expect(widened.single.bundle, Bundle.next);
+    testWidgets('a state with nothing in it says so, quietly', (tester) async {
+      store.applyPage([BacklogChange.put('task', 1, task(id: 1))]);
+
+      await tester.pumpWidget(screen());
+      await tester.tap(
+        find.text(
+          NowScreen.tab(words, TaskState.blocked, const Counted(0, false)),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(words.nothingInState), findsOneWidget);
     });
 
     testWidgets('a row opens the task it names', (tester) async {
@@ -427,7 +482,6 @@ void main() {
             doneWindow: DoneWindow.sevenDays,
             clock: () => today,
             onOpen: (_) {},
-            onMore: (_) {},
           ),
         ),
       );
@@ -525,7 +579,7 @@ void main() {
         ),
       );
 
-      await tester.tap(find.byTooltip(words.refresh));
+      await tester.tap(find.byTooltip(words.refresh).first);
       await tester.pumpAndSettle();
 
       expect(takes, 1);
@@ -541,7 +595,7 @@ void main() {
       ]);
       await tester.pumpWidget(screen(take: () async => throw Exception('off')));
 
-      await tester.tap(find.byTooltip(words.refresh));
+      await tester.tap(find.byTooltip(words.refresh).first);
       await tester.pumpAndSettle();
 
       expect(find.text('のこる'), findsOneWidget);
@@ -588,7 +642,6 @@ void main() {
               doneWindow: DoneWindow.sevenDays,
               clock: () => today,
               onOpen: (_) {},
-              onMore: (_) {},
             ),
           ),
         ),

@@ -4,17 +4,11 @@
   "tabSearch": "Szukaj",
   "nothingOpen": "Otwórz coś, żeby przeczytać to tutaj",
 
-  "bundleMoving": "W toku",
-  "bundleStalled": "Stoją",
-  "bundleNext": "Następne",
-  "bundleFinished": "Zakończone",
   "bundleFinishedWithin": "{days, plural, one{Zakończone (1 dzień)} few{Zakończone ({days} dni)} many{Zakończone ({days} dni)} other{Zakończone ({days} dnia)}}",
 
   "allProjects": "Wszystkie projekty",
   "chooseProject": "Wybierz projekt",
   "refresh": "Pobierz",
-  "more": "{count, plural, one{jeszcze 1} few{jeszcze {count}} many{jeszcze {count}} other{jeszcze {count}}}",
-  "moreCapped": "jeszcze {count}",
   "newActivity": "Nowe · {count}",
 
   "standingTooNew": "Twój komputer pisze w nowszym formacie, niż czyta ta aplikacja",
@@ -37,7 +31,7 @@
   "priorityLow": "Niski",
   "rowPriority": "priorytet {name}",
 
-  "statusTodo": "Następne",
+  "statusTodo": "Do zrobienia",
   "statusInProgress": "W toku",
   "statusDone": "Gotowe",
   "statusRejected": "Odrzucone",
@@ -63,8 +57,6 @@
   "stallStarts": "Start {day}",
   "stallBlocked": "Zablokowane",
 
-  "headingShowing": "rozwinięte",
-  "headingFolded": "zwinięte",
 
   "searchHint": "Szukaj",
   "searchClear": "Wyczyść",
@@ -79,6 +71,7 @@
   "showEverything": "Pokaż wszystko",
   "nothingHereYet": "Tu jeszcze nic nie ma",
   "nothingHereYetDetail": "Komputer wyśle to, co ma, przy następnej zmianie twojego backlogu. Pociągnięcie w dół na pierwszym ekranie prosi o to od razu.",
+  "nothingInState": "Nic w tym stanie",
   "valueChip": "{dimension}: {value}",
 
   "detailStalled": "Nie może ruszyć",

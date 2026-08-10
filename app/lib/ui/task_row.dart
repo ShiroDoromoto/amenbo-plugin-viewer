@@ -25,16 +25,19 @@ import 'tokens.dart';
 String countLabel(Words words, Counted counted) =>
     counted.overflowed ? words.countOverflow(Counted.cap) : '${counted.value}';
 
+/// A name with how many are under it — one tab of a switch, on either screen that has one.
+String labelWithCount(Words words, String name, Counted count) =>
+    '$name ${countLabel(words, count)}';
+
 /// Why a task cannot be started, in the words the person needs in order to act.
 ///
 /// A named blocker comes first because it is the only one that says what to go and do. `blocked`
 /// comes last for the same reason from the other end: it is amenbo's word for a stall nobody has
 /// written down, so it is what is left when there is nothing more useful to say.
 ///
-/// **Every premise the store bundles as stalled has a line here.** A row that landed in the bundle
-/// and then had nothing to say about why would be the one row on the screen that wastes its
-/// second line — a start day still ahead included, which is a stall nobody has to do anything
-/// about and therefore the easiest one to leave out.
+/// **Every premise that holds a task back has a line here.** No list divides by them any more, so
+/// this is the only place the person finds out — a start day still ahead included, which is a
+/// stall nobody has to do anything about and therefore the easiest one to leave out.
 String? stallReason(TimeFace face, TaskLine line, {required DateTime today}) {
   final words = face.words;
   final blocker = line.blockedBy;
@@ -73,12 +76,13 @@ class TaskRow extends StatelessWidget {
   /// only takes width away from the titles.
   final String? projectName;
 
-  /// When it last moved, for the one bundle where movement is the subject. Elsewhere freshness is
+  /// When it last moved, for the one state where movement is the subject. Elsewhere freshness is
   /// not what the person is judging, and a time on every row reads as noise.
   final DateTime? movedAt;
 
-  /// Whether to say what state it is in. A bundle already said it in its heading; a search result
-  /// stands on its own, and there the state is half of what the person came back to find out.
+  /// Whether to say what state it is in. A row read under the switch is already under its own
+  /// state; a search result stands on its own, and there the state is half of what the person
+  /// came back to find out.
   final bool showStatus;
 
   @override
@@ -86,11 +90,8 @@ class TaskRow extends StatelessWidget {
     final theme = Theme.of(context);
     final words = Words.of(context);
     final face = TimeFace.of(context);
-    // The two voices of the second line. The first says the one thing that decides whether to
-    // open the row; the second is context, and is smaller and paler so the eye can pass over it.
-    final deciding = theme.textTheme.bodySmall?.copyWith(
-      color: theme.colorScheme.onSurfaceVariant,
-    );
+    // The second line has two voices. What decides whether to open the row leads, in its own
+    // mark; everything after it is context, and is smaller and paler so the eye can pass over it.
     final aside = theme.textTheme.labelMedium?.copyWith(
       color: palette(context).textFaint,
       fontWeight: Lettering.normal,
@@ -105,12 +106,7 @@ class TaskRow extends StatelessWidget {
       // Why it cannot move, or when it is wanted — whichever there is. This is the row's second
       // strongest thing, so it leads, and nothing else on the line is drawn as loudly.
       if (reason != null)
-        Text(
-          reason,
-          style: deciding,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        )
+        StallMark(reason)
       else if (line.dueOn != null)
         DueMark(line.dueOn!, today: today),
       if (projectName != null)

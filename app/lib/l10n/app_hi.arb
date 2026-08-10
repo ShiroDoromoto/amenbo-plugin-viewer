@@ -4,17 +4,11 @@
   "tabSearch": "खोजें",
   "nothingOpen": "कुछ खोलिए, वह यहाँ पढ़ने को मिलेगा",
 
-  "bundleMoving": "चल रहे",
-  "bundleStalled": "अटके हुए",
-  "bundleNext": "अगले",
-  "bundleFinished": "पूरे हुए",
   "bundleFinishedWithin": "{days, plural, one{पूरे हुए (1 दिन)} other{पूरे हुए ({days} दिन)}}",
 
   "allProjects": "सभी प्रोजेक्ट",
   "chooseProject": "प्रोजेक्ट चुनें",
   "refresh": "लाएँ",
-  "more": "{count, plural, one{1 और} other{{count} और}}",
-  "moreCapped": "{count} और",
   "newActivity": "नई हलचल · {count}",
 
   "standingTooNew": "आपका पीसी जिस रूप में लिख रहा है, यह ऐप उससे पुराना पढ़ता है",
@@ -37,7 +31,7 @@
   "priorityLow": "निम्न",
   "rowPriority": "{name} प्राथमिकता",
 
-  "statusTodo": "अगला",
+  "statusTodo": "करना है",
   "statusInProgress": "चल रहा",
   "statusDone": "हो गया",
   "statusRejected": "अस्वीकृत",
@@ -63,8 +57,6 @@
   "stallStarts": "{day} से शुरू",
   "stallBlocked": "रुका हुआ",
 
-  "headingShowing": "खुला हुआ",
-  "headingFolded": "बंद किया हुआ",
 
   "searchHint": "खोजें",
   "searchClear": "मिटाएँ",
@@ -79,6 +71,7 @@
   "showEverything": "सब दिखाएँ",
   "nothingHereYet": "यहाँ अभी कुछ नहीं है",
   "nothingHereYetDetail": "आपकी सूची अगली बार बदलेगी तब आपका पीसी जो उसके पास है वह भेज देगा। पहली स्क्रीन पर नीचे खींचना अभी माँगना है।",
+  "nothingInState": "इस स्थिति में कुछ नहीं है",
   "valueChip": "{dimension}: {value}",
 
   "detailStalled": "शुरू नहीं हो सकता",

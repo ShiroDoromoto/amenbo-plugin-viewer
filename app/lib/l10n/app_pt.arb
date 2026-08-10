@@ -4,17 +4,11 @@
   "tabSearch": "Buscar",
   "nothingOpen": "Abra algo para ler aqui",
 
-  "bundleMoving": "Em andamento",
-  "bundleStalled": "Paradas",
-  "bundleNext": "Próximas",
-  "bundleFinished": "Concluídas",
   "bundleFinishedWithin": "{days, plural, one{Concluídas (1 dia)} other{Concluídas ({days} dias)}}",
 
   "allProjects": "Todos os projetos",
   "chooseProject": "Escolher um projeto",
   "refresh": "Buscar agora",
-  "more": "{count, plural, one{mais 1} other{mais {count}}}",
-  "moreCapped": "mais {count}",
   "newActivity": "Novidades · {count}",
 
   "standingTooNew": "Seu PC escreve num formato mais novo do que este app lê",
@@ -37,11 +31,11 @@
   "priorityLow": "Baixa",
   "rowPriority": "prioridade {name}",
 
-  "statusTodo": "Próxima",
+  "statusTodo": "A fazer",
   "statusInProgress": "Em andamento",
   "statusDone": "Feita",
   "statusRejected": "Descartada",
-  "statusBlocked": "Travada",
+  "statusBlocked": "Bloqueada",
 
   "decisionProposed": "Proposta",
   "decisionAccepted": "Aceita",
@@ -63,8 +57,6 @@
   "stallStarts": "Começa {day}",
   "stallBlocked": "Travada",
 
-  "headingShowing": "aberto",
-  "headingFolded": "recolhido",
 
   "searchHint": "Buscar",
   "searchClear": "Limpar",
@@ -79,6 +71,7 @@
   "showEverything": "Mostrar tudo",
   "nothingHereYet": "Ainda não há nada aqui",
   "nothingHereYetDetail": "Seu PC envia o que tiver na próxima vez que seu backlog mudar. Puxar para baixo na tela inicial pede agora.",
+  "nothingInState": "Nada neste estado",
   "valueChip": "{dimension}: {value}",
 
   "detailStalled": "Não pode começar",

@@ -1,4 +1,4 @@
-// The reading half: which bundle a task falls into, how big a window is, where a count stops,
+// The reading half: which state a task is read under, how big a window is, where a count stops,
 // and that a search is answered by the index rather than by walking the backlog.
 
 import 'package:amenbo_viewer/store/backlog_queries.dart';
@@ -7,7 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'backlog_fixture.dart';
 
-/// Every test reads the same day, so a bundle drawn here and a count taken beside it cannot
+/// Every test reads the same day, so a list drawn here and a count taken beside it cannot
 /// disagree about which tasks are late.
 final today = DateTime(2026, 8, 9);
 
@@ -17,8 +17,8 @@ void main() {
   setUp(() => store = BacklogStore.openInMemory());
   tearDown(() => store.close());
 
-  group('the four bundles', () {
-    test('what is in progress is moving, whatever else is true of it', () {
+  group('the four states', () {
+    test("a state is amenbo's status, whatever else is true of the row", () {
       store.applyPage([
         BacklogChange.put('task', 1, task(id: 1, status: 'in_progress')),
         BacklogChange.put(
@@ -29,50 +29,55 @@ void main() {
         BacklogChange.put('task', 3, task(id: 3)),
       ]);
 
-      final moving = store.bundle(Bundle.moving, today: today);
-      expect(moving.rows.map((row) => row.id), [1, 2]);
-      expect(moving.total.value, 2);
+      expect(
+        store.inState(TaskState.inProgress, today: today).map((row) => row.id),
+        [1, 2],
+      );
+      expect(store.stateCount(TaskState.inProgress, today: today).value, 2);
     });
 
-    test(
-      'every missing premise puts a task in stalled, and says which one',
-      () {
-        store.applyPage([
-          BacklogChange.put('task', 1, task(id: 1)),
-          BacklogChange.put('task', 2, task(id: 2, status: 'blocked')),
-          BacklogChange.put('task', 3, task(id: 3, draft: 1)),
-          BacklogChange.put('task', 4, task(id: 4, startOn: '2026-09-01')),
-          // Waiting on 1, which is not finished.
-          BacklogChange.put('task', 5, task(id: 5)),
-          BacklogChange.put(
-            'task_dependency',
-            1,
-            dependency(id: 1, taskId: 5, blockedById: 1),
-          ),
-          // Waiting on a decision nobody has ruled on.
-          BacklogChange.put('task', 6, task(id: 6)),
-          BacklogChange.put('decision', 7, decision(id: 7)),
-          BacklogChange.put(
-            'decision_task_link',
-            1,
-            decisionLink(id: 1, decisionId: 7, taskId: 6),
-          ),
-        ]);
-
-        final stalled = store.bundle(Bundle.stalled, today: today);
-        expect(stalled.rows.map((row) => row.id), [2, 3, 4, 5, 6]);
-
-        final byId = {for (final row in stalled.rows) row.id: row};
-        expect(
-          byId[5]!.blockedBy,
+    test('what is waiting on something stays in todo, and says what for', () {
+      store.applyPage([
+        BacklogChange.put('task', 1, task(id: 1)),
+        BacklogChange.put('task', 2, task(id: 2, status: 'blocked')),
+        BacklogChange.put('task', 3, task(id: 3, draft: 1)),
+        BacklogChange.put('task', 4, task(id: 4, startOn: '2026-09-01')),
+        // Waiting on 1, which is not finished.
+        BacklogChange.put('task', 5, task(id: 5)),
+        BacklogChange.put(
+          'task_dependency',
           1,
-          reason: 'the screen writes the blocker out by number',
-        );
-        expect(byId[6]!.undecided, 7);
-        expect(byId[3]!.draft, isTrue);
-        expect(byId[4]!.startOn, '2026-09-01');
-      },
-    );
+          dependency(id: 1, taskId: 5, blockedById: 1),
+        ),
+        // Waiting on a decision nobody has ruled on.
+        BacklogChange.put('task', 6, task(id: 6)),
+        BacklogChange.put('decision', 7, decision(id: 7)),
+        BacklogChange.put(
+          'decision_task_link',
+          1,
+          decisionLink(id: 1, decisionId: 7, taskId: 6),
+        ),
+      ]);
+
+      // Only amenbo's own `blocked` is a state of its own. The rest are waiting, and waiting
+      // is something a row says about itself.
+      final todo = store.inState(TaskState.todo, today: today);
+      expect(todo.map((row) => row.id), [1, 3, 4, 5, 6]);
+      expect(
+        store.inState(TaskState.blocked, today: today).map((row) => row.id),
+        [2],
+      );
+
+      final byId = {for (final row in todo) row.id: row};
+      expect(
+        byId[5]!.blockedBy,
+        1,
+        reason: 'the screen writes the blocker out by number',
+      );
+      expect(byId[6]!.undecided, 7);
+      expect(byId[3]!.draft, isTrue);
+      expect(byId[4]!.startOn, '2026-09-01');
+    });
 
     test(
       'a settled blocker and a settled decision stop holding a task back',
@@ -93,15 +98,15 @@ void main() {
           ),
         ]);
 
-        expect(store.bundle(Bundle.stalled, today: today).rows, isEmpty);
+        expect(store.inState(TaskState.blocked, today: today), isEmpty);
         expect(
-          store.bundle(Bundle.next, today: today).rows.map((row) => row.id),
+          store.inState(TaskState.todo, today: today).map((row) => row.id),
           [5],
         );
       },
     );
 
-    test('next puts the late first, then today, then priority', () {
+    test('todo puts the late first, then today, then priority', () {
       store.applyPage([
         BacklogChange.put('task', 1, task(id: 1, priority: 'high')),
         BacklogChange.put(
@@ -118,10 +123,13 @@ void main() {
         BacklogChange.put('task', 5, task(id: 5, priority: 'medium')),
       ]);
 
-      expect(
-        store.bundle(Bundle.next, today: today).rows.map((row) => row.id),
-        [2, 3, 1, 5, 4],
-      );
+      expect(store.inState(TaskState.todo, today: today).map((row) => row.id), [
+        2,
+        3,
+        1,
+        5,
+        4,
+      ]);
     });
 
     test('finished is the last seven days, newest first', () {
@@ -148,7 +156,7 @@ void main() {
       ]);
 
       expect(
-        store.bundle(Bundle.finished, today: today).rows.map((row) => row.id),
+        store.inState(TaskState.finished, today: today).map((row) => row.id),
         [1, 2],
       );
     });
@@ -162,19 +170,18 @@ void main() {
         ),
       ]);
 
-      expect(store.bundle(Bundle.finished, today: today).rows, isEmpty);
+      expect(store.inState(TaskState.finished, today: today), isEmpty);
       expect(
         store
-            .bundle(Bundle.finished, today: today, finishedDays: 30)
-            .rows
+            .inState(TaskState.finished, today: today, finishedDays: 30)
             .map((row) => row.id),
         [1],
       );
     });
 
-    test('everything has no cut-off, and still hands back a window', () {
+    test('everything has no cut-off, and still hands back one window', () {
       store.applyPage([
-        for (var id = 1; id <= 25; id++)
+        for (var id = 1; id <= Windows.list + 5; id++)
           BacklogChange.put(
             'task',
             id,
@@ -182,39 +189,39 @@ void main() {
           ),
       ]);
 
-      final finished = store.bundle(
-        Bundle.finished,
-        today: today,
-        finishedDays: null,
+      expect(
+        store.inState(TaskState.finished, today: today, finishedDays: null),
+        hasLength(Windows.list),
       );
-      expect(finished.rows, hasLength(Windows.bundle));
-      // The count is asked the same question as the window, or "5 more" would open nothing.
-      expect(finished.total.value, 25);
+      // The count is asked the same question as the window, or the number on the switch would be
+      // counting something the list is not.
       expect(
         store
-            .tasks(
-              const TaskQuery(bundle: Bundle.finished, finishedDays: null),
-              today: today,
-            )
-            .length,
-        25,
+            .stateCount(TaskState.finished, today: today, finishedDays: null)
+            .value,
+        Windows.list + 5,
       );
     });
 
-    test(
-      'a bundle hands back a window, and says how many there are behind it',
-      () {
-        store.applyPage([
-          for (var id = 1; id <= 25; id++)
-            BacklogChange.put('task', id, task(id: id)),
-        ]);
+    test('the next window carries on where the last one stopped', () {
+      store.applyPage([
+        for (var id = 1; id <= Windows.list + 5; id++)
+          BacklogChange.put('task', id, task(id: id)),
+      ]);
 
-        final next = store.bundle(Bundle.next, today: today);
-        expect(next.rows, hasLength(Windows.bundle));
-        expect(next.total.value, 25);
-        expect(next.total.overflowed, isFalse);
-      },
-    );
+      final first = store.inState(TaskState.todo, today: today);
+      final next = store.inState(
+        TaskState.todo,
+        today: today,
+        offset: first.length,
+      );
+      expect(first, hasLength(Windows.list));
+      expect(next, hasLength(5));
+      expect({
+        ...first.map((row) => row.id),
+        ...next.map((row) => row.id),
+      }, hasLength(Windows.list + 5));
+    });
   });
 
   group('counting', () {
@@ -224,7 +231,7 @@ void main() {
           BacklogChange.put('task', id, task(id: id)),
       ]);
 
-      final total = store.bundle(Bundle.next, today: today).total;
+      final total = store.stateCount(TaskState.todo, today: today);
       expect(total.value, Counted.cap);
       expect(total.overflowed, isTrue);
     });
@@ -266,7 +273,7 @@ void main() {
     test(
       'a search finds the word wherever it is written, closed tasks included',
       () {
-        final hits = store.tasks(const TaskQuery(text: 'ペアリング'), today: today);
+        final hits = store.tasks(const TaskQuery(text: 'ペアリング'));
 
         expect(hits.map((row) => row.id), contains(3));
         expect(hits.single.excerpt, isNotEmpty);
@@ -282,34 +289,35 @@ void main() {
         ),
       ]);
 
-      final hits = store.tasks(const TaskQuery(text: 'めずらしい語'), today: today);
+      final hits = store.tasks(const TaskQuery(text: 'めずらしい語'));
       expect(hits.map((row) => row.id), [5]);
     });
 
     test('a query too short for the index is still answered', () {
       // Two characters cannot be a trigram, and `qr` is exactly the sort of thing people type.
-      final hits = store.tasks(const TaskQuery(text: 'QR'), today: today);
+      final hits = store.tasks(const TaskQuery(text: 'QR'));
       expect(hits.map((row) => row.id), containsAll([1, 2, 3]));
     });
 
     test('a category value narrows the same face', () {
-      expect(
-        store
-            .tasks(const TaskQuery(valueId: 1), today: today)
-            .map((row) => row.id),
-        [4],
-      );
+      expect(store.tasks(const TaskQuery(valueId: 1)).map((row) => row.id), [
+        4,
+      ]);
     });
 
-    test('a bundle and a search can be asked for together', () {
+    test('a narrowing and a search can be asked for together', () {
+      // Three tasks say "QR" and one of them wears the value, so the two together answer with
+      // neither set on its own.
+      expect(store.tasks(const TaskQuery(text: 'QR')).map((row) => row.id), [
+        3,
+        2,
+        1,
+      ]);
       expect(
         store
-            .tasks(
-              const TaskQuery(text: 'QR', bundle: Bundle.next),
-              today: today,
-            )
+            .tasks(const TaskQuery(text: 'ペアリング', valueId: 1))
             .map((row) => row.id),
-        [2, 3],
+        isEmpty,
       );
     });
 
@@ -320,12 +328,9 @@ void main() {
         BacklogChange.put('project', 42, project(id: 42, name: 'nsys')),
       ]);
 
-      expect(
-        store
-            .tasks(const TaskQuery(projectId: 42), today: today)
-            .map((row) => row.id),
-        [9],
-      );
+      expect(store.tasks(const TaskQuery(projectId: 42)).map((row) => row.id), [
+        9,
+      ]);
       expect(store.projects().map((row) => row.name), [
         'amenbo-plugin-viewer',
         'nsys',
@@ -498,15 +503,18 @@ void main() {
         ),
       ]);
 
-      expect(store.bundle(Bundle.moving, today: today).rows, hasLength(2));
+      expect(store.inState(TaskState.inProgress, today: today), hasLength(2));
       expect(
-        store.bundle(Bundle.moving, today: today, projectId: 20).rows.single.id,
+        store
+            .inState(TaskState.inProgress, today: today, projectId: 20)
+            .single
+            .id,
         2,
       );
       expect(store.projects().map((row) => row.name), ['viewer', 'nsys']);
     });
 
-    test('an archived project is out of the bundles and still searchable', () {
+    test('an archived project is off the front screen and still searchable', () {
       store.applyPage([
         BacklogChange.put('project', 16, project(id: 16)),
         BacklogChange.put(
@@ -518,29 +526,19 @@ void main() {
         BacklogChange.put('task', 2, task(id: 2, projectId: 20, title: 'qr')),
       ]);
 
-      expect(store.bundle(Bundle.next, today: today).rows.single.id, 1);
-      // The continuation of a bundle is the same set, so it drops it too.
-      expect(
-        store
-            .tasks(const TaskQuery(bundle: Bundle.next), today: today)
-            .single
-            .id,
-        1,
-      );
+      expect(store.inState(TaskState.todo, today: today).single.id, 1);
       // Remembering how something ended up is what an archived project is kept for.
-      expect(
-        store
-            .tasks(const TaskQuery(text: 'qr'), today: today)
-            .map((row) => row.id),
-        [2, 1],
-      );
+      expect(store.tasks(const TaskQuery(text: 'qr')).map((row) => row.id), [
+        2,
+        1,
+      ]);
       // It is not offered as somewhere to narrow to either.
       expect(store.projects().map((row) => row.id), [16]);
     });
 
     test('a task whose project has not arrived yet is not hidden', () {
       store.applyPage([BacklogChange.put('task', 1, task(id: 1))]);
-      expect(store.bundle(Bundle.next, today: today).rows, hasLength(1));
+      expect(store.inState(TaskState.todo, today: today), hasLength(1));
     });
   });
 

@@ -4,17 +4,11 @@
   "tabSearch": "Cari",
   "nothingOpen": "Buka sesuatu untuk dibaca di sini",
 
-  "bundleMoving": "Sedang jalan",
-  "bundleStalled": "Tertahan",
-  "bundleNext": "Berikutnya",
-  "bundleFinished": "Selesai",
   "bundleFinishedWithin": "{days, plural, other{Selesai ({days} hari)}}",
 
   "allProjects": "Semua proyek",
   "chooseProject": "Pilih proyek",
   "refresh": "Ambil",
-  "more": "{count, plural, other{{count} lagi}}",
-  "moreCapped": "{count} lagi",
   "newActivity": "Ada yang baru · {count}",
 
   "standingTooNew": "PC-mu menulis dalam format yang lebih baru daripada yang dibaca aplikasi ini",
@@ -37,11 +31,11 @@
   "priorityLow": "Rendah",
   "rowPriority": "prioritas {name}",
 
-  "statusTodo": "Berikutnya",
+  "statusTodo": "Belum dikerjakan",
   "statusInProgress": "Sedang jalan",
   "statusDone": "Selesai",
   "statusRejected": "Ditolak",
-  "statusBlocked": "Tertahan",
+  "statusBlocked": "Diblokir",
 
   "decisionProposed": "Diusulkan",
   "decisionAccepted": "Diterima",
@@ -63,8 +57,6 @@
   "stallStarts": "Mulai {day}",
   "stallBlocked": "Tertahan",
 
-  "headingShowing": "terbuka",
-  "headingFolded": "terlipat",
 
   "searchHint": "Cari",
   "searchClear": "Hapus",
@@ -79,6 +71,7 @@
   "showEverything": "Tampilkan semua",
   "nothingHereYet": "Belum ada apa-apa di sini",
   "nothingHereYetDetail": "PC-mu mengirim apa yang ada saat daftar kerjamu berubah lagi. Menarik ke bawah di layar depan berarti meminta sekarang.",
+  "nothingInState": "Tidak ada yang berstatus ini",
   "valueChip": "{dimension}: {value}",
 
   "detailStalled": "Tidak bisa mulai",

@@ -4,17 +4,11 @@
   "tabSearch": "Rechercher",
   "nothingOpen": "Ouvrez quelque chose pour le lire ici",
 
-  "bundleMoving": "En cours",
-  "bundleStalled": "Bloqué",
-  "bundleNext": "À faire",
-  "bundleFinished": "Terminé",
   "bundleFinishedWithin": "{days, plural, one{Terminé (1 jour)} other{Terminé ({days} jours)}}",
 
   "allProjects": "Tous les projets",
   "chooseProject": "Choisir un projet",
   "refresh": "Récupérer",
-  "more": "{count, plural, one{1 de plus} other{{count} de plus}}",
-  "moreCapped": "{count} de plus",
   "newActivity": "Nouvelle activité · {count}",
 
   "standingTooNew": "Votre PC écrit un format plus récent que celui que lit cette app",
@@ -63,8 +57,6 @@
   "stallStarts": "Démarre {day}",
   "stallBlocked": "Bloqué",
 
-  "headingShowing": "déplié",
-  "headingFolded": "replié",
 
   "searchHint": "Rechercher",
   "searchClear": "Effacer",
@@ -79,6 +71,7 @@
   "showEverything": "Tout afficher",
   "nothingHereYet": "Rien ici pour l'instant",
   "nothingHereYetDetail": "Votre PC enverra ce qu'il a au prochain changement de votre backlog. Tirer vers le bas sur le premier écran le demande tout de suite.",
+  "nothingInState": "Rien dans cet état",
   "valueChip": "{dimension} : {value}",
 
   "detailStalled": "Ne peut pas démarrer",

@@ -4,17 +4,11 @@
   "tabSearch": "ค้นหา",
   "nothingOpen": "เปิดสักรายการเพื่ออ่านตรงนี้",
 
-  "bundleMoving": "กำลังทำ",
-  "bundleStalled": "ติดอยู่",
-  "bundleNext": "ทำต่อไป",
-  "bundleFinished": "เสร็จแล้ว",
   "bundleFinishedWithin": "{days, plural, other{เสร็จแล้ว ({days} วัน)}}",
 
   "allProjects": "ทุกโครงการ",
   "chooseProject": "เลือกโครงการ",
   "refresh": "ไปเอามา",
-  "more": "{count, plural, other{อีก {count} รายการ}}",
-  "moreCapped": "อีก {count} รายการ",
   "newActivity": "มีความเคลื่อนไหวใหม่ · {count}",
 
   "standingTooNew": "คอมพิวเตอร์ของคุณเขียนด้วยรูปแบบที่ใหม่กว่าที่แอปนี้อ่านได้",
@@ -37,11 +31,11 @@
   "priorityLow": "ต่ำ",
   "rowPriority": "ความสำคัญ{name}",
 
-  "statusTodo": "ทำต่อไป",
+  "statusTodo": "ยังไม่เริ่ม",
   "statusInProgress": "กำลังทำ",
   "statusDone": "เสร็จ",
   "statusRejected": "ตัดออก",
-  "statusBlocked": "ติดอยู่",
+  "statusBlocked": "ถูกบล็อก",
 
   "decisionProposed": "เสนอไว้",
   "decisionAccepted": "รับแล้ว",
@@ -63,8 +57,6 @@
   "stallStarts": "เริ่ม {day}",
   "stallBlocked": "ติดอยู่",
 
-  "headingShowing": "กางอยู่",
-  "headingFolded": "พับอยู่",
 
   "searchHint": "ค้นหา",
   "searchClear": "ล้าง",
@@ -79,6 +71,7 @@
   "showEverything": "แสดงทั้งหมด",
   "nothingHereYet": "ตรงนี้ยังไม่มีอะไร",
   "nothingHereYetDetail": "คอมพิวเตอร์จะส่งสิ่งที่มีให้ในครั้งถัดไปที่รายการงานของคุณเปลี่ยน ลากลงที่หน้าจอแรกคือขอเดี๋ยวนี้",
+  "nothingInState": "ไม่มีรายการในสถานะนี้",
   "valueChip": "{dimension}: {value}",
 
   "detailStalled": "ยังเริ่มไม่ได้",

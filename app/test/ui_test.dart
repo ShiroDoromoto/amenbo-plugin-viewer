@@ -503,7 +503,7 @@ void main() {
         _wrap(
           const Column(
             children: [
-              BundleHeading(title: 'Stalled'),
+              ListHeading(title: 'Stalled'),
               RowTitle('a task'),
             ],
           ),
