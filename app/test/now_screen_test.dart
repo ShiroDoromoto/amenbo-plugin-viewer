@@ -72,6 +72,22 @@ void main() {
     ),
   );
 
+  group('how many are left', () {
+    test('one of them is said the way one of anything is said', () {
+      // English only changes the noun; several of the languages this sheet is written for change
+      // the number's own words too, which is why the message carries the arms rather than the
+      // caller carrying an `if`.
+      expect(NowScreen.more(words, 1), '1 more');
+      expect(NowScreen.more(words, 3), '3 more');
+    });
+
+    test('a count that stopped counting is a different sentence', () {
+      // `999+` is not a number, so nothing in any language can agree with it. It gets its own
+      // message rather than being pushed through the one that expects to count.
+      expect(NowScreen.more(words, Counted.cap, overflowed: true), '999+ more');
+    });
+  });
+
   group('how old this is, and the way to a newer one', () {
     testWidgets('the two halves are read together, in words', (tester) async {
       var takes = 0;

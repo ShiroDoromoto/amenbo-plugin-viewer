@@ -140,8 +140,15 @@ class NowScreen extends StatefulWidget {
   /// "today" was.
   final DateTime Function() clock;
 
+  /// How many are left behind the window.
+  ///
+  /// Two messages rather than one, because they are two different sentences to write: a real
+  /// number, which a language makes its words agree with, and `999+`, which is not a number at
+  /// all and cannot be agreed with.
   static String more(Words words, int rest, {bool overflowed = false}) =>
-      words.more('$rest${overflowed ? '+' : ''}');
+      overflowed
+      ? words.moreCapped(words.countOverflow(Counted.cap))
+      : words.more(rest);
 
   static String arrived(Words words, Counted count) =>
       words.newActivity(countLabel(words, count));

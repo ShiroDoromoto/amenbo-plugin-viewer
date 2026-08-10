@@ -11,6 +11,10 @@
 // * A message in the template with no description on it. The person writing Polish is not looking
 //   at the screen, and a bare `"more": "{count} more"` does not say what it is more of.
 // * A sheet the app does not carry, or a language the app carries with no sheet behind it.
+// * A count written into a sentence without the arms a number needs. English gets away with two
+//   forms and several languages do not, so a message that takes a count as a number has to be a
+//   plural message — and the sheet it is copied from is where that is settled, not the sheet of
+//   whoever notices in Polish.
 
 import 'dart:convert';
 import 'dart:io';
@@ -58,6 +62,25 @@ void main() {
     );
   });
 
+  test('a count in a sentence is written as a plural', () {
+    // Only where the number arrives as a number. A count that stopped counting comes through as
+    // text (`999+`) and there is nothing for a language to agree with, which is exactly why those
+    // are separate messages.
+    final flat = [
+      for (final key in wanted)
+        if (_countsInWords(template, key) &&
+            !'${template[key]}'.contains('plural,'))
+          key,
+    ];
+    expect(
+      flat,
+      isEmpty,
+      reason:
+          'a sentence with a bare number in it is a sentence written in English '
+          'and handed to eighteen languages that do not count that way',
+    );
+  });
+
   group('every sheet against the template', () {
     for (final locale in _localesOnDisk()) {
       if (locale == 'en') continue;
@@ -89,6 +112,23 @@ void main() {
 Map<String, Object?> _read(String file) =>
     jsonDecode(File('$_sheets/$file').readAsStringSync())
         as Map<String, Object?>;
+
+/// Whether a message takes a number that its words have to agree with.
+///
+/// The name is the tell, and it is one this sheet keeps: a count is called `count` or `days`, and
+/// arrives as an `int`. A version, a sequence number and a size in bytes are numbers too, and
+/// nothing in any language changes shape around them.
+bool _countsInWords(Map<String, Object?> sheet, String key) {
+  final placeholders =
+      (sheet['@$key'] as Map<String, Object?>?)?['placeholders']
+          as Map<String, Object?>?;
+  if (placeholders == null) return false;
+  return placeholders.entries.any(
+    (entry) =>
+        (entry.key == 'count' || entry.key == 'days') &&
+        (entry.value as Map<String, Object?>?)?['type'] == 'int',
+  );
+}
 
 /// The keys that are messages — everything that is not `@@locale` or a `@key` block of metadata.
 List<String> _messages(Map<String, Object?> sheet) =>

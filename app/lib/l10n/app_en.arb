@@ -16,9 +16,9 @@
   "@bundleNext": { "description": "Heading over the tasks that are ready to pick up." },
   "bundleFinished": "Finished",
   "@bundleFinished": { "description": "Heading over closed work, when no cut-off is set." },
-  "bundleFinishedWithin": "{days, plural, =1{Finished (1 day)} other{Finished ({days} days)}}",
+  "bundleFinishedWithin": "{days, plural, one{Finished (1 day)} other{Finished ({days} days)}}",
   "@bundleFinishedWithin": {
-    "description": "Heading over closed work, saying how far back it reaches. The reach is said because the person chose it.",
+    "description": "Heading over closed work, saying how far back it reaches. The reach is said because the person chose it. A language with more number forms than English writes them all in — the arms here are the two English has, not the set.",
     "placeholders": { "days": { "type": "int" } }
   },
 
@@ -35,9 +35,14 @@
   "@chooseProject": { "description": "What the project menu is for." },
   "refresh": "Refresh",
   "@refresh": { "description": "The button at the top of the front screen: go and look now. A verb the person is asking for, not a name for the screen." },
-  "more": "{count} more",
+  "more": "{count, plural, one{1 more} other{{count} more}}",
   "@more": {
-    "description": "The rest of a bundle, past the window the front screen holds. The count arrives already capped, so it can read as 999+.",
+    "description": "The rest of a bundle, past the window the front screen holds.",
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "moreCapped": "{count} more",
+  "@moreCapped": {
+    "description": "The same, where counting stopped at the cap and the number arrives as text (999+). Nothing can agree with a number that is not one, so this arm is written as if there were many.",
     "placeholders": { "count": { "type": "String" } }
   },
   "newActivity": "New activity · {count}",
@@ -138,7 +143,7 @@
   "@markAi": { "description": "The mark on a row, and beside a comment, for what the AI holds or wrote. A name rather than a word." },
   "markYou": "You",
   "@markYou": { "description": "Beside a comment the person wrote themselves." },
-  "comments": "{count, plural, =1{1 comment} other{{count} comments}}",
+  "comments": "{count, plural, one{1 comment} other{{count} comments}}",
   "@comments": {
     "description": "How many comments a task or a decision carries.",
     "placeholders": { "count": { "type": "int" } }
@@ -242,7 +247,7 @@
 
   "decisionWaiting": "Waiting on your answer",
   "@decisionWaiting": { "description": "A decision nobody has ruled on. The one thing on the screen that is asking for something." },
-  "decisionHeld": "{count, plural, =1{1 task is held by it} other{{count} tasks are held by it}}",
+  "decisionHeld": "{count, plural, one{1 task is held by it} other{{count} tasks are held by it}}",
   "@decisionHeld": {
     "description": "How much is not moving until the decision is ruled on.",
     "placeholders": { "count": { "type": "int" } }
@@ -374,7 +379,7 @@
   "@firstSyncTitle": { "description": "The one wait in this app long enough to be worth a screen." },
   "firstSyncOpening": "Reading from your PC",
   "@firstSyncOpening": { "description": "What the count reads as before anything has landed. Not a zero, which would answer a question nobody has the answer to yet." },
-  "firstSyncTaken": "{count, plural, =1{1 record so far} other{{count} records so far}}",
+  "firstSyncTaken": "{count, plural, one{1 record so far} other{{count} records so far}}",
   "@firstSyncTaken": {
     "description": "The running count. What is on the phone, not a countdown — how many are coming is not something the place is asked.",
     "placeholders": { "count": { "type": "int" } }
@@ -453,14 +458,14 @@
 
   "timeJustNow": "just now",
   "@timeJustNow": { "description": "Under a minute ago." },
-  "timeMinutesAgo": "{count} min ago",
+  "timeMinutesAgo": "{count, plural, one{1 min ago} other{{count} min ago}}",
   "@timeMinutesAgo": {
-    "description": "Under an hour ago.",
+    "description": "Under an hour ago. English shortens the unit and stops inflecting it; a language that inflects it writes the arms its own number forms need.",
     "placeholders": { "count": { "type": "int" } }
   },
-  "timeHoursAgo": "{count} h ago",
+  "timeHoursAgo": "{count, plural, one{1 h ago} other{{count} h ago}}",
   "@timeHoursAgo": {
-    "description": "Earlier today.",
+    "description": "Earlier today. Same as the minutes: the arms here are English's two, not the set a language may have.",
     "placeholders": { "count": { "type": "int" } }
   },
   "timeYesterdayAt": "yesterday {time}",
