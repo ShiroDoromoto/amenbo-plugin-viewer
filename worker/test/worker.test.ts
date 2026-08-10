@@ -504,3 +504,102 @@ describe("placing the whole store again", () => {
 		expect(results).toEqual([{ k: "task/2" }]);
 	});
 });
+
+describe("a store with no room left", () => {
+	/**
+	 * What the binding throws when D1 is out of room, copied off a real database filled to its
+	 * ceiling: a plain `Error`, no code and no status, and the `7500` the REST API answers with
+	 * nowhere in it. The message is the only thing there is to go on.
+	 */
+	const NO_ROOM = () =>
+		new Error("D1_ERROR: Exceeded maximum DB size", { cause: new Error("Exceeded maximum DB size") });
+
+	/** A D1 failure that is not about room, as one arrives. */
+	const SOMETHING_ELSE = () =>
+		new Error(
+			"D1_ERROR: UNIQUE constraint failed: records.seq: SQLITE_CONSTRAINT (extended: SQLITE_CONSTRAINT_UNIQUE)",
+		);
+
+	/**
+	 * The same database, but every write fails the given way. Reads are left alone: the gate has
+	 * to let the caller in for any of this to be reached, and a full store still answers them.
+	 */
+	function whereWritesFail(error: () => Error): Env {
+		const statement = (real: D1PreparedStatement): D1PreparedStatement =>
+			new Proxy(real, {
+				get(target, property, receiver) {
+					if (property === "bind") {
+						return (...values: unknown[]) => statement(target.bind(...values));
+					}
+					if (property === "run") {
+						return () => Promise.reject(error());
+					}
+					const value = Reflect.get(target, property, receiver);
+					return typeof value === "function" ? value.bind(target) : value;
+				},
+			});
+		const database = new Proxy(env.RECORDS, {
+			get(target, property, receiver) {
+				if (property === "batch") {
+					return () => Promise.reject(error());
+				}
+				if (property === "prepare") {
+					return (sql: string) => statement(target.prepare(sql));
+				}
+				const value = Reflect.get(target, property, receiver);
+				return typeof value === "function" ? value.bind(target) : value;
+			},
+		});
+		return { ...env, RECORDS: database } as Env;
+	}
+
+	/** A request the PC's token carries, against a store standing in for a full one. */
+	function into(store: Env, path: string, init: RequestInit = {}): Promise<Response> {
+		return worker.fetch(
+			new Request(`${AT}${path}`, {
+				...init,
+				headers: { Authorization: `Bearer ${WRITE_TOKEN}`, ...(init.headers ?? {}) },
+			}),
+			store,
+		);
+	}
+
+	it("says the store is full, and what makes room", async () => {
+		const response = await into(whereWritesFail(NO_ROOM), "/records", {
+			method: "PUT",
+			body: placement(1, [sealed("task/1")]),
+		});
+
+		expect(response.status).toBe(507);
+		expect(await response.json()).toMatchObject({ error: expect.stringContaining("no room left") });
+	});
+
+	it("says the same when the whole store is being placed again", async () => {
+		const response = await into(whereWritesFail(NO_ROOM), "/reset", {
+			method: "PUT",
+			body: placement(1, [sealed("task/1")]),
+		});
+
+		expect(response.status).toBe(507);
+	});
+
+	it("says the same when a phone is being paired", async () => {
+		const response = await into(whereWritesFail(NO_ROOM), "/tokens", {
+			method: "PUT",
+			body: JSON.stringify({ label: "iPhone", hash: await hashOf("the-phone's-own-token") }),
+		});
+
+		expect(response.status).toBe(507);
+	});
+
+	// Room is the one D1 failure anyone can act on. A database that was briefly unreachable, told
+	// as "buy more storage", sends someone to pay for something that was never the matter.
+	it("leaves every other D1 failure alone", async () => {
+		const refused = into(whereWritesFail(SOMETHING_ELSE), "/records", {
+			method: "PUT",
+			body: placement(1, [sealed("task/1")]),
+		});
+
+		await expect(refused).rejects.toThrow("UNIQUE constraint failed");
+	});
+});

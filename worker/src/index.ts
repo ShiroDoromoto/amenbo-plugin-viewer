@@ -394,9 +394,51 @@ async function place(env: Env, request: Request, placing: Placing): Promise<Resp
 		),
 		env.RECORDS.prepare("SELECT seq FROM store WHERE id = 1"),
 	];
-	const done = await env.RECORDS.batch<{ seq: number }>(statements);
+	let done: D1Result<{ seq: number }>[];
+	try {
+		done = await env.RECORDS.batch<{ seq: number }>(statements);
+	} catch (thrown) {
+		if (!outOfRoom(thrown)) {
+			throw thrown;
+		}
+		return full();
+	}
 
 	return Response.json({ seq: done[done.length - 1].results[0].seq });
+}
+
+/**
+ * What D1 says when the database has no room left, and the only thing that says it.
+ *
+ * The binding throws a plain `Error` carrying this in its message: no code, no status, and the
+ * `7500` the REST API answers with does not reach a Worker. So the sentence is the whole of the
+ * telling-apart, and every other failure has to keep falling through — a database that was
+ * briefly unreachable, answered as "buy more storage", sends someone to pay for nothing.
+ */
+const OUT_OF_ROOM = "Exceeded maximum DB size";
+
+/** Whether what was thrown is D1 saying there is no room left. */
+function outOfRoom(thrown: unknown): boolean {
+	return thrown instanceof Error && thrown.message.includes(OUT_OF_ROOM);
+}
+
+/**
+ * The refusal for a store that is full.
+ *
+ * There is no reading of how much room is left — the number would say "fine" every day until the
+ * one nobody is looking — so this sentence is the whole of what a person is told, and it has to
+ * carry the next move as well as the fact.
+ *
+ * **Not everything stops.** Reading goes on, and so do the writes that need no new page: cutting
+ * a phone off, and placing the whole store again, which empties the records first and is what
+ * puts a full store right.
+ */
+function full(): Response {
+	return problem(
+		507,
+		"there is no room left in this store — a D1 database holds 500 MB on Cloudflare's free plan" +
+			" and 10 GB on the paid one, so raising the account it lives in is what makes room",
+	);
 }
 
 /**
@@ -455,12 +497,19 @@ async function issue(env: Env, request: Request): Promise<Response> {
 	}
 
 	const issued_at = new Date().toISOString();
-	await env.RECORDS.prepare(
-		"INSERT INTO tokens (label, hash, issued_at) VALUES (?, ?, ?)" +
-			" ON CONFLICT (label) DO UPDATE SET hash = excluded.hash, issued_at = excluded.issued_at",
-	)
-		.bind(label.trim(), hash.toLowerCase(), issued_at)
-		.run();
+	try {
+		await env.RECORDS.prepare(
+			"INSERT INTO tokens (label, hash, issued_at) VALUES (?, ?, ?)" +
+				" ON CONFLICT (label) DO UPDATE SET hash = excluded.hash, issued_at = excluded.issued_at",
+		)
+			.bind(label.trim(), hash.toLowerCase(), issued_at)
+			.run();
+	} catch (thrown) {
+		if (!outOfRoom(thrown)) {
+			throw thrown;
+		}
+		return full();
+	}
 
 	return Response.json({ label: label.trim(), issued_at });
 }

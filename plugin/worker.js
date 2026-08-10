@@ -180,10 +180,30 @@ async function place(env, request, placing) {
     ),
     env.RECORDS.prepare("SELECT seq FROM store WHERE id = 1")
   ];
-  const done = await env.RECORDS.batch(statements);
+  let done;
+  try {
+    done = await env.RECORDS.batch(statements);
+  } catch (thrown) {
+    if (!outOfRoom(thrown)) {
+      throw thrown;
+    }
+    return full();
+  }
   return Response.json({ seq: done[done.length - 1].results[0].seq });
 }
 __name(place, "place");
+var OUT_OF_ROOM = "Exceeded maximum DB size";
+function outOfRoom(thrown) {
+  return thrown instanceof Error && thrown.message.includes(OUT_OF_ROOM);
+}
+__name(outOfRoom, "outOfRoom");
+function full() {
+  return problem(
+    507,
+    "there is no room left in this store \u2014 a D1 database holds 500 MB on Cloudflare's free plan and 10 GB on the paid one, so raising the account it lives in is what makes room"
+  );
+}
+__name(full, "full");
 function checkedRecord(record) {
   const { k, op, n, c } = record;
   if (typeof k !== "string" || k === "") {
@@ -217,9 +237,16 @@ async function issue(env, request) {
     return problem(400, "the hash has to be a SHA-256 as 64 hex characters");
   }
   const issued_at = (/* @__PURE__ */ new Date()).toISOString();
-  await env.RECORDS.prepare(
-    "INSERT INTO tokens (label, hash, issued_at) VALUES (?, ?, ?) ON CONFLICT (label) DO UPDATE SET hash = excluded.hash, issued_at = excluded.issued_at"
-  ).bind(label.trim(), hash.toLowerCase(), issued_at).run();
+  try {
+    await env.RECORDS.prepare(
+      "INSERT INTO tokens (label, hash, issued_at) VALUES (?, ?, ?) ON CONFLICT (label) DO UPDATE SET hash = excluded.hash, issued_at = excluded.issued_at"
+    ).bind(label.trim(), hash.toLowerCase(), issued_at).run();
+  } catch (thrown) {
+    if (!outOfRoom(thrown)) {
+      throw thrown;
+    }
+    return full();
+  }
   return Response.json({ label: label.trim(), issued_at });
 }
 __name(issue, "issue");
