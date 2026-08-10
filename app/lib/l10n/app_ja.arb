@@ -1,7 +1,6 @@
 {
   "@@locale": "ja",
 
-  "tabNow": "いま",
   "tabSearch": "さがす",
   "nothingOpen": "開いたものが、ここに出ます",
 
@@ -87,7 +86,7 @@
   "nothingMatchedDetail": "この端末にあるものは、終わったものも却下されたものも全部さがしています。語を減らすか、絞りを1つ外すと見つかることが多いです。",
   "showEverything": "全部を出す",
   "nothingHereYet": "まだ何もありません",
-  "nothingHereYetDetail": "バックログが次に変わったとき、PC が送ります。いまの画面で引き下げると、その場で取りに行きます。",
+  "nothingHereYetDetail": "バックログが次に変わったとき、PC が送ります。タスクの画面で引き下げると、その場で取りに行きます。",
   "valueChip": "{dimension}: {value}",
 
   "detailStalled": "着手できません",
