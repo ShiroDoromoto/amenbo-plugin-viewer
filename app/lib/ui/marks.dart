@@ -261,7 +261,11 @@ class _Mark extends StatelessWidget {
             color: colour,
           ),
           const SizedBox(width: Space.s1),
-          Text(text, style: style),
+          // Flexible, for the same reason a stall reason is: these sit in a Wrap, which hands its
+          // whole width down, so a mark wider than the line it is on would run off the edge
+          // rather than being moved to the next one. Nothing is cut — the word wraps and the mark
+          // gets taller, because a state read as "In Bearbeitun…" is a state nobody can read.
+          Flexible(child: Text(text, style: style)),
         ],
       ),
     );
