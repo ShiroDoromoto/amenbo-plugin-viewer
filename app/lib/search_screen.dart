@@ -27,6 +27,7 @@ import 'store/backlog_queries.dart';
 import 'store/backlog_store.dart';
 import 'store/recents.dart';
 import 'ui/decision_row.dart';
+import 'ui/empty.dart';
 import 'ui/task_row.dart';
 import 'ui/theme.dart';
 import 'ui/tokens.dart';
@@ -201,6 +202,25 @@ class _SearchScreenState extends State<SearchScreen>
     _field.clear();
     setState(() {
       _text = '';
+      _load();
+    });
+  }
+
+  /// Everything, from a screen that answered nothing.
+  ///
+  /// The words and every narrowing go together rather than one at a time: what the person is
+  /// saying by pressing it is that they would rather start again than work out which of the four
+  /// things they are holding is the one keeping the row out.
+  void _everything() {
+    _settling?.cancel();
+    _field.clear();
+    setState(() {
+      _text = '';
+      _bundle = null;
+      _valueId = null;
+      _changedSince = null;
+      _moved = null;
+      _projectId = null;
       _load();
     });
   }
@@ -515,26 +535,26 @@ class _SearchScreenState extends State<SearchScreen>
     required Widget Function(int index) row,
   }) {
     if (rows == 0 && header.isEmpty) {
+      final words = Words.of(context);
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              Space.pageGutter,
-              Space.emptyScreenTop,
-              Space.pageGutter,
-              Space.pageGutter,
+          // Two different empty screens, because the person is in two different places. One asked
+          // for something and can widen; the other has a phone the PC has not fed yet, and the
+          // way on is on the other screen.
+          if (_asked)
+            EmptyFace(
+              mark: Icons.search_off,
+              said: words.nothingMatched,
+              detail: words.nothingMatchedDetail,
+              action: (label: words.showEverything, onTap: _everything),
+            )
+          else
+            EmptyFace(
+              mark: Icons.inbox_outlined,
+              said: words.nothingHereYet,
+              detail: words.nothingHereYetDetail,
             ),
-            child: Text(
-              _asked
-                  ? Words.of(context).nothingMatched
-                  : Words.of(context).nothingHereYet,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ),
         ],
       );
     }

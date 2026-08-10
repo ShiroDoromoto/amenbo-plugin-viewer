@@ -17,6 +17,7 @@ import 'package:flutter/material.dart';
 
 import '../l10n/words.dart';
 import 'refs.dart';
+import 'theme.dart';
 import 'tokens.dart';
 
 /// One record, from its bar down to the last section.
@@ -184,27 +185,29 @@ class DetailHead extends StatelessWidget {
         if (project != null)
           InkWell(
             onTap: onProject,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: Space.s1),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    project,
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: theme.colorScheme.primary,
+            child: TapTarget(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: Space.s1),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      project,
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: theme.colorScheme.primary,
+                      ),
                     ),
-                  ),
-                  if (onProject != null)
-                    Icon(
-                      Icons.chevron_right,
-                      size:
-                          (theme.textTheme.labelMedium?.fontSize ??
-                              Lettering.xs) *
-                          1.2,
-                      color: theme.colorScheme.primary,
-                    ),
-                ],
+                    if (onProject != null)
+                      Icon(
+                        Icons.chevron_right,
+                        size:
+                            (theme.textTheme.labelMedium?.fontSize ??
+                                Lettering.xs) *
+                            1.2,
+                        color: theme.colorScheme.primary,
+                      ),
+                  ],
+                ),
               ),
             ),
           ),

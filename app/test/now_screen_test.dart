@@ -10,6 +10,7 @@ import 'package:amenbo_viewer/store/backlog_store.dart';
 import 'package:amenbo_viewer/ui/task_row.dart';
 import 'package:amenbo_viewer/ui/theme.dart';
 import 'package:amenbo_viewer/ui/time.dart';
+import 'package:amenbo_viewer/ui/tokens.dart';
 import 'package:amenbo_viewer/l10n/words.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -254,6 +255,21 @@ void main() {
 
       await tester.pumpWidget(screen());
       await tester.scrollUntilVisible(find.text(NowScreen.more(words, 3)), 200);
+
+      // The last row of a bundle, and the one a thumb reaches for on the way past.
+      expect(
+        tester
+            .getSize(
+              find
+                  .ancestor(
+                    of: find.text(NowScreen.more(words, 3)),
+                    matching: find.byType(InkWell),
+                  )
+                  .first,
+            )
+            .height,
+        greaterThanOrEqualTo(Layout.touch),
+      );
 
       await tester.tap(find.text(NowScreen.more(words, 3)));
       expect(widened.single.bundle, Bundle.next);
@@ -505,6 +521,40 @@ void main() {
       expect(
         find.textContaining(movedHeading(words, Moved.filed)),
         findsNothing,
+      );
+    });
+
+    testWidgets('a number is pressed with a thumb, so it is a thumb wide', (
+      tester,
+    ) async {
+      store.setMeta(MetaKey.lastOpenedAt, lastLook);
+      store.applyPage([
+        BacklogChange.put(
+          'task',
+          1,
+          task(id: 1, status: 'done', completedAt: after),
+        ),
+      ]);
+
+      await tester.pumpWidget(screen());
+      final label = NowScreen.moved(
+        words,
+        Moved.finished,
+        const Counted(1, false),
+      );
+
+      expect(
+        tester
+            .getSize(
+              find
+                  .ancestor(
+                    of: find.text(label),
+                    matching: find.byType(InkWell),
+                  )
+                  .first,
+            )
+            .height,
+        greaterThanOrEqualTo(Layout.touch),
       );
     });
 

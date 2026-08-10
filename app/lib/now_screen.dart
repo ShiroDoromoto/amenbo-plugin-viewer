@@ -629,12 +629,16 @@ class _SinceNumber extends StatelessWidget {
       child: ExcludeSemantics(
         child: InkWell(
           onTap: onOpen,
-          child: Padding(
-            padding: const EdgeInsets.all(Space.s2),
-            child: Text(
-              label,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.primary,
+          // Set in the running text of a card and pressed with a thumb: what is drawn stays the
+          // size of the sentence it belongs to, and what answers the press is the finger's.
+          child: TapTarget(
+            child: Padding(
+              padding: const EdgeInsets.all(Space.s2),
+              child: Text(
+                label,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.primary,
+                ),
               ),
             ),
           ),
@@ -656,29 +660,32 @@ class _MoreRow extends StatelessWidget {
     final theme = Theme.of(context);
     return InkWell(
       onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          Space.gutter,
-          Space.s4,
-          Space.gutter,
-          Space.s4,
-        ),
-        child: Row(
-          children: [
-            Text(
-              label,
-              style: theme.textTheme.bodyMedium?.copyWith(
+      child: TapTarget(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            Space.gutter,
+            Space.s4,
+            Space.gutter,
+            Space.s4,
+          ),
+          child: Row(
+            children: [
+              Text(
+                label,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+              const SizedBox(width: Space.s1),
+              Icon(
+                Icons.chevron_right,
+                size:
+                    (theme.textTheme.bodyMedium?.fontSize ?? Lettering.md) *
+                    1.2,
                 color: theme.colorScheme.primary,
               ),
-            ),
-            const SizedBox(width: Space.s1),
-            Icon(
-              Icons.chevron_right,
-              size:
-                  (theme.textTheme.bodyMedium?.fontSize ?? Lettering.md) * 1.2,
-              color: theme.colorScheme.primary,
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

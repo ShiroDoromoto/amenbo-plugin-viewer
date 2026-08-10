@@ -11,6 +11,7 @@ import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../l10n/words.dart';
+import 'theme.dart';
 import 'tokens.dart';
 
 /// The namespace amenbo puts on everything it shows. A bare number belongs to any tracker;
@@ -68,24 +69,28 @@ class RefChip extends StatelessWidget {
             );
           },
           borderRadius: Corner.smooth,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: Space.s2,
-              vertical: Space.hair,
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(ref, style: theme.textTheme.labelLarge),
-                const SizedBox(width: Space.s1),
-                Icon(
-                  Icons.copy_outlined,
-                  size:
-                      (theme.textTheme.labelLarge?.fontSize ?? Lettering.md) *
-                      1.1,
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ],
+          // The ref is drawn at the size of a label and pressed with a thumb, so what answers the
+          // press is the finger's size rather than the text's.
+          child: TapTarget(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: Space.s2,
+                vertical: Space.hair,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(ref, style: theme.textTheme.labelLarge),
+                  const SizedBox(width: Space.s1),
+                  Icon(
+                    Icons.copy_outlined,
+                    size:
+                        (theme.textTheme.labelLarge?.fontSize ?? Lettering.md) *
+                        1.1,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ],
+              ),
             ),
           ),
         ),

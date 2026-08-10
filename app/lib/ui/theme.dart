@@ -4,7 +4,7 @@
 /// minute, so the thing worth spending on is that a row reads the same wherever it is met — not
 /// that a switch matches the platform it is drawn on.
 ///
-/// Three rules are kept here rather than in each screen, because a screen that forgets one of them
+/// Four rules are kept here rather than in each screen, because a screen that forgets one of them
 /// looks fine to whoever wrote it:
 ///
 /// * **nothing states its size.** Sizes come from the text theme, which follows the setting the
@@ -13,6 +13,8 @@
 ///   and [Corner], so the whole app can be moved at once.
 /// * **no state is carried by colour alone.** Priority, lateness and unread all come with a word
 ///   or a shape beside them — see `marks.dart`.
+/// * **nothing pressable is smaller than a finger.** Whatever answers a tap is wrapped in
+///   [TapTarget], which is the only place [Layout.touch] is read.
 library;
 
 import 'package:flutter/material.dart';
@@ -183,6 +185,30 @@ const _textTheme = TextTheme(
   ),
 );
 
+/// What a finger presses, held to the size a finger is.
+///
+/// It grows the area that answers the press without growing what is drawn, because the two are
+/// different measurements: a ref set at the size of a label reads correctly and is a quarter of a
+/// fingertip tall. Put it *inside* whatever takes the tap — an `InkWell` sized to this is also an
+/// `InkWell` whose ripple shows what was hit — and it takes no more room than its child wherever
+/// the child is already big enough.
+class TapTarget extends StatelessWidget {
+  const TapTarget({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => ConstrainedBox(
+    constraints: const BoxConstraints(
+      minWidth: Layout.touch,
+      minHeight: Layout.touch,
+    ),
+    // Sized to the child rather than to everything on offer, or a target in a row would take the
+    // whole line for itself.
+    child: Center(widthFactor: 1, heightFactor: 1, child: child),
+  );
+}
+
 /// A title as every list draws it: it wraps to a second line and stops there.
 ///
 /// At the largest text size a phone offers, a backlog title runs well past one line. Two lines is
@@ -253,46 +279,48 @@ class RowSurface extends StatelessWidget {
       ),
       child: InkWell(
         onTap: onOpen,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: Space.gutter,
-            vertical: Space.s4,
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              lead,
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    RowTitle(title),
-                    if (second.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: Space.hair),
-                        child: Wrap(
-                          spacing: Space.s4,
-                          runSpacing: Space.hair,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: second,
-                        ),
-                      ),
-                    if (found != null && found.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: Space.hair),
-                        child: Text(
-                          found,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
+        child: TapTarget(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: Space.gutter,
+              vertical: Space.s4,
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                lead,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      RowTitle(title),
+                      if (second.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: Space.hair),
+                          child: Wrap(
+                            spacing: Space.s4,
+                            runSpacing: Space.hair,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: second,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                  ],
+                      if (found != null && found.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: Space.hair),
+                          child: Text(
+                            found,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
