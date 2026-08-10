@@ -63,6 +63,18 @@ void main() {
   });
   tearDown(() => store.close());
 
+  /// Gives the test the glass it says it has.
+  ///
+  /// `MediaQuery` alone only tells the widgets what to think; the surface they are laid out on
+  /// stays whatever the test binding started with. That was harmless while nothing between the
+  /// window and the panes took any width — a rail down the side takes some, and a screen that
+  /// claims to be a tablet while being laid out on a phone splits where neither would.
+  void glass(WidgetTester tester, Size size) {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = size;
+    addTearDown(tester.view.reset);
+  }
+
   Widget home({
     Size size = const Size(400, 800),
     Rounds? rounds,
@@ -228,6 +240,36 @@ void main() {
       expect(find.byType(SearchScreen), findsOneWidget);
     });
 
+    testWidgets('a wide screen puts the two down the side instead', (
+      tester,
+    ) async {
+      const wide = Size(1000, 800);
+      glass(tester, wide);
+      await tester.pumpWidget(home(size: wide));
+      await tester.pumpAndSettle();
+
+      // The bottom edge is the furthest point on glass nobody is holding one-handed, so the two
+      // move to the side — and they are still the same two, named.
+      expect(find.byType(NavigationRail), findsOneWidget);
+      expect(find.byType(NavigationBar), findsNothing);
+      expect(find.text(words.tabNow), findsOneWidget);
+      expect(find.text(words.tabSearch), findsOneWidget);
+
+      await tester.tap(find.text(words.tabSearch));
+      await tester.pumpAndSettle();
+      expect(find.byType(SearchScreen), findsOneWidget);
+    });
+
+    testWidgets('a phone keeps them under the thumb', (tester) async {
+      const narrow = Size(400, 800);
+      glass(tester, narrow);
+      await tester.pumpWidget(home(size: narrow));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(NavigationBar), findsOneWidget);
+      expect(find.byType(NavigationRail), findsNothing);
+    });
+
     testWidgets('the settings are opened from the front screen, not a tab', (
       tester,
     ) async {
@@ -349,7 +391,9 @@ void main() {
     testWidgets('with width for two, what is opened sits beside the list', (
       tester,
     ) async {
-      await tester.pumpWidget(home(size: const Size(1000, 800)));
+      const wide = Size(1000, 800);
+      glass(tester, wide);
+      await tester.pumpWidget(home(size: wide));
       await tester.pumpAndSettle();
 
       expect(find.byType(TwoPane), findsWidgets);

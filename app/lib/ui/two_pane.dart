@@ -36,12 +36,32 @@ class TwoPane extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // The list keeps a readable measure and the detail takes the rest — a half-and-half
-          // split gives the list more width than a row of text wants.
-          SizedBox(width: Layout.listPane, child: list),
+          // split gives the list more width than a row of text wants. It grows with the glass
+          // between two bounds rather than staying at one width: fixed, every pixel a wider
+          // screen brings lands on one side of the rule.
+          SizedBox(width: _listWidth(constraints.maxWidth), child: list),
           const VerticalDivider(width: Stroke.rule),
-          Expanded(child: detail ?? placeholder ?? const SizedBox.shrink()),
+          // And the side that takes the rest stops growing where a line of prose stops being
+          // readable, sitting in the middle of what it was given.
+          Expanded(
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: Layout.readable),
+                child: detail ?? placeholder ?? const SizedBox.shrink(),
+              ),
+            ),
+          ),
         ],
       );
     },
   );
+
+  /// A share of the width, held between the narrowest a list of rows reads well at and the widest
+  /// it is worth drawing.
+  static double _listWidth(double available) =>
+      (available * Layout.listPaneShare).clamp(
+        Layout.listPane,
+        Layout.listPaneMax,
+      );
 }

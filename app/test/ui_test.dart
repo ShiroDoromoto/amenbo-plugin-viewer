@@ -331,6 +331,37 @@ void main() {
       expect(find.text('detail'), findsOneWidget);
     });
 
+    testWidgets('the split grows, and the page stops where reading does', (
+      tester,
+    ) async {
+      const list = Key('list');
+      const detail = Key('detail');
+      // The glass itself, not only what the widgets are told about it: the panes are laid out in
+      // the space they are actually given.
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(1200, 800);
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        _sized(
+          const Size(1200, 800),
+          const TwoPane(
+            list: SizedBox.expand(key: list),
+            detail: SizedBox.expand(key: detail),
+          ),
+        ),
+      );
+
+      // A share of the glass rather than one width: fixed, everything a wider screen brings lands
+      // on one side of the rule.
+      expect(
+        tester.getSize(find.byKey(list)).width,
+        1200 * Layout.listPaneShare,
+      );
+      // And the side that took the rest stops at a readable measure instead of running the eye
+      // off the end of every line.
+      expect(tester.getSize(find.byKey(detail)).width, Layout.readable);
+    });
+
     testWidgets(
       'a wide screen shows both, and holds the place when nothing is open',
       (tester) async {
