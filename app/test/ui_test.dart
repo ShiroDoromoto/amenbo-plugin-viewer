@@ -220,31 +220,25 @@ void main() {
   group('time', () {
     test('it counts while counting helps, then names the day', () {
       expect(
-        relativeTime(
-          words,
-          now.subtract(const Duration(seconds: 20)),
-          now: now,
-        ),
+        relativeTime(face, now.subtract(const Duration(seconds: 20)), now: now),
         'just now',
       );
       expect(
-        relativeTime(
-          words,
-          now.subtract(const Duration(minutes: 12)),
-          now: now,
-        ),
+        relativeTime(face, now.subtract(const Duration(minutes: 12)), now: now),
         '12 min ago',
       );
       expect(
-        relativeTime(words, now.subtract(const Duration(hours: 3)), now: now),
+        relativeTime(face, now.subtract(const Duration(hours: 3)), now: now),
         '3 h ago',
       );
       expect(
-        relativeTime(words, DateTime(2026, 8, 8, 14, 2), now: now),
+        relativeTime(face, DateTime(2026, 8, 8, 14, 2), now: now),
         'yesterday 14:02',
       );
-      expect(relativeTime(words, DateTime(2026, 8, 2), now: now), '2 Aug');
-      expect(relativeTime(words, DateTime(2025, 8, 2), now: now), '2 Aug 2025');
+      // The month's name and the order it stands in are the language's, not a key's: English
+      // writes the month first, and every other sheet gets its own order without translating one.
+      expect(relativeTime(face, DateTime(2026, 8, 2), now: now), 'Aug 2');
+      expect(relativeTime(face, DateTime(2025, 8, 2), now: now), 'Aug 2, 2025');
     });
 
     test('"h ago" never outlives the day it was counted from', () {
@@ -252,7 +246,7 @@ void main() {
       // still today.
       expect(
         relativeTime(
-          words,
+          face,
           DateTime(2026, 8, 8, 23, 0),
           now: DateTime(2026, 8, 9, 12, 0),
         ),
@@ -262,7 +256,7 @@ void main() {
       // the question being answered is how fresh it is.
       expect(
         relativeTime(
-          words,
+          face,
           DateTime(2026, 8, 8, 23, 50),
           now: DateTime(2026, 8, 9, 0, 30),
         ),
@@ -270,19 +264,27 @@ void main() {
       );
     });
 
+    test('the clock runs the way the phone was set, not the language', () {
+      final afternoon = DateTime(2026, 8, 9, 14, 2);
+      expect(clockTime(face, afternoon), '14:02');
+      // Left alone, it is the language that answers — and English asks for twelve hours. The gap
+      // before PM is the narrow one the language's own data asks for, not a plain space.
+      expect(clockTime(face12, afternoon), '2:02\u202fPM');
+    });
+
     testWidgets('the exact instant is one long press away', (tester) async {
       await tester.pumpWidget(
-        _wrap(
+        _onA24HourPhone(
           TimeOnHold(
             when: DateTime(2026, 8, 2, 14, 2),
-            child: const Text('2 Aug'),
+            child: const Text('the row'),
           ),
         ),
       );
 
-      await tester.longPress(find.text('2 Aug'));
+      await tester.longPress(find.text('the row'));
       await tester.pumpAndSettle();
-      expect(find.text('2 Aug 2026, 14:02'), findsOneWidget);
+      expect(find.text('Aug 2, 2026, 14:02'), findsOneWidget);
     });
   });
 
@@ -520,6 +522,18 @@ Widget _wrap(Widget child) => MaterialApp(
   supportedLocales: Words.supportedLocales,
   theme: viewerTheme(Brightness.light),
   home: Scaffold(body: Center(child: child)),
+);
+
+/// A phone whose owner set a 24-hour clock. Said out loud, because the default a test would
+/// otherwise get is not a decision anybody made.
+Widget _onA24HourPhone(Widget child) => MaterialApp(
+  localizationsDelegates: Words.localizationsDelegates,
+  supportedLocales: Words.supportedLocales,
+  theme: viewerTheme(Brightness.light),
+  home: MediaQuery(
+    data: const MediaQueryData(alwaysUse24HourFormat: true),
+    child: Scaffold(body: Center(child: child)),
+  ),
 );
 
 Widget _scaled(double scale, Widget child) => MaterialApp(

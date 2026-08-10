@@ -40,6 +40,7 @@ class DecisionRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final words = Words.of(context);
+    final face = TimeFace.of(context);
     final aside = theme.textTheme.labelMedium?.copyWith(
       color: palette(context).textFaint,
       fontWeight: Lettering.normal,
@@ -55,7 +56,7 @@ class DecisionRow extends StatelessWidget {
         line.title,
         ?projectName,
         decisionStatusWords(words, line.status),
-        if (when != null) relativeTime(words, when, now: today),
+        if (when != null) relativeTime(face, when, now: today),
         ?excerpt,
       ].join(', '),
       child: RowSurface(
@@ -74,7 +75,7 @@ class DecisionRow extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           if (when != null)
-            Text(relativeTime(words, when, now: today), style: aside),
+            Text(relativeTime(face, when, now: today), style: aside),
         ],
         excerpt: excerpt,
       ),

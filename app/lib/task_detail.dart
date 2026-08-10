@@ -193,7 +193,11 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         TimeOnHold(
           when: DateTime.parse(task.updatedAt),
           child: Text(
-            relativeTime(words, DateTime.parse(task.updatedAt), now: today),
+            relativeTime(
+              TimeFace.of(context),
+              DateTime.parse(task.updatedAt),
+              now: today,
+            ),
             style: theme.textTheme.labelMedium?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
@@ -202,7 +206,9 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         if (task.dueOn != null) DueMark(task.dueOn!, today: today),
         if (task.startOn != null)
           Text(
-            words.stallStarts(dayLabel(words, task.startOn!, now: today)),
+            words.stallStarts(
+              dayLabel(TimeFace.of(context), task.startOn!, now: today),
+            ),
             style: theme.textTheme.labelMedium?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
@@ -217,7 +223,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     TaskLine task,
     DateTime today,
   ) {
-    final reason = stallReason(words, task, today: today);
+    final reason = stallReason(TimeFace.of(context), task, today: today);
     if (reason == null) return const [];
     return [
       NoticePanel(
@@ -443,7 +449,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                     when: DateTime.parse(one.createdAt),
                     child: Text(
                       relativeTime(
-                        words,
+                        TimeFace.of(context),
                         DateTime.parse(one.createdAt),
                         now: today,
                       ),

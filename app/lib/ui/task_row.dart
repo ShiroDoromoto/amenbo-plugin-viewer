@@ -35,7 +35,8 @@ String countLabel(Words words, Counted counted) =>
 /// and then had nothing to say about why would be the one row on the screen that wastes its
 /// second line — a start day still ahead included, which is a stall nobody has to do anything
 /// about and therefore the easiest one to leave out.
-String? stallReason(Words words, TaskLine line, {required DateTime today}) {
+String? stallReason(TimeFace face, TaskLine line, {required DateTime today}) {
+  final words = face.words;
   final blocker = line.blockedBy;
   if (blocker != null) return words.stallBlockedBy(taskRef(blocker));
   final undecided = line.undecided;
@@ -43,7 +44,7 @@ String? stallReason(Words words, TaskLine line, {required DateTime today}) {
   if (line.draft) return words.stallDraft;
   final start = line.startOn;
   if (start != null && start.compareTo(isoDay(today)) > 0) {
-    return words.stallStarts(dayLabel(words, start, now: today));
+    return words.stallStarts(dayLabel(face, start, now: today));
   }
   if (line.status == 'blocked') return words.stallBlocked;
   return null;
@@ -87,6 +88,7 @@ class TaskRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final words = Words.of(context);
+    final face = TimeFace.of(context);
     // The two voices of the second line. The first says the one thing that decides whether to
     // open the row; the second is context, and is smaller and paler so the eye can pass over it.
     final deciding = theme.textTheme.bodySmall?.copyWith(
@@ -96,7 +98,7 @@ class TaskRow extends StatelessWidget {
       color: palette(context).textFaint,
       fontWeight: Lettering.normal,
     );
-    final reason = stallReason(words, line, today: today);
+    final reason = stallReason(face, line, today: today);
     final moved = movedAt;
 
     final excerpt = line.matchLine?.trim();
@@ -125,7 +127,7 @@ class TaskRow extends StatelessWidget {
         ),
       if (line.assigneeKind == 'ai') Text(words.markAi, style: aside),
       if (moved != null)
-        Text(relativeTime(words, moved, now: today), style: aside),
+        Text(relativeTime(face, moved, now: today), style: aside),
       if (line.comments > 0) Text(words.comments(line.comments), style: aside),
     ];
 
@@ -140,11 +142,11 @@ class TaskRow extends StatelessWidget {
         assigneeKind: line.assigneeKind,
         comments: line.comments,
         due: reason == null && line.dueOn != null
-            ? dueLabel(words, line.dueOn!, today: today)
+            ? dueLabel(face, line.dueOn!, today: today)
             : null,
         stallReason: reason,
         project: projectName,
-        when: moved == null ? null : relativeTime(words, moved, now: today),
+        when: moved == null ? null : relativeTime(face, moved, now: today),
         excerpt: excerpt,
       ),
       child: RowSurface(

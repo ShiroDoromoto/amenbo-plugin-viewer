@@ -462,16 +462,6 @@
     "description": "Yesterday is named rather than counted — nobody converts a count of minutes that large.",
     "placeholders": { "time": { "type": "String" } }
   },
-  "dateDayMonth": "{day} {month}",
-  "@dateDayMonth": {
-    "description": "A day inside this year.",
-    "placeholders": { "day": { "type": "int" }, "month": { "type": "String" } }
-  },
-  "dateWithYear": "{date} {year}",
-  "@dateWithYear": {
-    "description": "A day outside this year.",
-    "placeholders": { "date": { "type": "String" }, "year": { "type": "int" } }
-  },
   "dateAndTime": "{date}, {time}",
   "@dateAndTime": {
     "description": "The whole instant, spelled out — what a long press reveals.",
@@ -481,29 +471,5 @@
   "@dateThenTime": {
     "description": "The clock with its day in front of it, once today has stopped being the answer.",
     "placeholders": { "date": { "type": "String" }, "time": { "type": "String" } }
-  },
-  "monthJanuary": "Jan",
-  "@monthJanuary": { "description": "Month, short. The screens have room for three or four letters." },
-  "monthFebruary": "Feb",
-  "@monthFebruary": { "description": "Month, short." },
-  "monthMarch": "Mar",
-  "@monthMarch": { "description": "Month, short." },
-  "monthApril": "Apr",
-  "@monthApril": { "description": "Month, short." },
-  "monthMay": "May",
-  "@monthMay": { "description": "Month, short." },
-  "monthJune": "Jun",
-  "@monthJune": { "description": "Month, short." },
-  "monthJuly": "Jul",
-  "@monthJuly": { "description": "Month, short." },
-  "monthAugust": "Aug",
-  "@monthAugust": { "description": "Month, short." },
-  "monthSeptember": "Sep",
-  "@monthSeptember": { "description": "Month, short." },
-  "monthOctober": "Oct",
-  "@monthOctober": { "description": "Month, short." },
-  "monthNovember": "Nov",
-  "@monthNovember": { "description": "Month, short." },
-  "monthDecember": "Dec",
-  "@monthDecember": { "description": "Month, short." }
+  }
 }

@@ -97,24 +97,30 @@ void main() {
     // on.
     final today = DateTime(2026, 8, 10, 18, 0);
 
+    // The clock this band writes is the phone's, so which one the phone was set to is part of the
+    // harness rather than whatever a test machine happens to default to.
     Widget band(
       Standing standing, {
       DateTime? taken,
       bool whole = false,
+      bool hours24 = true,
       VoidCallback? onPairAgain,
       VoidCallback? onOpenSettings,
     }) => MaterialApp(
       localizationsDelegates: Words.localizationsDelegates,
       supportedLocales: Words.supportedLocales,
       theme: viewerTheme(Brightness.light),
-      home: Scaffold(
-        body: StateBand(
-          standing: standing,
-          lastTakenAt: taken,
-          whole: whole,
-          onPairAgain: onPairAgain,
-          onOpenSettings: onOpenSettings,
-          clock: () => today,
+      home: MediaQuery(
+        data: MediaQueryData(alwaysUse24HourFormat: hours24),
+        child: Scaffold(
+          body: StateBand(
+            standing: standing,
+            lastTakenAt: taken,
+            whole: whole,
+            onPairAgain: onPairAgain,
+            onOpenSettings: onOpenSettings,
+            clock: () => today,
+          ),
         ),
       ),
     );
@@ -137,6 +143,19 @@ void main() {
       expect(find.byType(TextButton), findsNothing);
     });
 
+    testWidgets('the hour is written the way the phone writes hours', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        band(
+          Standing.offline,
+          taken: DateTime(2026, 8, 10, 12, 34),
+          hours24: false,
+        ),
+      );
+      expect(find.text('Taken 12:34\u202fPM'), findsOneWidget);
+    });
+
     testWidgets('a picture from another day is dated, not just clocked', (
       tester,
     ) async {
@@ -150,12 +169,12 @@ void main() {
       await tester.pumpWidget(
         band(Standing.offline, taken: DateTime(2026, 8, 2, 9, 14)),
       );
-      expect(find.text('Taken 2 Aug 09:14'), findsOneWidget);
+      expect(find.text('Taken Aug 2 09:14'), findsOneWidget);
 
       await tester.pumpWidget(
         band(Standing.offline, taken: DateTime(2025, 12, 30, 9, 14)),
       );
-      expect(find.text('Taken 30 Dec 2025 09:14'), findsOneWidget);
+      expect(find.text('Taken Dec 30, 2025 09:14'), findsOneWidget);
     });
 
     testWidgets('a key that does not open offers the way out', (tester) async {

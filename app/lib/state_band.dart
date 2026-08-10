@@ -170,8 +170,11 @@ class StateBand extends StatelessWidget {
   /// The day comes with it once it is not today's. This line is the only thing a phone with no
   /// signal has to date what it is reading by, and out of signal is exactly where a picture stops
   /// being hours old and starts being days old.
-  static String takenAt(Words words, DateTime when, {required DateTime now}) =>
-      words.takenAt(clockOnDay(words, when, now: now));
+  static String takenAt(
+    TimeFace face,
+    DateTime when, {
+    required DateTime now,
+  }) => face.words.takenAt(clockOnDay(face, when, now: now));
 
   @override
   Widget build(BuildContext context) {
@@ -228,7 +231,7 @@ class StateBand extends StatelessWidget {
           TimeOnHold(
             when: taken,
             child: Text(
-              takenAt(words, taken, now: clock()),
+              takenAt(TimeFace.of(context), taken, now: clock()),
               style: theme.textTheme.bodySmall?.copyWith(color: under),
             ),
           ),

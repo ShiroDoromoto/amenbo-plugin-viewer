@@ -121,10 +121,7 @@ void main() {
           .bundle(Bundle.stalled, today: today)
           .rows
           .singleWhere((row) => row.id == 5);
-      expect(
-        find.text(stallReason(words, line, today: today)!),
-        findsOneWidget,
-      );
+      expect(find.text(stallReason(face, line, today: today)!), findsOneWidget);
     });
 
     testWidgets('a day that has not come is a reason like any other', (
@@ -156,7 +153,7 @@ void main() {
       await tester.pumpWidget(screen());
 
       expect(
-        find.text(relativeTime(words, DateTime.parse(moved), now: today)),
+        find.text(relativeTime(face, DateTime.parse(moved), now: today)),
         findsOneWidget,
       );
     });

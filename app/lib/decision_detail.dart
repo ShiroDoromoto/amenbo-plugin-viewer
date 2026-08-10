@@ -180,7 +180,7 @@ class _DecisionDetailScreenState extends State<DecisionDetailScreen> {
           TimeOnHold(
             when: when,
             child: Text(
-              relativeTime(words, when, now: today),
+              relativeTime(TimeFace.of(context), when, now: today),
               style: theme.textTheme.labelMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -359,7 +359,7 @@ class _DecisionDetailScreenState extends State<DecisionDetailScreen> {
                     when: DateTime.parse(one.createdAt),
                     child: Text(
                       relativeTime(
-                        words,
+                        TimeFace.of(context),
                         DateTime.parse(one.createdAt),
                         now: today,
                       ),
