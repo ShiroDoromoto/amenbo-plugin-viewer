@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The ground the app stands on (`Ground.bg` in lib/ui/tokens.dart). The window wears it
+         before Flutter's first frame and behind every frame after, so a value that drifts from
+         the token shows up as a flash at launch. -->
+    <color name="launch_background">#F7F6F3</color>
+
+    <!-- The tile the mark sits on. This one is the mark's own off-white, not the app's ground:
+         an icon is seen against the phone's wallpaper, not against the app. -->
+    <color name="ic_launcher_background">#F3F2EE</color>
+</resources>

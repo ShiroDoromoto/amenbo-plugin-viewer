@@ -1,12 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Modify this file to customize your launch splash screen -->
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:drawable="@android:color/white" />
+<!-- The launch screen up to Android 11: the ground, and the mark on it. Android 12 and later
+     draw their own splash instead, from the two lines in values-v31/styles.xml.
 
-    <!-- You can insert your own image assets here -->
-    <!-- <item>
-        <bitmap
-            android:gravity="center"
-            android:src="@mipmap/launch_image" />
-    </item> -->
+     The mark is the adaptive icon's foreground layer, which already keeps itself inside the
+     middle two thirds of its square — so the box below is 192dp and the strider comes out
+     at 128dp. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/launch_background" />
+    <item
+        android:width="192dp"
+        android:height="192dp"
+        android:drawable="@mipmap/ic_launcher_foreground"
+        android:gravity="center" />
 </layer-list>
