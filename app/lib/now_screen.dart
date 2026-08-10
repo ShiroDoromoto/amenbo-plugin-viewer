@@ -28,6 +28,7 @@ import 'store/backlog_queries.dart';
 import 'store/backlog_store.dart';
 import 'ui/task_row.dart';
 import 'ui/theme.dart';
+import 'ui/time.dart';
 import 'ui/tokens.dart';
 import 'ui/touch.dart';
 
@@ -144,6 +145,18 @@ class NowScreen extends StatefulWidget {
 
   static String arrived(Words words, Counted count) =>
       words.newActivity(countLabel(words, count));
+
+  /// The clock, not "3 h ago".
+  ///
+  /// This is the one place the app spells a time out. What the person is judging here is how old
+  /// what they are reading is, and a phone whose clock is wrong can still say the hour it took
+  /// something at — where "3 h ago" would be wrong by exactly the amount the clock is out.
+  ///
+  /// The day comes with it once it is not today's. This line is the only thing a phone with no
+  /// signal has to date what it is reading by, and out of signal is exactly where a picture stops
+  /// being hours old and starts being days old.
+  static String takenAt(Words words, DateTime when, {required DateTime now}) =>
+      words.takenAt(clockOnDay(words, when, now: now));
 
   static String moved(Words words, Moved moved, Counted count) =>
       '${movedHeading(words, moved)} ${countLabel(words, count)}';
@@ -361,14 +374,9 @@ class _NowScreenState extends State<NowScreen> with WidgetsBindingObserver {
       appBar: AppBar(
         title: _title(),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: words.refresh,
-            onPressed: _pull,
-          ),
           // The whole way to the settings: three choices opened a handful of times a year, which
-          // is not what a third of the bottom bar is for. Last of the two, where a screen's
-          // way out to what is behind it is looked for.
+          // is not what a third of the bottom bar is for. The corner where a screen's way out to
+          // what is behind it is looked for.
           if (widget.onOpenSettings != null)
             IconButton(
               icon: const Icon(Icons.settings_outlined),
@@ -391,7 +399,7 @@ class _NowScreenState extends State<NowScreen> with WidgetsBindingObserver {
           RefreshIndicator(
             onRefresh: _pull,
             child: _empty
-                ? _nothing(standing)
+                ? _nothing(words, standing)
                 : _scroll(words, today, standing),
           ),
           if (_arrived != null)
@@ -455,25 +463,63 @@ class _NowScreenState extends State<NowScreen> with WidgetsBindingObserver {
   /// A device that has never had anything. There is no picture for a band to sit above, so the
   /// same words take the screen — which is also the only time this app shows an empty list, and it
   /// does not show one even then.
-  Widget _nothing(Standing standing) => ListView(
+  Widget _nothing(Words words, Standing standing) => ListView(
     // Still a scroll, or there is nothing to pull on.
     physics: const AlwaysScrollableScrollPhysics(),
-    children: [_band(standing, whole: true)],
+    children: [_takeLine(words), _band(standing, whole: true)],
   );
 
   Widget _band(Standing standing, {bool whole = false}) => StateBand(
     standing: standing,
-    lastTakenAt: _takenAt,
     onPairAgain: widget.onPairAgain,
     onOpenSettings: widget.onOpenSettings,
     whole: whole,
-    clock: widget.clock,
   );
+
+  /// How old what is being read is, and the way to make it newer.
+  ///
+  /// The two are one question asked in two halves — "how old is this" and "can I have a newer
+  /// one" — so they are read together instead of the answer being a bare arrow in a corner that
+  /// says nothing about what pressing it does.
+  ///
+  /// The line is here whether or not a round has ever finished. The pull is the same fetch and
+  /// costs nothing to keep, but it cannot be seen, and an operation that is only discovered by
+  /// trying a gesture on it is one most people never have.
+  Widget _takeLine(Words words) {
+    final theme = Theme.of(context);
+    final taken = _takenAt;
+    return Padding(
+      padding: const EdgeInsets.only(left: Space.gutter, right: Space.s2),
+      child: Row(
+        children: [
+          if (taken != null)
+            Expanded(
+              child: TimeOnHold(
+                when: taken,
+                child: Text(
+                  NowScreen.takenAt(words, taken, now: widget.clock()),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            )
+          else
+            const Spacer(),
+          // Nothing to press on a phone with no route to take: the screen still draws what is on
+          // the device, and a button that quietly did nothing would be worse than no button.
+          if (widget.take != null)
+            TextButton(onPressed: _pull, child: Text(words.refresh)),
+        ],
+      ),
+    );
+  }
 
   Widget _scroll(Words words, DateTime today, Standing standing) {
     final rows = <Widget>[
       // Above the card and above the bundles: what is being read is only worth reading once the
-      // person knows how old it is and why.
+      // person knows how old it is — and, where there is something in the way, why.
+      _takeLine(words),
       _band(standing),
       // Then the card, because the person who opens this in bed is asking what happened overnight
       // before they are asking anything else.

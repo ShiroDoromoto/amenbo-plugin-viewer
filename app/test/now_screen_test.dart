@@ -20,6 +20,11 @@ import 'words_fixture.dart';
 /// One day for the whole file, so a row and the heading over it cannot disagree about it.
 final today = DateTime(2026, 8, 9, 12);
 
+/// A round that finished at a wall-clock moment, in the shape the store keeps it in. Written from
+/// a local time rather than a literal, so what the screen says is the hour that was passed in
+/// wherever the test is run.
+String stamp(DateTime when) => when.toUtc().toIso8601String();
+
 void main() {
   late BacklogStore store;
   late Arrivals arrivals;
@@ -59,6 +64,61 @@ void main() {
       onSince: sinced.add,
     ),
   );
+
+  group('how old this is, and the way to a newer one', () {
+    testWidgets('the two halves are read together, in words', (tester) async {
+      var takes = 0;
+      store.setMeta(MetaKey.fetchedAt, stamp(DateTime(2026, 8, 9, 12, 34)));
+      await tester.pumpWidget(screen(take: () async => takes++));
+
+      // The clock, not "3 h ago": a phone whose clock is out can still name the hour.
+      expect(find.text('Taken 12:34'), findsOneWidget);
+      // And what to do about it said in words rather than drawn as an arrow, so it can be read
+      // before it is pressed.
+      await tester.tap(find.widgetWithText(TextButton, words.refresh));
+      await tester.pumpAndSettle();
+      expect(takes, 1);
+    });
+
+    testWidgets('a picture from another day is dated, not just clocked', (
+      tester,
+    ) async {
+      // The line is all a phone out of signal has to judge what it is reading by, and an hour on
+      // its own reads as this morning's however many nights ago it was taken.
+      for (final (taken, said) in [
+        (DateTime(2026, 8, 8, 9, 14), 'Taken yesterday 09:14'),
+        (DateTime(2026, 8, 2, 9, 14), 'Taken 2 Aug 09:14'),
+        (DateTime(2025, 12, 30, 9, 14), 'Taken 30 Dec 2025 09:14'),
+      ]) {
+        store.setMeta(MetaKey.fetchedAt, stamp(taken));
+        await tester.pumpWidget(screen());
+        await tester.pumpAndSettle();
+        expect(find.text(said), findsOneWidget);
+        // Torn down between the rounds: the screen reads the stamp when it is built, so a second
+        // one built over the first would still be showing the first one's hour.
+        await tester.pumpWidget(const SizedBox.shrink());
+      }
+    });
+
+    testWidgets('the line is there before any round has finished', (
+      tester,
+    ) async {
+      await tester.pumpWidget(screen(take: () async {}));
+
+      // Nothing to date yet, and the way to go and get something is still on the screen — an
+      // operation nobody can find until it has already happened is one nobody finds.
+      expect(find.textContaining('Taken'), findsNothing);
+      expect(find.widgetWithText(TextButton, words.refresh), findsOneWidget);
+    });
+
+    testWidgets('a phone with no route to take is offered nothing to press', (
+      tester,
+    ) async {
+      await tester.pumpWidget(screen());
+
+      expect(find.widgetWithText(TextButton, words.refresh), findsNothing);
+    });
+  });
 
   group('how things stand sits above the picture, never in place of it', () {
     testWidgets('offline keeps every row readable', (tester) async {
@@ -422,7 +482,7 @@ void main() {
         ),
       );
 
-      await tester.tap(find.byTooltip(words.refresh));
+      await tester.tap(find.widgetWithText(TextButton, words.refresh));
       await tester.pumpAndSettle();
 
       expect(takes, 1);
@@ -438,7 +498,7 @@ void main() {
       ]);
       await tester.pumpWidget(screen(take: () async => throw Exception('off')));
 
-      await tester.tap(find.byTooltip(words.refresh));
+      await tester.tap(find.widgetWithText(TextButton, words.refresh));
       await tester.pumpAndSettle();
 
       expect(find.text('のこる'), findsOneWidget);

@@ -34,7 +34,7 @@
   "chooseProject": "Choose a project",
   "@chooseProject": { "description": "What the project menu is for." },
   "refresh": "Refresh",
-  "@refresh": { "description": "Go and look now." },
+  "@refresh": { "description": "The button at the top of the front screen: go and look now. A verb the person is asking for, not a name for the screen." },
   "more": "{count} more",
   "@more": {
     "description": "The rest of a bundle, past the window the front screen holds. The count arrives already capped, so it can read as 999+.",
@@ -83,7 +83,7 @@
   "@bandOpenSettings": { "description": "The band's button, where the phone's own settings are the way on." },
   "takenAt": "Taken {when}",
   "@takenAt": {
-    "description": "How old the picture underneath the band is. The clock, not a count of hours.",
+    "description": "How old what is being read is, said at the top of the front screen beside the way to fetch a newer one. The clock, not a count of hours.",
     "placeholders": { "when": { "type": "String" } }
   },
 
