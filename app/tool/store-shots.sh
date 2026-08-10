@@ -53,7 +53,7 @@ usage() {
 cd "$(dirname "$0")/.."
 
 # Which screen is standing still, or nothing at all. Written by the app, read from outside.
-ready_ios() { cat "$CONTAINER/tmp/shot-ready.txt" 2>/dev/null || true; }
+ready_ios() { cat "$CONTAINER/Library/Caches/shot-ready.txt" 2>/dev/null || true; }
 ready_android() { emu shell run-as "$BUNDLE" cat cache/shot-ready.txt 2>/dev/null || true; }
 
 # adb, aimed at the emulator and never at whatever else is on the cable.
@@ -87,7 +87,7 @@ take() {
 }
 
 shoot_ios() { xcrun simctl io "$SIM" screenshot --type png "$1" >/dev/null; }
-clear_ios() { rm -f "$CONTAINER/tmp/shot-ready.txt"; }
+clear_ios() { rm -f "$CONTAINER/Library/Caches/shot-ready.txt"; }
 
 shoot_android() { emu exec-out screencap -p > "$1"; }
 clear_android() { emu shell run-as "$BUNDLE" rm cache/shot-ready.txt; }
@@ -105,7 +105,7 @@ ios)
   flutter build ios --simulator --debug -t lib/shot_screen.dart
   xcrun simctl install "$SIM" build/ios/iphonesimulator/Runner.app
   CONTAINER=$(xcrun simctl get_app_container "$SIM" "$BUNDLE" data)
-  rm -f "$CONTAINER/tmp/shot-ready.txt"
+  rm -f "$CONTAINER/Library/Caches/shot-ready.txt"
   xcrun simctl terminate "$SIM" "$BUNDLE" 2>/dev/null || true
   xcrun simctl launch "$SIM" "$BUNDLE" >/dev/null
   ;;

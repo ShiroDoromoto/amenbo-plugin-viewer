@@ -58,9 +58,9 @@ enum Shot {
 /// Where the app says which screen is standing still.
 ///
 /// The directory is asked for rather than taken from `Directory.systemTemp`, which is not the
-/// same place on both systems: this is the app's own temporary directory either way — `tmp/`
-/// inside the container on iOS, `cache/` inside the data directory on Android — and each is a
-/// place the host has a way to reach.
+/// same place on both systems: this is the app's own temporary directory either way —
+/// `Library/Caches/` inside the container on iOS, `cache/` inside the data directory on Android —
+/// and each is a place the host has a way to reach. Neither one is `tmp/`.
 const readyFileName = 'shot-ready.txt';
 
 /// Long enough for the screen to arrive at what it settles into — a debug build warms up, and a
