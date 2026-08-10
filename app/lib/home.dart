@@ -16,13 +16,15 @@
 /// the phone holds, and everything downstream of it — the count, the pill, the band — is handed the
 /// same report either way.
 ///
-/// **Where the ways out go.** Two tabs across the bottom, because the thumb of a hand holding a
-/// phone reaches the bottom half and a menu at the top does not exist for someone standing on a
-/// train. That reach is worth spending on what is read every day, and settings are three choices
-/// opened a handful of times a year — so they sit at the top of the front screen instead, one tap
-/// further away and out of the way of the two that are not. Everything that opens a list opens the
-/// one list face; everything that opens a task opens the one detail. Where there is width for it,
-/// what was opened sits beside the list it was opened from rather than on top of it.
+/// **Where the ways out go.** Two of them, across the bottom of a phone, because the thumb of a
+/// hand holding one reaches the bottom half and a menu at the top does not exist for someone
+/// standing on a train. That reach is worth spending on what is read every day, and settings are
+/// three choices opened a handful of times a year — so they sit at the top of the front screen
+/// instead, one tap further away and out of the way of the two that are not. On glass nobody is
+/// holding one-handed the same two move to a rail down the side, where the bottom edge would be
+/// the furthest point on the screen. Everything that opens a list opens the one list face;
+/// everything that opens a task opens the one detail. Where there is width for it, what was opened
+/// sits beside the list it was opened from rather than on top of it.
 library;
 
 import 'package:flutter/material.dart';
@@ -441,59 +443,106 @@ class _HomeShellState extends State<HomeShell> {
     ),
   );
 
+  /// Moving between the two ways out.
+  ///
+  /// The same handler whichever side of the screen the destinations were drawn on: what a tab does
+  /// is not a fact about where it sits.
+  void _goTo(int chosen) => setState(() {
+    _tab = chosen;
+    // What was open belonged to the list being left.
+    _besideTaskId = null;
+    if (chosen == 1) _visits += 1;
+  });
+
   @override
   Widget build(BuildContext context) {
     final words = Words.of(context);
+    // The bottom is where a thumb reaches on a phone held in one hand, and nowhere else. On a
+    // tablet, or a phone turned sideways, that hand is not holding it and the bottom edge is the
+    // furthest point on the glass — so the ways out move to the side the same width the list and
+    // the detail split at, both being the same judgement about how it is being held.
+    final wide = _wide;
+    // The two keep their state while the person moves between them — the front screen most of
+    // all, which counts from the moment the app came to the front and would count from a new one
+    // every time it was rebuilt.
+    final tabs = IndexedStack(
+      index: _tab,
+      children: [
+        _pane(
+          NowScreen(
+            store: widget.store,
+            clock: widget.clock,
+            doneWindow: widget.settings.value.doneWindow,
+            take: widget.take,
+            arrivals: widget.arrivals,
+            failure: widget.failure,
+            iCloudAvailable: widget.iCloudAvailable,
+            onOpen: (line) => _open(line.id),
+            onMore: _list,
+            onSince: _list,
+            onPairAgain: widget.onPairAgain,
+            onOpenSettings: _openSettings,
+          ),
+        ),
+        KeyedSubtree(
+          key: ValueKey(_visits),
+          child: _pane(_searchFace(const TaskQuery(), opens: _open)),
+        ),
+      ],
+    );
+
     return Scaffold(
-      // The two keep their state while the person moves between them — the front screen most of
-      // all, which counts from the moment the app came to the front and would count from a new one
-      // every time it was rebuilt.
-      body: IndexedStack(
-        index: _tab,
-        children: [
-          _pane(
-            NowScreen(
-              store: widget.store,
-              clock: widget.clock,
-              doneWindow: widget.settings.value.doneWindow,
-              take: widget.take,
-              arrivals: widget.arrivals,
-              failure: widget.failure,
-              iCloudAvailable: widget.iCloudAvailable,
-              onOpen: (line) => _open(line.id),
-              onMore: _list,
-              onSince: _list,
-              onPairAgain: widget.onPairAgain,
-              onOpenSettings: _openSettings,
-            ),
-          ),
-          KeyedSubtree(
-            key: ValueKey(_visits),
-            child: _pane(_searchFace(const TaskQuery(), opens: _open)),
-          ),
-        ],
-      ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _tab,
-        onDestinationSelected: (chosen) => setState(() {
-          _tab = chosen;
-          // What was open belonged to the list being left.
-          _besideTaskId = null;
-          if (chosen == 1) _visits += 1;
-        }),
-        destinations: [
-          NavigationDestination(
-            icon: const Icon(Icons.list_alt_outlined),
-            selectedIcon: const Icon(Icons.list_alt),
-            label: words.tabNow,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.search_outlined),
-            selectedIcon: const Icon(Icons.search),
-            label: words.tabSearch,
-          ),
-        ],
-      ),
+      body: wide
+          ? Row(
+              children: [
+                _rail(words),
+                const VerticalDivider(width: Stroke.rule),
+                Expanded(child: tabs),
+              ],
+            )
+          : tabs,
+      bottomNavigationBar: wide ? null : _bar(words),
     );
   }
+
+  /// The two ways out, down the side.
+  ///
+  /// The labels stay under the icons rather than being shown for the chosen one alone: a list icon
+  /// and a magnifying glass are not two things anybody reads at a glance, and a way out nobody can
+  /// name is one they find by pressing it.
+  Widget _rail(Words words) => NavigationRail(
+    selectedIndex: _tab,
+    onDestinationSelected: _goTo,
+    labelType: NavigationRailLabelType.all,
+    destinations: [
+      NavigationRailDestination(
+        icon: const Icon(Icons.list_alt_outlined),
+        selectedIcon: const Icon(Icons.list_alt),
+        label: Text(words.tabNow),
+      ),
+      NavigationRailDestination(
+        icon: const Icon(Icons.search_outlined),
+        selectedIcon: const Icon(Icons.search),
+        label: Text(words.tabSearch),
+      ),
+    ],
+  );
+
+  /// The same two, across the bottom, where a thumb is what reaches them.
+  Widget _bar(Words words) => NavigationBar(
+    selectedIndex: _tab,
+    onDestinationSelected: _goTo,
+    destinations: [
+      NavigationDestination(
+        icon: const Icon(Icons.list_alt_outlined),
+        selectedIcon: const Icon(Icons.list_alt),
+        label: words.tabNow,
+      ),
+      NavigationDestination(
+        icon: const Icon(Icons.search_outlined),
+        selectedIcon: const Icon(Icons.search),
+        label: words.tabSearch,
+      ),
+    ],
+  );
 }

@@ -52,10 +52,24 @@ abstract final class Layout {
   /// for the same machine held the other way.
   static const twoPane = 720.0;
 
-  /// The list's width once there is room to show a detail beside it. It keeps a readable measure
-  /// and the detail takes the rest — a half-and-half split gives the list more width than a row of
-  /// text wants.
+  /// The narrowest the list is drawn at once there is room to show a detail beside it. It keeps a
+  /// readable measure and the detail takes the rest — a half-and-half split gives the list more
+  /// width than a row of text wants.
   static const listPane = 360.0;
+
+  /// The widest. Past it, more width would only stretch the titles: a row is read by scanning down
+  /// its left edge, and the far end of a very long line is not where the eye goes.
+  static const listPaneMax = 460.0;
+
+  /// The share of a wide screen the list takes between those two. A third leaves the detail the
+  /// two-thirds a page of prose wants, and it is what keeps the split growing with the glass
+  /// instead of putting every extra pixel on one side.
+  static const listPaneShare = 1 / 3;
+
+  /// The widest a page of prose is drawn at. Past it a line runs long enough that the eye loses
+  /// which row it is coming back to, so the page stops growing and sits in the middle of what it
+  /// was given.
+  static const readable = 760.0;
 
   /// The column a detail's link rows put their lead-in word in, so the refs beside them line up.
   static const leadColumn = 110.0;
