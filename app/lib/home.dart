@@ -16,11 +16,13 @@
 /// the phone holds, and everything downstream of it — the count, the pill, the band — is handed the
 /// same report either way.
 ///
-/// **Where the ways out go.** Three tabs across the bottom, because the thumb of a hand holding a
+/// **Where the ways out go.** Two tabs across the bottom, because the thumb of a hand holding a
 /// phone reaches the bottom half and a menu at the top does not exist for someone standing on a
-/// train. Everything that opens a list opens the one list face; everything that opens a task opens
-/// the one detail. Where there is width for it, what was opened sits beside the list it was
-/// opened from rather than on top of it.
+/// train. That reach is worth spending on what is read every day, and settings are three choices
+/// opened a handful of times a year — so they sit at the top of the front screen instead, one tap
+/// further away and out of the way of the two that are not. Everything that opens a list opens the
+/// one list face; everything that opens a task opens the one detail. Where there is width for it,
+/// what was opened sits beside the list it was opened from rather than on top of it.
 library;
 
 import 'package:flutter/material.dart';
@@ -287,7 +289,7 @@ class _ViewerHomeState extends State<ViewerHome> with WidgetsBindingObserver {
   }
 }
 
-/// The three screens, and the destinations they share.
+/// The two screens, and the destinations they share.
 class HomeShell extends StatefulWidget {
   const HomeShell({
     super.key,
@@ -358,6 +360,22 @@ class _HomeShellState extends State<HomeShell> {
     MaterialPageRoute(builder: (_) => _searchFace(narrowing, opens: _push)),
   );
 
+  /// The settings, from the top of the front screen. Pushed like everything else that is opened
+  /// from a tab rather than being one — and what comes back is whether the phone's copy was erased
+  /// two screens in, which is the root's news, not this shell's.
+  Future<void> _openSettings() async {
+    final erased = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => SettingsScreen(
+          settings: widget.settings,
+          connection: widget.connection,
+          appName: widget.appName,
+        ),
+      ),
+    );
+    if (erased == true) widget.onErased?.call();
+  }
+
   /// A decision, from a task that links one or from the other tab of the search face.
   ///
   /// Always pushed, whatever the width: what it was opened from is a detail as often as a list,
@@ -427,7 +445,7 @@ class _HomeShellState extends State<HomeShell> {
   Widget build(BuildContext context) {
     final words = Words.of(context);
     return Scaffold(
-      // The three keep their state while the person moves between them — the front screen most of
+      // The two keep their state while the person moves between them — the front screen most of
       // all, which counts from the moment the app came to the front and would count from a new one
       // every time it was rebuilt.
       body: IndexedStack(
@@ -446,18 +464,12 @@ class _HomeShellState extends State<HomeShell> {
               onMore: _list,
               onSince: _list,
               onPairAgain: widget.onPairAgain,
-              onOpenSettings: () => setState(() => _tab = 2),
+              onOpenSettings: _openSettings,
             ),
           ),
           KeyedSubtree(
             key: ValueKey(_visits),
             child: _pane(_searchFace(const TaskQuery(), opens: _open)),
-          ),
-          SettingsScreen(
-            settings: widget.settings,
-            connection: widget.connection,
-            appName: widget.appName,
-            onErased: widget.onErased,
           ),
         ],
       ),
@@ -479,11 +491,6 @@ class _HomeShellState extends State<HomeShell> {
             icon: const Icon(Icons.search_outlined),
             selectedIcon: const Icon(Icons.search),
             label: words.tabSearch,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.settings_outlined),
-            selectedIcon: const Icon(Icons.settings),
-            label: words.tabSettings,
           ),
         ],
       ),

@@ -200,7 +200,7 @@ void main() {
     });
   });
 
-  group('the three tabs', () {
+  group('the two tabs', () {
     setUp(() async {
       await const PairingStore().save(aPairing);
       store.applyPage([
@@ -215,20 +215,33 @@ void main() {
       expect(find.byType(NowScreen), findsOneWidget);
       expect(find.text(words.tabNow), findsOneWidget);
       expect(find.text(words.tabSearch), findsOneWidget);
-      expect(find.text(words.tabSettings), findsOneWidget);
+      // The bottom bar is the thumb's, and it is spent on the two things read every day.
+      expect(find.byType(NavigationDestination), findsNWidgets(2));
     });
 
     testWidgets('each destination is one press away', (tester) async {
       await tester.pumpWidget(home());
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text(words.tabSettings));
-      await tester.pumpAndSettle();
-      expect(find.byType(SettingsScreen), findsOneWidget);
-
       await tester.tap(find.text(words.tabSearch));
       await tester.pumpAndSettle();
       expect(find.byType(SearchScreen), findsOneWidget);
+    });
+
+    testWidgets('the settings are opened from the front screen, not a tab', (
+      tester,
+    ) async {
+      await tester.pumpWidget(home());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip(words.settingsTitle));
+      await tester.pumpAndSettle();
+
+      // Pushed, so the way back is the one every other pushed screen has.
+      expect(find.byType(SettingsScreen), findsOneWidget);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(find.byType(NowScreen), findsOneWidget);
     });
 
     testWidgets('search starts from everything, every time it is arrived at', (

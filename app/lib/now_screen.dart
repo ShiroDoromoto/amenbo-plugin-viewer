@@ -366,6 +366,15 @@ class _NowScreenState extends State<NowScreen> with WidgetsBindingObserver {
             tooltip: words.refresh,
             onPressed: _pull,
           ),
+          // The whole way to the settings: three choices opened a handful of times a year, which
+          // is not what a third of the bottom bar is for. Last of the two, where a screen's
+          // way out to what is behind it is looked for.
+          if (widget.onOpenSettings != null)
+            IconButton(
+              icon: const Icon(Icons.settings_outlined),
+              tooltip: words.settingsTitle,
+              onPressed: widget.onOpenSettings,
+            ),
         ],
         // While a fetch runs, a line and nothing else. A spinner over the list, or a skeleton in
         // place of it, would take away the old picture — which is the correct thing to be reading
