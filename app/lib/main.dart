@@ -17,6 +17,7 @@ import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 
 import 'home.dart';
+import 'l10n/language.dart';
 import 'l10n/words.dart';
 import 'settings.dart';
 import 'store/backlog_store.dart';
@@ -75,6 +76,9 @@ class AmenboViewerApp extends StatelessWidget {
         // scroll bar's labels — come out of the same choice of language.
         localizationsDelegates: Words.localizationsDelegates,
         supportedLocales: Words.supportedLocales,
+        // Which of them, decided here rather than left to Flutter's own matching: Chinese and
+        // Portuguese need an answer the phone's tags do not spell out.
+        localeListResolutionCallback: languageFor,
         theme: viewerTheme(Brightness.light),
         darkTheme: viewerTheme(Brightness.dark),
         themeMode: settings.value.appearance.themeMode,
