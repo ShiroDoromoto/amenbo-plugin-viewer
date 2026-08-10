@@ -93,34 +93,21 @@ void main() {
   });
 
   group('the band itself', () {
-    // A fixed today, so a line that names a day says the same thing whatever day the test is run
-    // on.
-    final today = DateTime(2026, 8, 10, 18, 0);
-
-    // The clock this band writes is the phone's, so which one the phone was set to is part of the
-    // harness rather than whatever a test machine happens to default to.
     Widget band(
       Standing standing, {
-      DateTime? taken,
       bool whole = false,
-      bool hours24 = true,
       VoidCallback? onPairAgain,
       VoidCallback? onOpenSettings,
     }) => MaterialApp(
       localizationsDelegates: Words.localizationsDelegates,
       supportedLocales: Words.supportedLocales,
       theme: viewerTheme(Brightness.light),
-      home: MediaQuery(
-        data: MediaQueryData(alwaysUse24HourFormat: hours24),
-        child: Scaffold(
-          body: StateBand(
-            standing: standing,
-            lastTakenAt: taken,
-            whole: whole,
-            onPairAgain: onPairAgain,
-            onOpenSettings: onOpenSettings,
-            clock: () => today,
-          ),
+      home: Scaffold(
+        body: StateBand(
+          standing: standing,
+          whole: whole,
+          onPairAgain: onPairAgain,
+          onOpenSettings: onOpenSettings,
         ),
       ),
     );
@@ -130,51 +117,14 @@ void main() {
       expect(find.byType(Text), findsNothing);
     });
 
-    testWidgets('offline says when the picture under it was taken', (
-      tester,
-    ) async {
-      final taken = DateTime(2026, 8, 10, 12, 34);
-      await tester.pumpWidget(band(Standing.offline, taken: taken));
+    testWidgets('offline is said without a retry to press', (tester) async {
+      await tester.pumpWidget(band(Standing.offline));
 
       expect(find.text(standingWords(words, Standing.offline)), findsOneWidget);
-      // The clock, not "3 h ago": a phone whose clock is out can still name the hour.
-      expect(find.text('Taken 12:34'), findsOneWidget);
-      // No dialog, no retry to press — another round happens on its own.
+      // Nothing to press: the round the person could ask for is on the front screen above this,
+      // and another one happens on its own the moment it can.
       expect(find.byType(TextButton), findsNothing);
-    });
-
-    testWidgets('the hour is written the way the phone writes hours', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        band(
-          Standing.offline,
-          taken: DateTime(2026, 8, 10, 12, 34),
-          hours24: false,
-        ),
-      );
-      expect(find.text('Taken 12:34\u202fPM'), findsOneWidget);
-    });
-
-    testWidgets('a picture from another day is dated, not just clocked', (
-      tester,
-    ) async {
-      // The line is all a phone out of signal has to judge what it is reading by, and an hour on
-      // its own reads as this morning's however many nights ago it was taken.
-      await tester.pumpWidget(
-        band(Standing.offline, taken: DateTime(2026, 8, 9, 9, 14)),
-      );
-      expect(find.text('Taken yesterday 09:14'), findsOneWidget);
-
-      await tester.pumpWidget(
-        band(Standing.offline, taken: DateTime(2026, 8, 2, 9, 14)),
-      );
-      expect(find.text('Taken Aug 2 09:14'), findsOneWidget);
-
-      await tester.pumpWidget(
-        band(Standing.offline, taken: DateTime(2025, 12, 30, 9, 14)),
-      );
-      expect(find.text('Taken Dec 30, 2025 09:14'), findsOneWidget);
+      expect(find.byType(FilledButton), findsNothing);
     });
 
     testWidgets('a key that does not open offers the way out', (tester) async {
@@ -284,7 +234,6 @@ void main() {
                   body: SingleChildScrollView(
                     child: StateBand(
                       standing: standing,
-                      lastTakenAt: DateTime(2026, 8, 9, 12, 34),
                       onPairAgain: () {},
                       onOpenSettings: () {},
                     ),

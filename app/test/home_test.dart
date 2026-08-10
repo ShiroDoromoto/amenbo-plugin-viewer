@@ -290,8 +290,14 @@ void main() {
       await tester.pumpWidget(home());
       await tester.pumpAndSettle();
 
-      await tester.scrollUntilVisible(find.text(NowScreen.more(words, 2)), 200);
-      await tester.tap(find.text(NowScreen.more(words, 2)));
+      final rest = find.text(NowScreen.more(words, 2));
+      await tester.scrollUntilVisible(rest, 200);
+      // Settled before it is pressed: a scroll still coasting puts the row somewhere other than
+      // where it was found.
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(rest);
+      await tester.pumpAndSettle();
+      await tester.tap(rest);
       await tester.pumpAndSettle();
 
       expect(find.byType(SearchScreen), findsOneWidget);
@@ -430,7 +436,7 @@ void main() {
       expect(round.ran, isEmpty);
 
       // The thumb still fetches: what the setting turns off is the app going on its own.
-      await tester.tap(find.byTooltip(words.refresh));
+      await tester.tap(find.widgetWithText(TextButton, words.refresh));
       await tester.pumpAndSettle();
       expect(round.ran, hasLength(1));
     });
@@ -533,7 +539,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(round.ran, isEmpty);
 
-      await tester.tap(find.byTooltip(words.refresh));
+      await tester.tap(find.widgetWithText(TextButton, words.refresh));
       await tester.pumpAndSettle();
 
       expect(round.ran, hasLength(1));
