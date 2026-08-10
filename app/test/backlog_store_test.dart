@@ -33,10 +33,7 @@ void main() {
       store.applyPage([BacklogChange.put('task', 1, task(id: 1, title: 'あと'))]);
 
       expect(store.task(1)!.title, 'あと');
-      expect(
-        store.taskCount(const TaskQuery(), today: DateTime(2026, 8, 9)).value,
-        1,
-      );
+      expect(store.taskCount(const TaskQuery()).value, 1);
     });
 
     test('a deleted record leaves nothing behind, index included', () {
@@ -47,13 +44,7 @@ void main() {
 
       expect(store.record('task', 1), isNull);
       expect(store.task(1), isNull);
-      expect(
-        store.tasks(
-          const TaskQuery(text: 'めずらしい'),
-          today: DateTime(2026, 8, 9),
-        ),
-        isEmpty,
-      );
+      expect(store.tasks(const TaskQuery(text: 'めずらしい')), isEmpty);
     });
 
     test('a comment landing before its task is kept, not rejected', () {
@@ -102,10 +93,7 @@ void main() {
 
       // A page is the unit that survives being interrupted: the cursor may not move past rows
       // that did not land, or the next fetch asks for what came after them and they are lost.
-      expect(
-        store.taskCount(const TaskQuery(), today: DateTime(2026, 8, 9)).value,
-        1,
-      );
+      expect(store.taskCount(const TaskQuery()).value, 1);
       expect(store.seq, 7);
     });
   });
@@ -128,10 +116,7 @@ void main() {
 
       store.wipe();
 
-      expect(
-        store.taskCount(const TaskQuery(), today: DateTime(2026, 8, 9)).value,
-        0,
-      );
+      expect(store.taskCount(const TaskQuery()).value, 0);
       expect(store.seq, 0);
       // The place being replaced says nothing about what the person has already read.
       expect(store.meta(MetaKey.lastOpenedAt), '2026-08-09T06:00:00Z');

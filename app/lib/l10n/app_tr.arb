@@ -4,10 +4,6 @@
   "tabSearch": "Ara",
   "nothingOpen": "Burada okumak için bir şey aç",
 
-  "bundleMoving": "Sürüyor",
-  "bundleStalled": "Takılmış",
-  "bundleNext": "Sıradaki",
-  "bundleFinished": "Bitmiş",
   "bundleFinishedWithin": "{days, plural, other{Bitmiş ({days} gün)}}",
 
   "movedFinished": "Biten",
@@ -17,8 +13,6 @@
   "allProjects": "Bütün projeler",
   "chooseProject": "Proje seç",
   "refresh": "Getir",
-  "more": "{count, plural, other{{count} tane daha}}",
-  "moreCapped": "{count} tane daha",
   "newActivity": "Yeni hareket · {count}",
   "sinceLastLook": "En son baktığından beri",
   "sinceLastLookSpoken": "en son baktığından beri",
@@ -44,11 +38,11 @@
   "priorityLow": "Düşük",
   "rowPriority": "{name} öncelik",
 
-  "statusTodo": "Sıradaki",
+  "statusTodo": "Yapılacak",
   "statusInProgress": "Sürüyor",
   "statusDone": "Bitti",
   "statusRejected": "Elendi",
-  "statusBlocked": "Tıkalı",
+  "statusBlocked": "Engellendi",
 
   "decisionProposed": "Önerildi",
   "decisionAccepted": "Kabul edildi",
@@ -71,8 +65,6 @@
   "stallStarts": "{day} başlıyor",
   "stallBlocked": "Tıkalı",
 
-  "headingShowing": "açık",
-  "headingFolded": "katlanmış",
 
   "searchHint": "Ara",
   "searchClear": "Temizle",
@@ -87,6 +79,7 @@
   "showEverything": "Hepsini göster",
   "nothingHereYet": "Burada henüz bir şey yok",
   "nothingHereYetDetail": "Bilgisayarın, iş listen bir sonraki değiştiğinde elindekini gönderir. İlk ekranda aşağı çekmek şimdi istemek demektir.",
+  "nothingInState": "Bu durumda hiçbir şey yok",
   "valueChip": "{dimension}: {value}",
 
   "detailStalled": "Başlayamıyor",

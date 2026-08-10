@@ -4,10 +4,6 @@
   "tabSearch": "尋找",
   "nothingOpen": "打開一條，就在這裡讀",
 
-  "bundleMoving": "進行中",
-  "bundleStalled": "卡住的",
-  "bundleNext": "接下來",
-  "bundleFinished": "已完成",
   "bundleFinishedWithin": "{days, plural, other{已完成（{days} 天內）}}",
 
   "movedFinished": "完成",
@@ -17,8 +13,6 @@
   "allProjects": "全部專案",
   "chooseProject": "選擇專案",
   "refresh": "去取",
-  "more": "{count, plural, other{還有 {count} 條}}",
-  "moreCapped": "還有 {count} 條",
   "newActivity": "新動靜 · {count}",
   "sinceLastLook": "上次查看之後",
   "sinceLastLookSpoken": "上次查看之後",
@@ -44,7 +38,7 @@
   "priorityLow": "低",
   "rowPriority": "{name}優先度",
 
-  "statusTodo": "接下來",
+  "statusTodo": "待辦",
   "statusInProgress": "進行中",
   "statusDone": "已完成",
   "statusRejected": "已否決",
@@ -71,8 +65,6 @@
   "stallStarts": "{day} 開始",
   "stallBlocked": "受阻",
 
-  "headingShowing": "已展開",
-  "headingFolded": "已收合",
 
   "searchHint": "尋找",
   "searchClear": "清空",
@@ -87,6 +79,7 @@
   "showEverything": "顯示全部",
   "nothingHereYet": "這裡還是空的",
   "nothingHereYetDetail": "待辦下次變動時，電腦會把手上的內容傳過來。在首頁下拉，就是現在去取。",
+  "nothingInState": "此狀態沒有項目",
   "valueChip": "{dimension}：{value}",
 
   "detailStalled": "無法開始",

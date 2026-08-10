@@ -357,7 +357,7 @@ void main() {
     setUp(() async {
       await const PairingStore().save(aPairing);
       store.applyPage([
-        for (var id = 1; id <= Windows.bundle + 2; id++)
+        for (var id = 1; id <= 3; id++)
           BacklogChange.put('task', id, task(id: id, title: 'しごと $id')),
       ]);
     });
@@ -370,30 +370,6 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(TaskDetailScreen), findsOneWidget);
-    });
-
-    testWidgets('the rest of a bundle opens the one list face, holding it', (
-      tester,
-    ) async {
-      await tester.pumpWidget(home());
-      await tester.pumpAndSettle();
-
-      final rest = find.text(NowScreen.more(words, 2));
-      await tester.scrollUntilVisible(rest, 200);
-      // Settled before it is pressed: a scroll still coasting puts the row somewhere other than
-      // where it was found.
-      await tester.pumpAndSettle();
-      await tester.ensureVisible(rest);
-      await tester.pumpAndSettle();
-      await tester.tap(rest);
-      await tester.pumpAndSettle();
-
-      expect(find.byType(SearchScreen), findsOneWidget);
-      // Not plain search: the bundle came with it, in the form that can be taken off.
-      expect(
-        find.widgetWithText(InputChip, bundleHeading(words, Bundle.next)),
-        findsOneWidget,
-      );
     });
 
     testWidgets('a number on the card opens what that number counted', (

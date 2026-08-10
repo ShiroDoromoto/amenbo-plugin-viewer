@@ -19,7 +19,6 @@ library;
 
 import 'package:flutter/material.dart';
 
-import '../l10n/words.dart';
 import 'tokens.dart';
 
 /// The palette the surrounding theme is drawn from.
@@ -328,78 +327,41 @@ class RowSurface extends StatelessWidget {
   }
 }
 
-/// A heading over a bundle, with how many are in it.
-///
-/// The count is part of the heading rather than a badge: it is read out with the heading, and it
-/// is the number the person is actually after when they glance at the screen.
+/// A heading over a stretch of a list, saying what the rows under it are.
 ///
 /// It is drawn heavier than the titles beneath it. A heading that is smaller or lighter than the
 /// rows it gathers stops being the thing that divides the screen, and the person scrolling past
-/// reads one long list instead of four short ones.
-class BundleHeading extends StatelessWidget {
-  const BundleHeading({
-    super.key,
-    required this.title,
-    this.count,
-    this.expanded,
-    this.onToggle,
-  });
+/// reads one long list instead of two short ones.
+///
+/// It carries no count. Where there is a number to give — the four states — it is on the switch
+/// that opens them, which is where the person is looking before they have chosen one.
+class ListHeading extends StatelessWidget {
+  const ListHeading({super.key, required this.title});
 
   final String title;
-
-  /// Already capped by the store — `999+` is what a backlog past the cap says. Null where the
-  /// heading is over a handful the person just left behind and counting them says nothing.
-  final String? count;
-
-  /// Whether the rows under it are showing, for a bundle that folds. Null for one that does not,
-  /// and then the heading is not a button.
-  final bool? expanded;
-
-  final VoidCallback? onToggle;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final style = theme.textTheme.titleMedium?.copyWith(
-      fontWeight: Lettering.bold,
-    );
-    // The count belongs to the heading but is not the heading: same weight, quieter colour.
-    final counted = style?.copyWith(color: theme.colorScheme.onSurfaceVariant);
-    final folds = expanded != null;
-    final heading = Padding(
-      padding: const EdgeInsets.fromLTRB(
-        Space.gutter,
-        Space.s6,
-        Space.gutter,
-        Space.s1,
-      ),
-      child: Row(
-        children: [
-          Expanded(child: Text(title, style: style)),
-          if (count != null) Text(count!, style: counted),
-          if (folds)
-            Icon(
-              expanded! ? Icons.expand_less : Icons.expand_more,
-              size: (style?.fontSize ?? Lettering.lg) * 1.4,
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-        ],
-      ),
-    );
     return Semantics(
       header: true,
       container: true,
-      button: folds,
-      label: [
-        title,
-        ?count,
-        if (folds)
-          expanded!
-              ? Words.of(context).headingShowing
-              : Words.of(context).headingFolded,
-      ].join(', '),
+      label: title,
       child: ExcludeSemantics(
-        child: folds ? InkWell(onTap: onToggle, child: heading) : heading,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            Space.gutter,
+            Space.s6,
+            Space.gutter,
+            Space.s1,
+          ),
+          child: Text(
+            title,
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: Lettering.bold,
+            ),
+          ),
+        ),
       ),
     );
   }

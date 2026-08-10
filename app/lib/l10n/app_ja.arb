@@ -4,10 +4,6 @@
   "tabSearch": "さがす",
   "nothingOpen": "開いたものが、ここに出ます",
 
-  "bundleMoving": "進行中",
-  "bundleStalled": "動けないもの",
-  "bundleNext": "つぎにやる",
-  "bundleFinished": "終わったもの",
   "bundleFinishedWithin": "{days, plural, other{終わったもの（{days}日）}}",
 
   "movedFinished": "終わった",
@@ -17,8 +13,6 @@
   "allProjects": "すべてのプロジェクト",
   "chooseProject": "プロジェクトを選ぶ",
   "refresh": "取りに行く",
-  "more": "{count, plural, other{のこり{count}件}}",
-  "moreCapped": "のこり{count}件",
   "newActivity": "新しい動き · {count}",
   "sinceLastLook": "前に見たときから",
   "sinceLastLookSpoken": "前に見たときから",
@@ -44,11 +38,11 @@
   "priorityLow": "低",
   "rowPriority": "優先度{name}",
 
-  "statusTodo": "つぎ",
+  "statusTodo": "未着手",
   "statusInProgress": "進行中",
   "statusDone": "完了",
   "statusRejected": "却下",
-  "statusBlocked": "止まっている",
+  "statusBlocked": "ブロック",
 
   "decisionProposed": "提案中",
   "decisionAccepted": "採択",
@@ -71,8 +65,6 @@
   "stallStarts": "{day}から",
   "stallBlocked": "止まっている",
 
-  "headingShowing": "開いています",
-  "headingFolded": "畳んでいます",
 
   "searchHint": "さがす",
   "searchClear": "消す",
@@ -87,6 +79,7 @@
   "showEverything": "全部を出す",
   "nothingHereYet": "まだ何もありません",
   "nothingHereYetDetail": "バックログが次に変わったとき、PC が送ります。タスクの画面で引き下げると、その場で取りに行きます。",
+  "nothingInState": "この状態のものはありません",
   "valueChip": "{dimension}: {value}",
 
   "detailStalled": "着手できません",

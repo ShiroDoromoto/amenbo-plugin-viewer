@@ -4,10 +4,6 @@
   "tabSearch": "查找",
   "nothingOpen": "打开一条，就在这里读",
 
-  "bundleMoving": "进行中",
-  "bundleStalled": "卡住的",
-  "bundleNext": "接下来",
-  "bundleFinished": "已完成",
   "bundleFinishedWithin": "{days, plural, other{已完成（{days} 天内）}}",
 
   "movedFinished": "完成",
@@ -17,8 +13,6 @@
   "allProjects": "全部项目",
   "chooseProject": "选择项目",
   "refresh": "去取",
-  "more": "{count, plural, other{还有 {count} 条}}",
-  "moreCapped": "还有 {count} 条",
   "newActivity": "新动静 · {count}",
   "sinceLastLook": "上次查看之后",
   "sinceLastLookSpoken": "上次查看之后",
@@ -44,7 +38,7 @@
   "priorityLow": "低",
   "rowPriority": "{name}优先级",
 
-  "statusTodo": "接下来",
+  "statusTodo": "待办",
   "statusInProgress": "进行中",
   "statusDone": "已完成",
   "statusRejected": "已否决",
@@ -71,8 +65,6 @@
   "stallStarts": "{day} 开始",
   "stallBlocked": "受阻",
 
-  "headingShowing": "已展开",
-  "headingFolded": "已折叠",
 
   "searchHint": "查找",
   "searchClear": "清空",
@@ -87,6 +79,7 @@
   "showEverything": "显示全部",
   "nothingHereYet": "这里还是空的",
   "nothingHereYetDetail": "待办下次变动时，电脑会把手上的内容发过来。在首页下拉，就是现在去取。",
+  "nothingInState": "此状态下没有内容",
   "valueChip": "{dimension}：{value}",
 
   "detailStalled": "无法开始",

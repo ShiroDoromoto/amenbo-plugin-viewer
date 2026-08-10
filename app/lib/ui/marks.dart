@@ -98,7 +98,7 @@ String priorityWords(Words words, String priority) => switch (priority) {
 };
 
 /// amenbo's status, for the places that show it outright — a detail, or a search result whose
-/// row is not in a bundle that already says it.
+/// row is not being read under the state it is in.
 class StatusMark extends StatelessWidget {
   const StatusMark(this.status, {super.key});
 
@@ -167,7 +167,7 @@ String decisionStatusWords(Words words, String status) => switch (status) {
 
 /// A due day, saying in words when it has passed.
 ///
-/// Lateness is not a bundle of its own — it lifts a task to the top of the one it is already in —
+/// Lateness is not a state of its own — it lifts a task to the top of the one it is already in —
 /// so this is where a person finds out, and "Overdue" has to be written rather than implied by
 /// the date turning red.
 class DueMark extends StatelessWidget {
@@ -185,6 +185,49 @@ class DueMark extends StatelessWidget {
       icon: late ? Icons.priority_high : Icons.event_outlined,
       colour: late ? colours.dueOverdue : colours.dueFuture,
       text: label,
+    );
+  }
+}
+
+/// What a row is waiting on, with a mark that says at a glance that it is waiting.
+///
+/// The four states do not divide by this — a task waiting on something is `todo` like any other —
+/// so this is the whole of how the person tells them apart while reading down the list. The glyph
+/// does the telling apart and the words say which one it is; neither is enough alone, and colour
+/// is not used to carry it at all.
+class StallMark extends StatelessWidget {
+  const StallMark(this.reason, {super.key});
+
+  final String reason;
+
+  @override
+  Widget build(BuildContext context) {
+    final colour = palette(context).statusBlocked;
+    final style = Theme.of(
+      context,
+    ).textTheme.bodySmall?.copyWith(color: colour);
+    return ExcludeSemantics(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.hourglass_empty,
+            size: (style?.fontSize ?? Lettering.sm) * 1.1,
+            color: colour,
+          ),
+          const SizedBox(width: Space.s1),
+          // Flexible, and not a fixed width: the row is laid out in a Wrap, which hands its whole
+          // width down, so a long reason ends in an ellipsis instead of over the edge.
+          Flexible(
+            child: Text(
+              reason,
+              style: style,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

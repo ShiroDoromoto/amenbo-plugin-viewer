@@ -485,7 +485,6 @@ class _HomeShellState extends State<HomeShell> {
             failure: widget.failure,
             iCloudAvailable: widget.iCloudAvailable,
             onOpen: (line) => _open(line.id),
-            onMore: _list,
             onSince: _list,
             onPairAgain: widget.onPairAgain,
             onOpenSettings: _openSettings,

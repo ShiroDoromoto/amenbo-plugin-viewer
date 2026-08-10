@@ -6,17 +6,9 @@
   "nothingOpen": "Open something to read it here",
   "@nothingOpen": { "description": "The empty half of a two-pane screen, before anything has been opened into it." },
 
-  "bundleMoving": "In progress",
-  "@bundleMoving": { "description": "Heading over the tasks that are being worked on." },
-  "bundleStalled": "Stalled",
-  "@bundleStalled": { "description": "Heading over the tasks that cannot start." },
-  "bundleNext": "Next",
-  "@bundleNext": { "description": "Heading over the tasks that are ready to pick up." },
-  "bundleFinished": "Finished",
-  "@bundleFinished": { "description": "Heading over closed work, when no cut-off is set." },
   "bundleFinishedWithin": "{days, plural, one{Finished (1 day)} other{Finished ({days} days)}}",
   "@bundleFinishedWithin": {
-    "description": "Heading over closed work, saying how far back it reaches. The reach is said because the person chose it. A language with more number forms than English writes them all in — the arms here are the two English has, not the set.",
+    "description": "The line above the finished state, saying how far back it reaches. The reach is said because the person chose it, and because that state is the one list on the screen that is not everything there is. A language with more number forms than English writes them all in — the arms here are the two English has, not the set.",
     "placeholders": { "days": { "type": "int" } }
   },
 
@@ -33,16 +25,6 @@
   "@chooseProject": { "description": "What the project menu is for." },
   "refresh": "Refresh",
   "@refresh": { "description": "The button at the top of the front screen: go and look now. A verb the person is asking for, not a name for the screen." },
-  "more": "{count, plural, one{1 more} other{{count} more}}",
-  "@more": {
-    "description": "The rest of a bundle, past the window the front screen holds.",
-    "placeholders": { "count": { "type": "int" } }
-  },
-  "moreCapped": "{count} more",
-  "@moreCapped": {
-    "description": "The same, where counting stopped at the cap and the number arrives as text (999+). Nothing can agree with a number that is not one, so this arm is written as if there were many.",
-    "placeholders": { "count": { "type": "String" } }
-  },
   "newActivity": "New activity · {count}",
   "@newActivity": {
     "description": "The pill offering rows that landed behind the person's back.",
@@ -102,8 +84,8 @@
     "placeholders": { "name": { "type": "String" } }
   },
 
-  "statusTodo": "Next",
-  "@statusTodo": { "description": "amenbo's todo. Said as what it is to the reader rather than as amenbo's own word." },
+  "statusTodo": "To do",
+  "@statusTodo": { "description": "amenbo's todo, in the word the person reads on the PC — the switch on the front screen and the mark on a row are the same four states, so they are said the same way." },
   "statusInProgress": "In progress",
   "@statusInProgress": { "description": "amenbo's in_progress." },
   "statusDone": "Done",
@@ -172,10 +154,6 @@
   "stallBlocked": "Blocked",
   "@stallBlocked": { "description": "Why a task cannot start, with nothing more useful to say — amenbo's word for a stall nobody wrote down." },
 
-  "headingShowing": "showing",
-  "@headingShowing": { "description": "Read out on a heading whose rows are open." },
-  "headingFolded": "folded",
-  "@headingFolded": { "description": "Read out on a heading whose rows are folded away." },
 
   "searchHint": "Search",
   "@searchHint": { "description": "The field at the top of the list face." },
@@ -203,6 +181,8 @@
   "@nothingHereYet": { "description": "Nothing was asked for and there is nothing to show." },
   "nothingHereYetDetail": "Your PC sends what it has the next time your backlog changes. Pulling down on the front screen asks for it now.",
   "@nothingHereYetDetail": { "description": "What to do about a phone that holds nothing yet. The fetch is on the other screen, so it is named rather than offered here." },
+  "nothingInState": "Nothing in this state",
+  "@nothingInState": { "description": "One of the four states, with no tasks in it. Said as a fact — nothing being blocked is good news — and the switch above still says what the other three hold." },
   "valueChip": "{dimension}: {value}",
   "@valueChip": {
     "description": "A category value, as the chip on the list face names it.",

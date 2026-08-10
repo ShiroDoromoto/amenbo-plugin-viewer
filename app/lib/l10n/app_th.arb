@@ -4,10 +4,6 @@
   "tabSearch": "ค้นหา",
   "nothingOpen": "เปิดสักรายการเพื่ออ่านตรงนี้",
 
-  "bundleMoving": "กำลังทำ",
-  "bundleStalled": "ติดอยู่",
-  "bundleNext": "ทำต่อไป",
-  "bundleFinished": "เสร็จแล้ว",
   "bundleFinishedWithin": "{days, plural, other{เสร็จแล้ว ({days} วัน)}}",
 
   "movedFinished": "เสร็จ",
@@ -17,8 +13,6 @@
   "allProjects": "ทุกโครงการ",
   "chooseProject": "เลือกโครงการ",
   "refresh": "ไปเอามา",
-  "more": "{count, plural, other{อีก {count} รายการ}}",
-  "moreCapped": "อีก {count} รายการ",
   "newActivity": "มีความเคลื่อนไหวใหม่ · {count}",
   "sinceLastLook": "ตั้งแต่ครั้งล่าสุดที่คุณดู",
   "sinceLastLookSpoken": "ตั้งแต่ครั้งล่าสุดที่คุณดู",
@@ -44,11 +38,11 @@
   "priorityLow": "ต่ำ",
   "rowPriority": "ความสำคัญ{name}",
 
-  "statusTodo": "ทำต่อไป",
+  "statusTodo": "ยังไม่เริ่ม",
   "statusInProgress": "กำลังทำ",
   "statusDone": "เสร็จ",
   "statusRejected": "ตัดออก",
-  "statusBlocked": "ติดอยู่",
+  "statusBlocked": "ถูกบล็อก",
 
   "decisionProposed": "เสนอไว้",
   "decisionAccepted": "รับแล้ว",
@@ -71,8 +65,6 @@
   "stallStarts": "เริ่ม {day}",
   "stallBlocked": "ติดอยู่",
 
-  "headingShowing": "กางอยู่",
-  "headingFolded": "พับอยู่",
 
   "searchHint": "ค้นหา",
   "searchClear": "ล้าง",
@@ -87,6 +79,7 @@
   "showEverything": "แสดงทั้งหมด",
   "nothingHereYet": "ตรงนี้ยังไม่มีอะไร",
   "nothingHereYetDetail": "คอมพิวเตอร์จะส่งสิ่งที่มีให้ในครั้งถัดไปที่รายการงานของคุณเปลี่ยน ลากลงที่หน้าจอแรกคือขอเดี๋ยวนี้",
+  "nothingInState": "ไม่มีรายการในสถานะนี้",
   "valueChip": "{dimension}: {value}",
 
   "detailStalled": "ยังเริ่มไม่ได้",

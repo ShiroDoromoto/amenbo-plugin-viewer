@@ -4,10 +4,6 @@
   "tabSearch": "Zoeken",
   "nothingOpen": "Open iets om het hier te lezen",
 
-  "bundleMoving": "Loopt",
-  "bundleStalled": "Staat stil",
-  "bundleNext": "Volgende",
-  "bundleFinished": "Afgerond",
   "bundleFinishedWithin": "{days, plural, one{Afgerond (1 dag)} other{Afgerond ({days} dagen)}}",
 
   "movedFinished": "Afgerond",
@@ -17,8 +13,6 @@
   "allProjects": "Alle projecten",
   "chooseProject": "Kies een project",
   "refresh": "Ophalen",
-  "more": "{count, plural, one{nog 1} other{nog {count}}}",
-  "moreCapped": "nog {count}",
   "newActivity": "Nieuwe activiteit · {count}",
   "sinceLastLook": "Sinds je laatste bezoek",
   "sinceLastLookSpoken": "sinds je laatste bezoek",
@@ -44,7 +38,7 @@
   "priorityLow": "Laag",
   "rowPriority": "prioriteit {name}",
 
-  "statusTodo": "Volgende",
+  "statusTodo": "Te doen",
   "statusInProgress": "Loopt",
   "statusDone": "Klaar",
   "statusRejected": "Afgewezen",
@@ -71,8 +65,6 @@
   "stallStarts": "Begint {day}",
   "stallBlocked": "Geblokkeerd",
 
-  "headingShowing": "uitgeklapt",
-  "headingFolded": "ingeklapt",
 
   "searchHint": "Zoeken",
   "searchClear": "Wissen",
@@ -87,6 +79,7 @@
   "showEverything": "Alles tonen",
   "nothingHereYet": "Hier is nog niets",
   "nothingHereYetDetail": "Je pc stuurt wat hij heeft zodra je backlog weer verandert. Naar beneden trekken op het eerste scherm vraagt er nu om.",
+  "nothingInState": "Niets met deze status",
   "valueChip": "{dimension}: {value}",
 
   "detailStalled": "Kan niet starten",

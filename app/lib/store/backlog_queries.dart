@@ -5,7 +5,7 @@
 /// holding it gets dropped from memory the moment it goes behind — which is exactly when it is
 /// about to be brought back to the front.
 ///
-/// The counts follow the same rule: a screen shows how many are in a bundle, so the count stops
+/// The counts follow the same rule: a screen shows how many are in a state, so the count stops
 /// at [Counted.cap] instead of walking to the end of a backlog to produce a number that is
 /// displayed as `999+` anyway.
 library;
@@ -16,23 +16,28 @@ import 'package:sqlite3/sqlite3.dart';
 
 import 'backlog_store.dart';
 
-/// The four bundles the front screen stacks, in the order it stacks them.
-enum Bundle {
+/// The four states the front screen switches between, in the order it offers them.
+///
+/// They are amenbo's own statuses and nothing derived from them. Whether a task's premises are
+/// met is a different question, answered per row — and one whose answer changes overnight without
+/// the task moving, which is why a list divided by it would not be the list the person reads on
+/// the PC.
+enum TaskState {
+  /// `todo`, whether or not it can be started. The row carries what it is waiting on.
+  todo,
+
   /// `in_progress` — what the AI has its hands on.
-  moving,
+  inProgress,
 
-  /// A premise is missing, or it is `blocked`. The screen writes the reason out, so the query
-  /// carries the blocker and the undecided decision with the row.
-  stalled,
+  /// amenbo's `blocked`: a stall nobody can move past.
+  blocked,
 
-  /// `todo` with every premise met.
-  next,
-
-  /// Closed within the reach the phone is set to — see [finishedDaysDefault].
+  /// Closed — `done` or `rejected` — within the reach the phone is set to (see
+  /// [finishedDaysDefault]).
   finished,
 }
 
-/// How far back the finished bundle reaches when nobody has said otherwise.
+/// How far back the finished state reaches when nobody has said otherwise.
 ///
 /// It is the settings screen's own starting choice, written here as well because the store answers
 /// callers that have no settings behind them. Null, wherever one of these is passed, is not a very
@@ -57,10 +62,8 @@ enum Moved {
 
 /// How many rows a face holds at once.
 class Windows {
-  /// A bundle on the front screen. Past this it says "N more" and the rest is another face.
-  static const bundle = 20;
-
-  /// The one list face — search, the rest of a bundle, the tasks under a category value.
+  /// Every list — the front screen's four states, search, the tasks under a category value.
+  /// Reaching the end of one asks for the next.
   static const list = 50;
 
   /// What a task's detail opens with. Older ones are pulled [commentPage] at a time.
@@ -119,7 +122,7 @@ class TaskLine {
   final String? startOn;
   final String updatedAt;
 
-  /// When it was closed, for the "finished" bundle.
+  /// When it was closed, for the finished state.
   final String? closedAt;
   final int comments;
 
@@ -236,29 +239,22 @@ class DecisionEdgeLine {
   final String status;
 }
 
-/// What a list face was asked for. All five inputs are optional and they combine.
+/// What a list face was asked for. All four inputs are optional and they combine.
 ///
-/// One face answers every list in the app — search results, the rest of a bundle, the tasks under
-/// a category value, what changed since a moment, one project — so the screens do not multiply
-/// with the ways of arriving at a list.
+/// One face answers every list in the app — search results, the tasks under a category value,
+/// what changed since a moment, one project — so the screens do not multiply with the ways of
+/// arriving at a list.
 class TaskQuery {
   const TaskQuery({
     this.text,
-    this.bundle,
     this.valueId,
     this.changedSince,
     this.moved,
     this.projectId,
-    this.finishedDays = finishedDaysDefault,
   });
 
   /// What was typed. Matched through the index, never by walking every row.
   final String? text;
-  final Bundle? bundle;
-
-  /// How far back [Bundle.finished] reaches, null being everything. The rest of that bundle is
-  /// read here, so it has to be asked the same question the front screen asked.
-  final int? finishedDays;
 
   /// A category value (`dimension_value.id`), from a chip in a detail.
   final int? valueId;
@@ -280,63 +276,66 @@ class TaskQuery {
 extension BacklogQueries on BacklogStore {
   // ------------------------------------------------------------- the front screen
 
-  /// One bundle's window, and how many are in it.
+  /// One window of one state, in the order that state is read in.
   ///
-  /// [today] is passed in rather than read from the clock so that a bundle drawn at 23:59 and the
-  /// count beside it cannot disagree about which day it is.
+  /// [today] is passed in rather than read from the clock so that rows drawn at 23:59 and the
+  /// count beside them cannot disagree about which day it is.
   ///
-  /// [finishedDays] is how far back [Bundle.finished] reaches, null being everything. It counts
-  /// for the total as much as for the window, or the heading would offer a rest that is not there.
-  ({List<TaskLine> rows, Counted total}) bundle(
-    Bundle bundle, {
+  /// [finishedDays] is how far back [TaskState.finished] reaches, null being everything.
+  ///
+  /// The count is asked for separately ([stateCount]): a state is walked window by window to its
+  /// end, and re-counting the whole of it on every window would be paying for the number in the
+  /// heading again and again.
+  List<TaskLine> inState(
+    TaskState state, {
     required DateTime today,
     int? projectId,
     int? finishedDays = finishedDaysDefault,
-    int limit = Windows.bundle,
-    int offset = 0,
-  }) {
-    final where = _bundleWhere(bundle, today, projectId, finishedDays);
-    final rows = db.select(
-      'SELECT ${_taskColumns()} FROM task t WHERE ${where.sql} '
-      'ORDER BY ${_bundleOrder(bundle, today)} LIMIT ? OFFSET ?',
-      [...where.args, ..._orderArgs(bundle, today), limit, offset],
-    );
-    return (
-      rows: rows.map(_taskLine).toList(growable: false),
-      total: _count('SELECT 1 FROM task t WHERE ${where.sql}', where.args),
-    );
-  }
-
-  // ------------------------------------------------------------- the one list face
-
-  List<TaskLine> tasks(
-    TaskQuery query, {
-    required DateTime today,
     int limit = Windows.list,
     int offset = 0,
   }) {
-    final search = _searchJoin(query.text, 'task');
-    final where = _listWhere(query, today);
-    final order = query.bundle == null
-        ? 't.updated_at DESC, t.id DESC'
-        : _bundleOrder(query.bundle!, today);
+    final where = _stateWhere(state, today, projectId, finishedDays);
     final rows = db.select(
-      'SELECT ${_taskColumns(excerpt: search != null)} FROM task t ${search?.sql ?? ''} '
-      'WHERE ${where.sql} ORDER BY $order LIMIT ? OFFSET ?',
-      [
-        ...?search?.args,
-        ...where.args,
-        if (query.bundle != null) ..._orderArgs(query.bundle!, today),
-        limit,
-        offset,
-      ],
+      'SELECT ${_taskColumns()} FROM task t WHERE ${where.sql} '
+      'ORDER BY ${_stateOrder(state, today)} LIMIT ? OFFSET ?',
+      [...where.args, ..._orderArgs(state, today), limit, offset],
     );
     return rows.map(_taskLine).toList(growable: false);
   }
 
-  Counted taskCount(TaskQuery query, {required DateTime today}) {
+  /// How many are in one state — the number the switch shows on it.
+  Counted stateCount(
+    TaskState state, {
+    required DateTime today,
+    int? projectId,
+    int? finishedDays = finishedDaysDefault,
+  }) {
+    final where = _stateWhere(state, today, projectId, finishedDays);
+    return _count('SELECT 1 FROM task t WHERE ${where.sql}', where.args);
+  }
+
+  // ------------------------------------------------------------- the one list face
+
+  /// Newest first, always. Nothing here is ordered by the day it is read on — that belongs to the
+  /// four states, where a deadline decides what is at the top.
+  List<TaskLine> tasks(
+    TaskQuery query, {
+    int limit = Windows.list,
+    int offset = 0,
+  }) {
     final search = _searchJoin(query.text, 'task');
-    final where = _listWhere(query, today);
+    final where = _listWhere(query);
+    final rows = db.select(
+      'SELECT ${_taskColumns(excerpt: search != null)} FROM task t ${search?.sql ?? ''} '
+      'WHERE ${where.sql} ORDER BY t.updated_at DESC, t.id DESC LIMIT ? OFFSET ?',
+      [...?search?.args, ...where.args, limit, offset],
+    );
+    return rows.map(_taskLine).toList(growable: false);
+  }
+
+  Counted taskCount(TaskQuery query) {
+    final search = _searchJoin(query.text, 'task');
+    final where = _listWhere(query);
     return _count(
       'SELECT 1 FROM task t ${search?.sql ?? ''} WHERE ${where.sql}',
       [...?search?.args, ...where.args],
@@ -638,7 +637,7 @@ extension BacklogQueries on BacklogStore {
   /// What has happened since [stamp] — the three numbers on the card at the top of the screen.
   ///
   /// They are counted inside whatever narrowing the screen is holding. A card that counts the
-  /// whole machine while the bundles under it count one project would send the person, from a
+  /// whole machine while the lists under it count one project would send the person, from a
   /// number they pressed, to a list of a different length.
   ///
   /// [stamp] is the moment the app was last brought to the front, so this is deliberately not the
@@ -718,25 +717,9 @@ extension BacklogQueries on BacklogStore {
   }
 }
 
-/// A missing premise, stated once. Four things hold a task back, and every face that asks
-/// "can this be started" asks it with these.
-const _openBlocker =
-    'EXISTS (SELECT 1 FROM task_dependency d '
-    'JOIN task b ON b.id = d.blocked_by_id '
-    "WHERE d.task_id = t.id AND b.status NOT IN ('done', 'rejected'))";
-
-const _unsettledDecision =
-    'EXISTS (SELECT 1 FROM decision_task_link l '
-    'JOIN decision c ON c.id = l.decision_id '
-    "WHERE l.task_id = t.id AND c.status = 'proposed')";
-
-const _notStarted = '(t.start_on IS NOT NULL AND t.start_on > ?)';
-
-const _stillDraft = 't.draft = 1';
-
-String _readySql() =>
-    'NOT ($_openBlocker OR $_unsettledDecision OR $_notStarted OR $_stillDraft)';
-
+/// What holds a task back travels on the row, not in the where-clause: the blocker it names, the
+/// decision nobody has ruled on, the day it does not start until, and whether it is still being
+/// written. No list is divided by them — the row says which one it is waiting on.
 String _taskColumns({bool excerpt = false}) =>
     't.id, t.project_id, t.title, t.status, t.priority, t.assignee_kind, t.draft, '
     't.due_on, t.start_on, t.updated_at, '
@@ -771,27 +754,22 @@ TaskLine _taskLine(Row row) => TaskLine(
       : null,
 );
 
-({String sql, List<Object?> args}) _bundleWhere(
-  Bundle bundle,
+({String sql, List<Object?> args}) _stateWhere(
+  TaskState state,
   DateTime today,
   int? projectId,
   int? finishedDays,
 ) {
-  final day = _day(today);
   final clauses = <String>[];
   final args = <Object?>[];
-  switch (bundle) {
-    case Bundle.moving:
+  switch (state) {
+    case TaskState.todo:
+      clauses.add("t.status = 'todo'");
+    case TaskState.inProgress:
       clauses.add("t.status = 'in_progress'");
-    case Bundle.stalled:
-      clauses.add(
-        "(t.status = 'blocked' OR (t.status = 'todo' AND NOT ${_readySql()}))",
-      );
-      args.add(day);
-    case Bundle.next:
-      clauses.add("t.status = 'todo' AND ${_readySql()}");
-      args.add(day);
-    case Bundle.finished:
+    case TaskState.blocked:
+      clauses.add("t.status = 'blocked'");
+    case TaskState.finished:
       clauses.add("t.status IN ('done', 'rejected')");
       // Everything asks for no cut-off, so the clause is left off rather than pushed far enough
       // back to look like one.
@@ -810,7 +788,7 @@ TaskLine _taskLine(Row row) => TaskLine(
   return (sql: clauses.join(' AND '), args: args);
 }
 
-/// A task a bundle may hold at all: its project is one the person still works in.
+/// A task a list may hold at all: its project is one the person still works in.
 ///
 /// Archived is amenbo's word for a project nobody adds to any more, so nothing in it belongs in
 /// "what to do when I get back". Search still reaches it — remembering how something ended up is
@@ -821,30 +799,26 @@ TaskLine _taskLine(Row row) => TaskLine(
 const _liveProject =
     'NOT EXISTS (SELECT 1 FROM project p WHERE p.id = t.project_id AND p.archived = 1)';
 
-String _bundleOrder(Bundle bundle, DateTime today) => switch (bundle) {
-  // Movement is the subject here, so freshness outranks everything but priority.
-  Bundle.moving => 't.priority_rank, t.updated_at DESC, t.id',
-  Bundle.stalled => 't.priority_rank, t.id',
-  // Overdue first, then today, then priority — a deadline is not a bundle of its own, it is
-  // a reason to be at the top of this one.
-  Bundle.next =>
+String _stateOrder(TaskState state, DateTime today) => switch (state) {
+  // Overdue first, then today, then priority — a deadline is not a state of its own, it is a
+  // reason to be at the top of the one it is already in. What is waiting on something is not
+  // pushed down: the person reads from the top and takes the first row with no waiting mark on it.
+  TaskState.todo =>
     'CASE WHEN t.due_on IS NOT NULL AND t.due_on < ? THEN 0 '
         'WHEN t.due_on = ? THEN 1 ELSE 2 END, t.priority_rank, t.id',
-  Bundle.finished =>
+  // Movement is the subject here, so freshness outranks everything but priority.
+  TaskState.inProgress => 't.priority_rank, t.updated_at DESC, t.id',
+  TaskState.blocked => 't.priority_rank, t.id',
+  TaskState.finished =>
     'COALESCE(t.completed_at, t.status_changed_at, t.updated_at) DESC, t.id DESC',
 };
 
-List<Object?> _orderArgs(Bundle bundle, DateTime today) =>
-    bundle == Bundle.next ? [_day(today), _day(today)] : const [];
+List<Object?> _orderArgs(TaskState state, DateTime today) =>
+    state == TaskState.todo ? [_day(today), _day(today)] : const [];
 
-({String sql, List<Object?> args}) _listWhere(TaskQuery query, DateTime today) {
+({String sql, List<Object?> args}) _listWhere(TaskQuery query) {
   final clauses = <String>[];
   final args = <Object?>[];
-  if (query.bundle != null) {
-    final bundle = _bundleWhere(query.bundle!, today, null, query.finishedDays);
-    clauses.add('(${bundle.sql})');
-    args.addAll(bundle.args);
-  }
   if (query.valueId != null) {
     clauses.add(
       'EXISTS (SELECT 1 FROM task_dimension_value x '

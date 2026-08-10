@@ -4,10 +4,6 @@
   "tabSearch": "Tìm",
   "nothingOpen": "Mở một mục để đọc ở đây",
 
-  "bundleMoving": "Đang làm",
-  "bundleStalled": "Đang kẹt",
-  "bundleNext": "Tiếp theo",
-  "bundleFinished": "Đã xong",
   "bundleFinishedWithin": "{days, plural, other{Đã xong ({days} ngày)}}",
 
   "movedFinished": "Xong",
@@ -17,8 +13,6 @@
   "allProjects": "Tất cả dự án",
   "chooseProject": "Chọn dự án",
   "refresh": "Lấy về",
-  "more": "{count, plural, other{còn {count} mục}}",
-  "moreCapped": "còn {count} mục",
   "newActivity": "Có cái mới · {count}",
   "sinceLastLook": "Từ lần bạn xem gần nhất",
   "sinceLastLookSpoken": "từ lần bạn xem gần nhất",
@@ -44,7 +38,7 @@
   "priorityLow": "Thấp",
   "rowPriority": "mức ưu tiên {name}",
 
-  "statusTodo": "Tiếp theo",
+  "statusTodo": "Cần làm",
   "statusInProgress": "Đang làm",
   "statusDone": "Xong",
   "statusRejected": "Đã bỏ",
@@ -71,8 +65,6 @@
   "stallStarts": "Bắt đầu {day}",
   "stallBlocked": "Bị chặn",
 
-  "headingShowing": "đang mở",
-  "headingFolded": "đang gấp",
 
   "searchHint": "Tìm",
   "searchClear": "Xoá",
@@ -87,6 +79,7 @@
   "showEverything": "Hiện tất cả",
   "nothingHereYet": "Ở đây chưa có gì",
   "nothingHereYetDetail": "Máy tính sẽ gửi những gì nó có vào lần tới khi danh sách việc của bạn thay đổi. Kéo xuống ở màn hình đầu là xin ngay bây giờ.",
+  "nothingInState": "Không có gì ở trạng thái này",
   "valueChip": "{dimension}: {value}",
 
   "detailStalled": "Chưa thể bắt đầu",
