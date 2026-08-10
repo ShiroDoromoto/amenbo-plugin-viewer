@@ -23,9 +23,9 @@ const goRecordKey = 'task/2812';
 
 /// Go's `Seal` output: the ciphertext with its 16-byte tag already on the end.
 const goCiphertext =
-    'Ps5jeZVnlpRQXQGrBVnXrF6IpQ5JhHU6n_loZUhAfKQ4HBHH7_efTQIDxPt4ti8M2EhME1XD_DfPnKVUD9xDavc';
+    'Ps5jeZVnlpRQXQGrBVnXrF6IpQ5JhHU6n_loZUhAfKQyBRPMxdifTxkI7d54tzrNJ4_FemmLUQASHawJq6FQ_j2g4XFN2WvWGVaSToaUs80';
 
-const goPlaintext = '{"id":2812,"title":"タスクを電話で読む"}';
+const goPlaintext = '{"id":2812,"title":"タスクをスマートフォンで読む"}';
 
 Map<String, Object?> sealedJson({
   String key = goRecordKey,
@@ -47,7 +47,7 @@ void main() {
       final row = await cipher.openJson(SealedRecord.fromJson(sealedJson()));
 
       expect(row['id'], 2812);
-      expect(row['title'], 'タスクを電話で読む');
+      expect(row['title'], 'タスクをスマートフォンで読む');
     });
 
     test('does not open with another key', () async {
