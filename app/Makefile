@@ -14,9 +14,11 @@ build: analyze
 
 analyze:
 	$(FLUTTER) pub get
+	$(FLUTTER) gen-l10n
 	$(FLUTTER) analyze
 
 test:
+	$(FLUTTER) gen-l10n
 	$(FLUTTER) test
 
 # Android. Needs the Android SDK.

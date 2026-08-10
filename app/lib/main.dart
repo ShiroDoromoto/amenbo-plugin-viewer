@@ -17,6 +17,7 @@ import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 
 import 'home.dart';
+import 'l10n/words.dart';
 import 'settings.dart';
 import 'store/backlog_store.dart';
 import 'ui/theme.dart';
@@ -60,8 +61,8 @@ class AmenboViewerApp extends StatelessWidget {
 
   final bool hasICloud;
 
-  /// The name the stores show, in both languages — it reads the same in each, so it is not
-  /// translated per locale.
+  /// The name the stores show, in every language — it reads the same in each, so it is the one
+  /// piece of text on these screens that is not on a sheet.
   static const title = 'amenbo Viewer';
 
   @override
@@ -70,6 +71,10 @@ class AmenboViewerApp extends StatelessWidget {
       listenable: settings,
       builder: (context, _) => MaterialApp(
         title: title,
+        // The app's own words and Material's — the licence page, the text field's menu, the
+        // scroll bar's labels — come out of the same choice of language.
+        localizationsDelegates: Words.localizationsDelegates,
+        supportedLocales: Words.supportedLocales,
         theme: viewerTheme(Brightness.light),
         darkTheme: viewerTheme(Brightness.dark),
         themeMode: settings.value.appearance.themeMode,

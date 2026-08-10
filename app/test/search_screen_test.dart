@@ -9,10 +9,12 @@ import 'package:amenbo_viewer/ui/decision_row.dart';
 import 'package:amenbo_viewer/ui/marks.dart';
 import 'package:amenbo_viewer/ui/task_row.dart';
 import 'package:amenbo_viewer/ui/theme.dart';
+import 'package:amenbo_viewer/l10n/words.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'backlog_fixture.dart';
+import 'words_fixture.dart';
 
 final today = DateTime(2026, 8, 9, 12);
 
@@ -32,6 +34,8 @@ void main() {
   tearDown(() => store.close());
 
   Widget screen({TaskQuery narrowing = const TaskQuery()}) => MaterialApp(
+    localizationsDelegates: Words.localizationsDelegates,
+    supportedLocales: Words.supportedLocales,
     theme: viewerTheme(Brightness.light),
     home: SearchScreen(
       store: store,
@@ -89,7 +93,7 @@ void main() {
       expect(find.text('QR に載せるものを決める'), findsOneWidget);
       expect(find.text('ペアリングの案内を書く'), findsOneWidget);
       // Nothing was filtered out for being closed — the state is written on the row instead.
-      expect(find.text(statusWords('done')), findsOneWidget);
+      expect(find.text(statusWords(words, 'done')), findsOneWidget);
     });
 
     testWidgets('a hit in a body says the line it hit', (tester) async {
@@ -119,13 +123,13 @@ void main() {
 
       expect(
         find.text(
-          SearchScreen.tab(SearchScreen.tasksTab, const Counted(2, false)),
+          SearchScreen.tab(words, words.tabTasks, const Counted(2, false)),
         ),
         findsOneWidget,
       );
       expect(
         find.text(
-          SearchScreen.tab(SearchScreen.decisionsTab, const Counted(1, false)),
+          SearchScreen.tab(words, words.tabDecisions, const Counted(1, false)),
         ),
         findsOneWidget,
       );
@@ -149,7 +153,7 @@ void main() {
       await tester.pumpWidget(screen());
 
       expect(find.byType(TaskRow), findsNWidgets(3));
-      expect(find.text(SearchScreen.nothingMatched), findsNothing);
+      expect(find.text(words.nothingMatched), findsNothing);
     });
 
     testWidgets('nothing matching says so without emptying the screen', (
@@ -158,7 +162,7 @@ void main() {
       await tester.pumpWidget(screen());
       await type(tester, 'まったく出てこない語');
 
-      expect(find.text(SearchScreen.nothingMatched), findsOneWidget);
+      expect(find.text(words.nothingMatched), findsOneWidget);
     });
   });
 
@@ -233,7 +237,7 @@ void main() {
 
       expect(find.text('アーカイブのしごと'), findsOneWidget);
       // And it can be picked out, which is the whole reason it is kept.
-      await tester.tap(find.byTooltip(SearchScreen.chooseProject));
+      await tester.tap(find.byTooltip(words.chooseProject));
       await tester.pumpAndSettle();
       await tester.tap(find.text('むかしの').last);
       await tester.pumpAndSettle();
@@ -275,8 +279,8 @@ void main() {
       // Coming back to it another time, on an empty field: both shortcuts are standing there.
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pumpWidget(screen());
-      expect(find.text(SearchScreen.recentTerms), findsOneWidget);
-      expect(find.text(SearchScreen.recentlyOpened), findsOneWidget);
+      expect(find.text(words.recentTerms), findsOneWidget);
+      expect(find.text(words.recentlyOpened), findsOneWidget);
 
       await tester.tap(find.widgetWithText(ActionChip, 'おぼえられる'));
       await tester.pumpAndSettle();
@@ -348,6 +352,8 @@ void main() {
     for (final scale in [1.0, 2.0, 3.2]) {
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: Words.localizationsDelegates,
+          supportedLocales: Words.supportedLocales,
           theme: viewerTheme(Brightness.light),
           home: MediaQuery(
             data: MediaQueryData(textScaler: TextScaler.linear(scale)),

@@ -3,6 +3,7 @@
 
 import 'package:amenbo_viewer/ui/markdown.dart';
 import 'package:amenbo_viewer/ui/theme.dart';
+import 'package:amenbo_viewer/l10n/words.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -108,6 +109,8 @@ void main() {
     ) async {
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: Words.localizationsDelegates,
+          supportedLocales: Words.supportedLocales,
           theme: viewerTheme(Brightness.light),
           home: const Scaffold(
             body: SingleChildScrollView(child: MarkdownSections(source: notes)),
@@ -129,6 +132,8 @@ void main() {
     final followed = <String>[];
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: Words.localizationsDelegates,
+        supportedLocales: Words.supportedLocales,
         theme: viewerTheme(Brightness.light),
         home: Scaffold(
           body: MarkdownBody(
@@ -159,6 +164,8 @@ void main() {
     for (final scale in [1.0, 2.0, 3.2]) {
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: Words.localizationsDelegates,
+          supportedLocales: Words.supportedLocales,
           theme: viewerTheme(Brightness.light),
           home: MediaQuery(
             data: MediaQueryData(textScaler: TextScaler.linear(scale)),

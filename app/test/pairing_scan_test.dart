@@ -2,12 +2,15 @@
 // out of every place someone can get stuck: before the permission sheet, after it was refused,
 // and after a code that turned out to be something else. A real camera can say none of that.
 
+import 'package:amenbo_viewer/l10n/words.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:amenbo_viewer/pairing_scan.dart';
 import 'package:amenbo_viewer/pairing_store.dart';
+
+import 'words_fixture.dart';
 
 /// A camera that reports what it was asked for and shows whatever it is told to.
 class FakeCamera implements Camera {
@@ -47,6 +50,8 @@ Future<Pairing? Function()> open(WidgetTester tester, FakeCamera camera) async {
 
   await tester.pumpWidget(
     MaterialApp(
+      localizationsDelegates: Words.localizationsDelegates,
+      supportedLocales: Words.supportedLocales,
       home: Builder(
         builder: (context) => TextButton(
           onPressed: () async {
@@ -83,12 +88,12 @@ void main() {
 
     // Nothing has been asked of the OS yet, and the screen says why it is about to.
     expect(camera.asked, 0);
-    expect(find.text(PairingScanScreen.why), findsOneWidget);
+    expect(find.text(words.pairWhy), findsOneWidget);
 
     await turnOnTheCamera(tester);
 
     expect(camera.asked, 1);
-    expect(find.text(PairingScanScreen.inFrame), findsOneWidget);
+    expect(find.text(words.pairInFrame), findsOneWidget);
   });
 
   testWidgets('a code that reads pairs the phone and closes', (tester) async {
@@ -118,7 +123,7 @@ void main() {
 
     // Still scanning, and now saying what it read instead of stopping at "could not read that".
     expect(find.byType(PairingScanScreen), findsOneWidget);
-    expect(find.text(PairingScanScreen.inFrame), findsNothing);
+    expect(find.text(words.pairInFrame), findsNothing);
     expect(find.textContaining('not an amenbo pairing code'), findsOneWidget);
   });
 
@@ -144,7 +149,7 @@ void main() {
     await open(tester, camera);
     await turnOnTheCamera(tester);
 
-    expect(find.text(PairingScanScreen.refused), findsOneWidget);
+    expect(find.text(words.pairCameraRefused), findsOneWidget);
 
     // One button, and it is the settings. A code read out of a photograph would put the token
     // and the key in the photo library, so that way back is not offered at all.

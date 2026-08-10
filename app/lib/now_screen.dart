@@ -21,6 +21,7 @@ library;
 import 'package:flutter/material.dart';
 
 import 'cloudflare_intake.dart';
+import 'l10n/words.dart';
 import 'settings.dart';
 import 'state_band.dart';
 import 'store/backlog_queries.dart';
@@ -40,21 +41,24 @@ import 'ui/touch.dart';
 /// a person who set it to a month and reads "7 days" would take the setting for broken. With no
 /// cut-off there is nothing to say, so it says nothing.
 String bundleHeading(
+  Words words,
   Bundle bundle, {
   int? finishedDays = finishedDaysDefault,
 }) => switch (bundle) {
-  Bundle.moving => 'In progress',
-  Bundle.stalled => 'Stalled',
-  Bundle.next => 'Next',
+  Bundle.moving => words.bundleMoving,
+  Bundle.stalled => words.bundleStalled,
+  Bundle.next => words.bundleNext,
   Bundle.finished =>
-    finishedDays == null ? 'Finished' : 'Finished ($finishedDays days)',
+    finishedDays == null
+        ? words.bundleFinished
+        : words.bundleFinishedWithin(finishedDays),
 };
 
 /// What the card calls each of its three numbers.
-String movedHeading(Moved moved) => switch (moved) {
-  Moved.finished => 'Finished',
-  Moved.filed => 'New',
-  Moved.commented => 'Comments',
+String movedHeading(Words words, Moved moved) => switch (moved) {
+  Moved.finished => words.movedFinished,
+  Moved.filed => words.movedFiled,
+  Moved.commented => words.movedCommented,
 };
 
 /// Says that rows arrived. Nothing about which — the screen that cares reads the store itself.
@@ -135,21 +139,14 @@ class NowScreen extends StatefulWidget {
   /// "today" was.
   final DateTime Function() clock;
 
-  static const allProjects = 'All projects';
-  static const chooseProject = 'Choose a project';
-  static const refresh = 'Refresh';
+  static String more(Words words, int rest, {bool overflowed = false}) =>
+      words.more('$rest${overflowed ? '+' : ''}');
 
-  static String more(int rest, {bool overflowed = false}) =>
-      '$rest${overflowed ? '+' : ''} more';
+  static String arrived(Words words, Counted count) =>
+      words.newActivity(countLabel(words, count));
 
-  static String arrived(Counted count) => 'New activity · ${countLabel(count)}';
-
-  /// The card's heading. It names the moment rather than the span, because "since you last looked"
-  /// is a moment the person remembers and "in the last 9 hours" is one they have to work out.
-  static const sinceLastLook = 'Since you last looked';
-
-  static String moved(Moved moved, Counted count) =>
-      '${movedHeading(moved)} ${countLabel(count)}';
+  static String moved(Words words, Moved moved, Counted count) =>
+      '${movedHeading(words, moved)} ${countLabel(words, count)}';
 
   @override
   State<NowScreen> createState() => _NowScreenState();
@@ -354,6 +351,7 @@ class _NowScreenState extends State<NowScreen> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     final today = widget.clock();
+    final words = Words.of(context);
     final standing = standingOf(
       anythingHere: !_empty,
       failure: widget.failure,
@@ -365,7 +363,7 @@ class _NowScreenState extends State<NowScreen> with WidgetsBindingObserver {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            tooltip: NowScreen.refresh,
+            tooltip: words.refresh,
             onPressed: _pull,
           ),
         ],
@@ -383,7 +381,9 @@ class _NowScreenState extends State<NowScreen> with WidgetsBindingObserver {
         children: [
           RefreshIndicator(
             onRefresh: _pull,
-            child: _empty ? _nothing(standing) : _scroll(today, standing),
+            child: _empty
+                ? _nothing(standing)
+                : _scroll(words, today, standing),
           ),
           if (_arrived != null)
             Align(
@@ -392,7 +392,7 @@ class _NowScreenState extends State<NowScreen> with WidgetsBindingObserver {
                 padding: const EdgeInsets.only(top: Space.s3),
                 child: ActionChip(
                   avatar: const Icon(Icons.arrow_upward, size: Space.s5),
-                  label: Text(NowScreen.arrived(_arrived!)),
+                  label: Text(NowScreen.arrived(words, _arrived!)),
                   onPressed: _showWhatArrived,
                 ),
               ),
@@ -403,30 +403,31 @@ class _NowScreenState extends State<NowScreen> with WidgetsBindingObserver {
   }
 
   Widget _title() {
+    final words = Words.of(context);
     // Nothing to choose between: one project is the title, and a menu offering the only answer
     // is a control that costs a tap and gives nothing back.
     if (_projects.length < 2) {
       return Text(
-        _projects.isEmpty ? NowScreen.allProjects : _projects.single.name,
+        _projects.isEmpty ? words.allProjects : _projects.single.name,
       );
     }
     final label = _projectId == null
-        ? NowScreen.allProjects
-        : _names[_projectId] ?? NowScreen.allProjects;
+        ? words.allProjects
+        : _names[_projectId] ?? words.allProjects;
     return PopupMenuButton<int?>(
-      tooltip: NowScreen.chooseProject,
+      tooltip: words.chooseProject,
       initialValue: _projectId,
       onSelected: (chosen) => setState(() {
         _projectId = chosen;
         _load();
       }),
       itemBuilder: (context) => [
-        const PopupMenuItem(value: null, child: Text(NowScreen.allProjects)),
+        PopupMenuItem(value: null, child: Text(words.allProjects)),
         for (final project in _projects)
           PopupMenuItem(value: project.id, child: Text(project.name)),
       ],
       child: Semantics(
-        label: '$label, ${NowScreen.chooseProject}',
+        label: '$label, ${words.chooseProject}',
         button: true,
         container: true,
         child: ExcludeSemantics(
@@ -460,7 +461,7 @@ class _NowScreenState extends State<NowScreen> with WidgetsBindingObserver {
     clock: widget.clock,
   );
 
-  Widget _scroll(DateTime today, Standing standing) {
+  Widget _scroll(Words words, DateTime today, Standing standing) {
     final rows = <Widget>[
       // Above the card and above the bundles: what is being read is only worth reading once the
       // person knows how old it is and why.
@@ -477,8 +478,12 @@ class _NowScreenState extends State<NowScreen> with WidgetsBindingObserver {
       final folds = bundle == Bundle.finished;
       rows.add(
         BundleHeading(
-          title: bundleHeading(bundle, finishedDays: widget.doneWindow.days),
-          count: countLabel(held.total),
+          title: bundleHeading(
+            words,
+            bundle,
+            finishedDays: widget.doneWindow.days,
+          ),
+          count: countLabel(words, held.total),
           expanded: folds ? _finishedOpen : null,
           onToggle: folds
               ? () => setState(() => _finishedOpen = !_finishedOpen)
@@ -513,7 +518,11 @@ class _NowScreenState extends State<NowScreen> with WidgetsBindingObserver {
       if (rest > 0) {
         rows.add(
           _MoreRow(
-            label: NowScreen.more(rest, overflowed: held.total.overflowed),
+            label: NowScreen.more(
+              words,
+              rest,
+              overflowed: held.total.overflowed,
+            ),
             onTap: () => widget.onMore(
               TaskQuery(
                 bundle: bundle,
@@ -560,7 +569,10 @@ class _SinceCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(NowScreen.sinceLastLook, style: theme.textTheme.titleSmall),
+            Text(
+              Words.of(context).sinceLastLook,
+              style: theme.textTheme.titleSmall,
+            ),
             const SizedBox(height: Space.s1),
             Wrap(
               crossAxisAlignment: WrapCrossAlignment.center,
@@ -596,11 +608,13 @@ class _SinceNumber extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final label = NowScreen.moved(moved, count);
+    final words = Words.of(context);
+    final label = NowScreen.moved(words, moved, count);
     return Semantics(
       // On its own it would be read as two words and a number, with no way to tell what the
-      // number is since.
-      label: '$label, ${NowScreen.sinceLastLook.toLowerCase()}',
+      // number is since. Said rather than lower-cased: case is not a thing every language does
+      // the same way.
+      label: '$label, ${words.sinceLastLookSpoken}',
       button: true,
       container: true,
       child: ExcludeSemantics(

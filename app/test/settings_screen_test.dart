@@ -3,15 +3,17 @@
 
 import 'package:amenbo_viewer/about_screen.dart';
 import 'package:amenbo_viewer/connection.dart';
-import 'package:amenbo_viewer/connection_screen.dart';
 import 'package:amenbo_viewer/main.dart';
 import 'package:amenbo_viewer/settings.dart';
 import 'package:amenbo_viewer/settings_screen.dart';
 import 'package:amenbo_viewer/store/backlog_store.dart';
+import 'package:amenbo_viewer/l10n/words.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'connection_screen_test.dart' show FakeFacts;
+
+import 'words_fixture.dart';
 
 const _facts = Connection(
   route: ConnectionRoute.cloudflare,
@@ -26,6 +28,8 @@ Future<SettingsController> pumpSettings(
   final settings = SettingsController(keep ?? UnkeptSettings());
   await tester.pumpWidget(
     MaterialApp(
+      localizationsDelegates: Words.localizationsDelegates,
+      supportedLocales: Words.supportedLocales,
       home: SettingsScreen(
         settings: settings,
         connection: connection ?? FakeFacts(_facts),
@@ -50,13 +54,13 @@ void main() {
     await pumpSettings(tester);
 
     for (final one in Refresh.values) {
-      expect(find.text(one.words), findsOneWidget);
+      expect(find.text(refreshWords(words, one)), findsOneWidget);
     }
     for (final one in Appearance.values) {
-      expect(find.text(one.words), findsOneWidget);
+      expect(find.text(appearanceWords(words, one)), findsOneWidget);
     }
     for (final one in DoneWindow.values) {
-      expect(find.text(one.words), findsOneWidget);
+      expect(find.text(doneWindowWords(words, one)), findsOneWidget);
     }
     // Everything a person can decide here is a radio in one of those three groups, plus the two
     // ways out. Anything else on this screen would be the app's shape handed over.
@@ -79,7 +83,7 @@ void main() {
     var announced = 0;
     settings.addListener(() => announced += 1);
 
-    await tester.tap(find.text(Appearance.dark.words));
+    await tester.tap(find.text(appearanceWords(words, Appearance.dark)));
     await tester.pumpAndSettle();
 
     expect(settings.value.appearance, Appearance.dark);
@@ -103,7 +107,7 @@ void main() {
   testWidgets('the connection is one tap away', (tester) async {
     await pumpSettings(tester);
 
-    await tapRow(tester, find.text(ConnectionScreen.title));
+    await tapRow(tester, find.text(words.connectionTitle));
 
     expect(find.text(_facts.host!), findsOneWidget);
   });
@@ -117,6 +121,8 @@ void main() {
     final settings = SettingsController(UnkeptSettings());
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: Words.localizationsDelegates,
+        supportedLocales: Words.supportedLocales,
         home: Builder(
           builder: (context) => Scaffold(
             body: TextButton(
@@ -139,13 +145,13 @@ void main() {
     );
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
-    await tapRow(tester, find.text(ConnectionScreen.title));
-    await tapRow(tester, find.text(ConnectionScreen.erase));
+    await tapRow(tester, find.text(words.connectionTitle));
+    await tapRow(tester, find.text(words.erase));
     await tester.tap(find.text('Erase'));
     await tester.pumpAndSettle();
 
     expect(popped, isTrue);
-    expect(find.text(SettingsScreen.title), findsNothing);
+    expect(find.text(words.settingsTitle), findsNothing);
   });
 
   testWidgets('what this build is, is on the screen it is asked from', (
@@ -153,21 +159,21 @@ void main() {
   ) async {
     await pumpSettings(tester);
 
-    await tapRow(tester, find.text(AboutScreen.title));
+    await tapRow(tester, find.text(words.aboutTitle));
 
     expect(find.text('Version $appVersion'), findsOneWidget);
     // The one thing a place and a phone can disagree about while both are working.
     expect(find.textContaining('snapshot contract'), findsOneWidget);
-    expect(find.text(AboutScreen.licences), findsOneWidget);
+    expect(find.text(words.licences), findsOneWidget);
   });
 
   testWidgets('the licences are the ones built in, not fetched', (
     tester,
   ) async {
     await pumpSettings(tester);
-    await tapRow(tester, find.text(AboutScreen.title));
+    await tapRow(tester, find.text(words.aboutTitle));
 
-    await tester.tap(find.text(AboutScreen.licences));
+    await tester.tap(find.text(words.licences));
     await tester.pumpAndSettle();
 
     expect(find.byType(LicensePage), findsOneWidget);

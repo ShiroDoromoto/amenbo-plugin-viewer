@@ -17,6 +17,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../l10n/words.dart';
 import 'tokens.dart';
 
 /// The palette the surrounding theme is drawn from.
@@ -257,7 +258,10 @@ class BundleHeading extends StatelessWidget {
       label: [
         title,
         ?count,
-        if (folds) expanded! ? 'showing' : 'folded',
+        if (folds)
+          expanded!
+              ? Words.of(context).headingShowing
+              : Words.of(context).headingFolded,
       ].join(', '),
       child: ExcludeSemantics(
         child: folds ? InkWell(onTap: onToggle, child: heading) : heading,

@@ -10,6 +10,7 @@
 library;
 
 import 'icloud_container.dart';
+import 'l10n/words.dart';
 import 'pairing_store.dart';
 import 'store/backlog_store.dart';
 
@@ -17,15 +18,17 @@ import 'store/backlog_store.dart';
 enum ConnectionRoute {
   /// The app's own iCloud container. iPhone only, and it holds no secret this device chose — so
   /// there is nothing here to pair again and nothing to revoke.
-  iCloud('iCloud Drive'),
+  iCloud,
 
   /// The person's own Worker, reached with the token and key the QR code carried.
-  cloudflare('Your own Cloudflare');
-
-  const ConnectionRoute(this.words);
-
-  final String words;
+  cloudflare,
 }
+
+String connectionRouteWords(Words words, ConnectionRoute route) =>
+    switch (route) {
+      ConnectionRoute.iCloud => words.routeICloud,
+      ConnectionRoute.cloudflare => words.routeCloudflare,
+    };
 
 /// The last thing the app managed to take from the place.
 ///

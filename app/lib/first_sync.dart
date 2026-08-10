@@ -22,6 +22,7 @@ library;
 import 'package:flutter/material.dart';
 
 import 'cloudflare_intake.dart';
+import 'l10n/words.dart';
 import 'ui/tokens.dart';
 import 'ui/touch.dart';
 
@@ -39,23 +40,6 @@ class FirstSyncScreen extends StatefulWidget {
   const FirstSyncScreen({super.key, required this.take});
 
   final TakeTheBacklog take;
-
-  static const title = 'Getting your backlog';
-  static const carriesOn =
-      'Leaving this is safe. It carries on from where it stopped.';
-  static const tryAgain = 'Try again';
-
-  /// What the count reads as while nothing has landed yet.
-  ///
-  /// Not "0 records so far": a page is written whole, so the whole of a backlog that fits in one
-  /// arrives at once and there is nothing to count until it does. A zero standing there for the
-  /// length of the wait is the screen answering a question it has not been told the answer to.
-  static const opening = 'Reading from your PC';
-
-  /// How the running count is said. It is the records that are on the phone, not a countdown:
-  /// how many are coming is not something the place is asked.
-  static String taken(int records) =>
-      records == 1 ? '1 record so far' : '$records records so far';
 
   @override
   State<FirstSyncScreen> createState() => _FirstSyncScreenState();
@@ -119,10 +103,11 @@ class _FirstSyncScreenState extends State<FirstSyncScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final words = Words.of(context);
     final stopped = _stopped;
 
     return Scaffold(
-      appBar: AppBar(title: const Text(FirstSyncScreen.title)),
+      appBar: AppBar(title: Text(words.firstSyncTitle)),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(
           Space.pageGutter,
@@ -133,8 +118,8 @@ class _FirstSyncScreenState extends State<FirstSyncScreen> {
         children: [
           Text(
             _records == 0
-                ? FirstSyncScreen.opening
-                : FirstSyncScreen.taken(_records),
+                ? words.firstSyncOpening
+                : words.firstSyncTaken(_records),
             style: theme.textTheme.headlineSmall,
           ),
           const SizedBox(height: Space.s6),
@@ -149,7 +134,7 @@ class _FirstSyncScreenState extends State<FirstSyncScreen> {
           // next. Under a refusal it is the sentence that keeps somebody sitting here.
           if (stopped == null || worthAnotherRound(stopped.failure))
             Text(
-              FirstSyncScreen.carriesOn,
+              words.firstSyncCarriesOn,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -163,12 +148,15 @@ class _FirstSyncScreenState extends State<FirstSyncScreen> {
               ),
             ),
             const SizedBox(height: Space.s3),
-            Text(_wayOut(stopped.failure), style: theme.textTheme.bodyMedium),
+            Text(
+              _wayOut(words, stopped.failure),
+              style: theme.textTheme.bodyMedium,
+            ),
             if (worthAnotherRound(stopped.failure)) ...[
               const SizedBox(height: Space.s6),
               FilledButton(
                 onPressed: _running ? null : _take,
-                child: const Text(FirstSyncScreen.tryAgain),
+                child: Text(words.tryAgain),
               ),
             ],
           ],
@@ -179,16 +167,12 @@ class _FirstSyncScreenState extends State<FirstSyncScreen> {
 
   /// What there is to do about a round that stopped. Each of these has a different next step, and
   /// a single "something went wrong" would send everyone to the same wrong one.
-  static String _wayOut(IntakeFailure failure) => switch (failure) {
-    IntakeFailure.unreachable =>
-      'Nothing was lost. Trying again picks up where this stopped.',
-    IntakeFailure.refused =>
-      'This phone is no longer allowed to read. Show it a fresh code from the PC.',
-    IntakeFailure.tooNew =>
-      'Update this app from the store, and it will be able to read the rest.',
-    IntakeFailure.rebuilt =>
-      'The place was built again from nothing, so this starts from the beginning.',
-    IntakeFailure.unreadable =>
-      'Nothing was lost. If trying again says the same, the PC is the end to look at.',
-  };
+  static String _wayOut(Words words, IntakeFailure failure) =>
+      switch (failure) {
+        IntakeFailure.unreachable => words.wayOutUnreachable,
+        IntakeFailure.refused => words.wayOutRefused,
+        IntakeFailure.tooNew => words.wayOutTooNew,
+        IntakeFailure.rebuilt => words.wayOutRebuilt,
+        IntakeFailure.unreadable => words.wayOutUnreadable,
+      };
 }

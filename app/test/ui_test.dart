@@ -12,10 +12,13 @@ import 'package:amenbo_viewer/ui/theme.dart';
 import 'package:amenbo_viewer/ui/time.dart';
 import 'package:amenbo_viewer/ui/tokens.dart';
 import 'package:amenbo_viewer/ui/two_pane.dart';
+import 'package:amenbo_viewer/l10n/words.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'words_fixture.dart';
 
 final now = DateTime(2026, 8, 9, 12, 0);
 
@@ -70,6 +73,8 @@ void main() {
       for (final platform in [TargetPlatform.iOS, TargetPlatform.android]) {
         await tester.pumpWidget(
           MaterialApp(
+            localizationsDelegates: Words.localizationsDelegates,
+            supportedLocales: Words.supportedLocales,
             theme: viewerTheme(Brightness.light).copyWith(platform: platform),
             home: const Scaffold(body: RowTitle('a title')),
           ),
@@ -150,6 +155,7 @@ void main() {
   group('a row is read as one thing', () {
     test('the sentence carries what the marks show, and no glyphs', () {
       final label = rowLabel(
+        words,
         ref: taskRef(2833),
         title: 'wire the store up',
         status: 'in_progress',
@@ -168,6 +174,7 @@ void main() {
 
     test('one comment is not read as "1 comments"', () {
       final label = rowLabel(
+        words,
         ref: taskRef(1),
         title: 't',
         status: 'todo',
@@ -178,7 +185,7 @@ void main() {
       // Nothing at all when there are none: a row saying "0 comments" spends the listener's
       // attention on the absence of something.
       expect(
-        rowLabel(ref: taskRef(1), title: 't', status: 'todo'),
+        rowLabel(words, ref: taskRef(1), title: 't', status: 'todo'),
         isNot(contains('comment')),
       );
     });
@@ -211,23 +218,31 @@ void main() {
   group('time', () {
     test('it counts while counting helps, then names the day', () {
       expect(
-        relativeTime(now.subtract(const Duration(seconds: 20)), now: now),
+        relativeTime(
+          words,
+          now.subtract(const Duration(seconds: 20)),
+          now: now,
+        ),
         'just now',
       );
       expect(
-        relativeTime(now.subtract(const Duration(minutes: 12)), now: now),
+        relativeTime(
+          words,
+          now.subtract(const Duration(minutes: 12)),
+          now: now,
+        ),
         '12 min ago',
       );
       expect(
-        relativeTime(now.subtract(const Duration(hours: 3)), now: now),
+        relativeTime(words, now.subtract(const Duration(hours: 3)), now: now),
         '3 h ago',
       );
       expect(
-        relativeTime(DateTime(2026, 8, 8, 14, 2), now: now),
+        relativeTime(words, DateTime(2026, 8, 8, 14, 2), now: now),
         'yesterday 14:02',
       );
-      expect(relativeTime(DateTime(2026, 8, 2), now: now), '2 Aug');
-      expect(relativeTime(DateTime(2025, 8, 2), now: now), '2 Aug 2025');
+      expect(relativeTime(words, DateTime(2026, 8, 2), now: now), '2 Aug');
+      expect(relativeTime(words, DateTime(2025, 8, 2), now: now), '2 Aug 2025');
     });
 
     test('"h ago" never outlives the day it was counted from', () {
@@ -235,6 +250,7 @@ void main() {
       // still today.
       expect(
         relativeTime(
+          words,
           DateTime(2026, 8, 8, 23, 0),
           now: DateTime(2026, 8, 9, 12, 0),
         ),
@@ -244,6 +260,7 @@ void main() {
       // the question being answered is how fresh it is.
       expect(
         relativeTime(
+          words,
           DateTime(2026, 8, 8, 23, 50),
           now: DateTime(2026, 8, 9, 0, 30),
         ),
@@ -355,11 +372,15 @@ void main() {
 }
 
 Widget _wrap(Widget child) => MaterialApp(
+  localizationsDelegates: Words.localizationsDelegates,
+  supportedLocales: Words.supportedLocales,
   theme: viewerTheme(Brightness.light),
   home: Scaffold(body: Center(child: child)),
 );
 
 Widget _scaled(double scale, Widget child) => MaterialApp(
+  localizationsDelegates: Words.localizationsDelegates,
+  supportedLocales: Words.supportedLocales,
   theme: viewerTheme(Brightness.light),
   home: MediaQuery(
     data: MediaQueryData(textScaler: TextScaler.linear(scale)),
@@ -371,6 +392,8 @@ Widget _scaled(double scale, Widget child) => MaterialApp(
 /// sit under something that hands down loose constraints or it silently keeps the surface's own
 /// width — which is the one thing these tests are about.
 Widget _sized(Size size, Widget child) => MaterialApp(
+  localizationsDelegates: Words.localizationsDelegates,
+  supportedLocales: Words.supportedLocales,
   theme: viewerTheme(Brightness.light),
   home: Align(
     alignment: Alignment.topLeft,

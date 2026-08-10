@@ -5,44 +5,54 @@
 /// press away, for the times it is the answer.
 ///
 /// The clock is passed in rather than read here, so a list and the line above it cannot disagree
-/// about what "now" was.
+/// about what "now" was. The words are passed in for the same reason they are everywhere else:
+/// nothing here writes its own text.
 library;
 
 import 'package:flutter/material.dart';
+
+import '../l10n/words.dart';
 
 /// `12 min ago` / `yesterday 14:02` / `2 Aug` / `2 Aug 2025`.
 ///
 /// It stops being a count of minutes as soon as counting stops helping: yesterday is named, and
 /// anything older is a date, because "9,412 min ago" is a number nobody converts.
-String relativeTime(DateTime when, {required DateTime now}) {
+String relativeTime(Words words, DateTime when, {required DateTime now}) {
   final local = when.toLocal();
   final gap = now.difference(local);
 
-  if (gap.inSeconds < 60) return 'just now';
-  if (gap.inMinutes < 60) return '${gap.inMinutes} min ago';
-  if (gap.inHours < 24 && _sameDay(local, now)) return '${gap.inHours} h ago';
+  if (gap.inSeconds < 60) return words.timeJustNow;
+  if (gap.inMinutes < 60) return words.timeMinutesAgo(gap.inMinutes);
+  if (gap.inHours < 24 && _sameDay(local, now)) {
+    return words.timeHoursAgo(gap.inHours);
+  }
 
   final yesterday = now.subtract(const Duration(days: 1));
-  if (_sameDay(local, yesterday)) return 'yesterday ${clockTime(local)}';
+  if (_sameDay(local, yesterday)) {
+    return words.timeYesterdayAt(clockTime(local));
+  }
 
   return local.year == now.year
-      ? _date(local)
-      : '${_date(local)} ${local.year}';
+      ? _date(words, local)
+      : words.dateWithYear(_date(words, local), local.year);
 }
 
 /// The whole instant, spelled out — what the long press reveals.
-String absoluteTime(DateTime when) {
+String absoluteTime(Words words, DateTime when) {
   final local = when.toLocal();
-  return '${_date(local)} ${local.year}, ${clockTime(local)}';
+  return words.dateAndTime(
+    words.dateWithYear(_date(words, local), local.year),
+    clockTime(local),
+  );
 }
 
 /// A day on its own (`due_on`, `start_on`), which amenbo writes as `YYYY-MM-DD`.
-String dayLabel(String isoDay, {required DateTime now}) {
+String dayLabel(Words words, String isoDay, {required DateTime now}) {
   final parsed = DateTime.tryParse(isoDay);
   if (parsed == null) return isoDay;
   return parsed.year == now.year
-      ? _date(parsed)
-      : '${_date(parsed)} ${parsed.year}';
+      ? _date(words, parsed)
+      : words.dateWithYear(_date(words, parsed), parsed.year);
 }
 
 /// Reveals [when] in full while it is held down.
@@ -57,7 +67,7 @@ class TimeOnHold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Tooltip(
-    message: absoluteTime(when),
+    message: absoluteTime(Words.of(context), when),
     triggerMode: TooltipTriggerMode.longPress,
     // The tooltip would otherwise be read out as a second thing on a row that is meant to be
     // read as one; the label the row carries already says the relative time.
@@ -81,21 +91,35 @@ String clockTime(DateTime when) =>
 /// Still the clock rather than a count of hours, for the same reason [clockTime] is — but an hour
 /// on its own only names a moment while it is today's. A phone that spent the night out of signal
 /// would otherwise say `09:14` about a picture two days old.
-String clockOnDay(DateTime when, {required DateTime now}) {
+String clockOnDay(Words words, DateTime when, {required DateTime now}) {
   final local = when.toLocal();
   final time = clockTime(local);
   if (_sameDay(local, now)) return time;
   if (_sameDay(local, now.subtract(const Duration(days: 1)))) {
-    return 'yesterday $time';
+    return words.timeYesterdayAt(time);
   }
   return local.year == now.year
-      ? '${_date(local)} $time'
-      : '${_date(local)} ${local.year} $time';
+      ? words.dateThenTime(_date(words, local), time)
+      : words.dateThenTime(
+          words.dateWithYear(_date(words, local), local.year),
+          time,
+        );
 }
 
-const _months = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', //
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-];
+String _month(Words words, int month) => switch (month) {
+  1 => words.monthJanuary,
+  2 => words.monthFebruary,
+  3 => words.monthMarch,
+  4 => words.monthApril,
+  5 => words.monthMay,
+  6 => words.monthJune,
+  7 => words.monthJuly,
+  8 => words.monthAugust,
+  9 => words.monthSeptember,
+  10 => words.monthOctober,
+  11 => words.monthNovember,
+  _ => words.monthDecember,
+};
 
-String _date(DateTime when) => '${when.day} ${_months[when.month - 1]}';
+String _date(Words words, DateTime when) =>
+    words.dateDayMonth(when.day, _month(words, when.month));

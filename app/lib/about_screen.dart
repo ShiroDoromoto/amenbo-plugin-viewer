@@ -8,6 +8,7 @@ library;
 import 'package:flutter/material.dart';
 
 import 'cloudflare_intake.dart';
+import 'l10n/words.dart';
 import 'ui/tokens.dart';
 
 /// This build's version, as the stores show it.
@@ -21,26 +22,20 @@ class AboutScreen extends StatelessWidget {
 
   final String appName;
 
-  static const title = 'About';
-  static const licences = 'Licences';
-
-  /// Said in full rather than as a number on its own: `spec_v` is the one thing a place and a
-  /// phone can disagree about while both are working correctly, and this is where the person
-  /// finds out which side is behind.
-  static String contractLine(int version) =>
-      'Reads version $version of the amenbo snapshot contract. A place writing '
-      'any other version needs a different version of this app.';
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final words = Words.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text(title)),
+      appBar: AppBar(title: Text(words.aboutTitle)),
       body: ListView(
         padding: const EdgeInsets.only(bottom: Space.s7),
         children: [
-          ListTile(title: Text(appName), subtitle: Text('Version $appVersion')),
+          ListTile(
+            title: Text(appName),
+            subtitle: Text(words.appVersion(appVersion)),
+          ),
           Padding(
             padding: const EdgeInsets.fromLTRB(
               Space.gutter,
@@ -49,7 +44,7 @@ class AboutScreen extends StatelessWidget {
               Space.s5,
             ),
             child: Text(
-              contractLine(contractVersion),
+              words.contractLine(contractVersion),
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -57,7 +52,7 @@ class AboutScreen extends StatelessWidget {
           ),
           const Divider(height: Stroke.rule),
           ListTile(
-            title: const Text(licences),
+            title: Text(words.licences),
             onTap: () => showLicensePage(
               context: context,
               applicationName: appName,

@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../l10n/words.dart';
 import 'tokens.dart';
 
 /// The namespace amenbo puts on everything it shows. A bare number belongs to any tracker;
@@ -51,8 +52,9 @@ class RefChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final words = Words.of(context);
     return Semantics(
-      label: '$ref, copy',
+      label: '$ref, ${words.refCopy}',
       button: true,
       container: true,
       child: ExcludeSemantics(
@@ -61,7 +63,9 @@ class RefChip extends StatelessWidget {
             await Clipboard.setData(ClipboardData(text: ref));
             if (!context.mounted) return;
             final messenger = ScaffoldMessenger.maybeOf(context);
-            messenger?.showSnackBar(SnackBar(content: Text('Copied $ref')));
+            messenger?.showSnackBar(
+              SnackBar(content: Text(words.refCopied(ref))),
+            );
           },
           borderRadius: Corner.smooth,
           child: Padding(

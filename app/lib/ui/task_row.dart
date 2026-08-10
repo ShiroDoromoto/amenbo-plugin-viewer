@@ -13,6 +13,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../l10n/words.dart';
 import '../store/backlog_queries.dart';
 import 'marks.dart';
 import 'refs.dart';
@@ -21,8 +22,8 @@ import 'time.dart';
 import 'tokens.dart';
 
 /// A count as a heading prints it.
-String countLabel(Counted counted) =>
-    counted.overflowed ? '${Counted.cap}+' : '${counted.value}';
+String countLabel(Words words, Counted counted) =>
+    counted.overflowed ? words.countOverflow(Counted.cap) : '${counted.value}';
 
 /// Why a task cannot be started, in the words the person needs in order to act.
 ///
@@ -34,17 +35,17 @@ String countLabel(Counted counted) =>
 /// and then had nothing to say about why would be the one row on the screen that wastes its
 /// second line — a start day still ahead included, which is a stall nobody has to do anything
 /// about and therefore the easiest one to leave out.
-String? stallReason(TaskLine line, {required DateTime today}) {
+String? stallReason(Words words, TaskLine line, {required DateTime today}) {
   final blocker = line.blockedBy;
-  if (blocker != null) return '${taskRef(blocker)} is not finished';
+  if (blocker != null) return words.stallBlockedBy(taskRef(blocker));
   final undecided = line.undecided;
-  if (undecided != null) return '${decisionRef(undecided)} is undecided';
-  if (line.draft) return 'Still being written';
+  if (undecided != null) return words.stallUndecided(decisionRef(undecided));
+  if (line.draft) return words.stallDraft;
   final start = line.startOn;
   if (start != null && start.compareTo(isoDay(today)) > 0) {
-    return 'Starts ${dayLabel(start, now: today)}';
+    return words.stallStarts(dayLabel(words, start, now: today));
   }
-  if (line.status == 'blocked') return 'Blocked';
+  if (line.status == 'blocked') return words.stallBlocked;
   return null;
 }
 
@@ -85,10 +86,11 @@ class TaskRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final words = Words.of(context);
     final quiet = theme.textTheme.bodySmall?.copyWith(
       color: theme.colorScheme.onSurfaceVariant,
     );
-    final reason = stallReason(line, today: today);
+    final reason = stallReason(words, line, today: today);
     final moved = movedAt;
 
     final excerpt = line.matchLine?.trim();
@@ -118,17 +120,15 @@ class TaskRow extends StatelessWidget {
         )
       else if (line.dueOn != null)
         DueMark(line.dueOn!, today: today),
-      if (line.assigneeKind == 'ai') Text('AI', style: quiet),
-      if (moved != null) Text(relativeTime(moved, now: today), style: quiet),
-      if (line.comments > 0)
-        Text(
-          '${line.comments} ${line.comments == 1 ? 'comment' : 'comments'}',
-          style: quiet,
-        ),
+      if (line.assigneeKind == 'ai') Text(words.markAi, style: quiet),
+      if (moved != null)
+        Text(relativeTime(words, moved, now: today), style: quiet),
+      if (line.comments > 0) Text(words.comments(line.comments), style: quiet),
     ];
 
     return SpokenAsOne(
       label: rowLabel(
+        words,
         ref: taskRef(line.id),
         title: line.title,
         status: line.status,
@@ -137,11 +137,11 @@ class TaskRow extends StatelessWidget {
         assigneeKind: line.assigneeKind,
         comments: line.comments,
         due: reason == null && line.dueOn != null
-            ? dueLabel(line.dueOn!, today: today)
+            ? dueLabel(words, line.dueOn!, today: today)
             : null,
         stallReason: reason,
         project: projectName,
-        when: moved == null ? null : relativeTime(moved, now: today),
+        when: moved == null ? null : relativeTime(words, moved, now: today),
         excerpt: excerpt,
       ),
       child: InkWell(

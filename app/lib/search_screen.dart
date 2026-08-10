@@ -21,6 +21,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import 'l10n/words.dart';
 import 'now_screen.dart' show bundleHeading, movedHeading;
 import 'store/backlog_queries.dart';
 import 'store/backlog_store.dart';
@@ -59,32 +60,17 @@ class SearchScreen extends StatefulWidget {
   /// prefixes nobody meant to ask about.
   final Duration settle;
 
-  static const hint = 'Search';
-  static const clear = 'Clear';
-  static const tasksTab = 'Tasks';
-  static const decisionsTab = 'Decisions';
-  static const chooseProject = 'Choose a project';
-  static const allProjects = 'All projects';
-  static const recentTerms = 'Recent searches';
-  static const recentlyOpened = 'Recently opened';
-  static const allTasks = 'All tasks, newest first';
-  static const allDecisions = 'All decisions, newest first';
-
-  /// Nothing matched what was asked for — as opposed to nothing having arrived at all.
-  static const nothingMatched = 'Nothing matched';
-  static const nothingYet = 'Nothing here yet';
-
   /// What the narrowing the person arrived with calls itself, once the screen it came from is
   /// behind them.
-  static const sinceYouLooked = 'Since you last looked';
-
-  /// The same narrowing, said with the number it came from — the card has three, and a chip that
+  ///
+  /// Said with the number it came from where there is one — the card has three, and a chip that
   /// said only "since you last looked" would not say which one was pressed.
-  static String since(Moved? moved) => moved == null
-      ? sinceYouLooked
-      : '${movedHeading(moved)} since you last looked';
+  static String since(Words words, Moved? moved) => moved == null
+      ? words.sinceLastLook
+      : words.sinceMoved(movedHeading(words, moved));
 
-  static String tab(String name, Counted count) => '$name ${countLabel(count)}';
+  static String tab(Words words, String name, Counted count) =>
+      '$name ${countLabel(words, count)}';
 
   @override
   State<SearchScreen> createState() => _SearchScreenState();
@@ -268,10 +254,10 @@ class _SearchScreenState extends State<SearchScreen>
   }
 
   /// Every narrowing in force, in the form that lets it be taken off.
-  List<({String label, VoidCallback off})> get _narrowings => [
+  List<({String label, VoidCallback off})> _narrowings(Words words) => [
     if (_bundle != null)
       (
-        label: bundleHeading(_bundle!, finishedDays: _finishedDays),
+        label: bundleHeading(words, _bundle!, finishedDays: _finishedDays),
         off: () => setState(() {
           _bundle = null;
           _load();
@@ -279,7 +265,7 @@ class _SearchScreenState extends State<SearchScreen>
       ),
     if (_valueId != null)
       (
-        label: _valueLabel(_valueId!),
+        label: _valueLabel(words, _valueId!),
         off: () => setState(() {
           _valueId = null;
           _load();
@@ -287,7 +273,7 @@ class _SearchScreenState extends State<SearchScreen>
       ),
     if (_changedSince != null)
       (
-        label: SearchScreen.since(_moved),
+        label: SearchScreen.since(words, _moved),
         off: () => setState(() {
           _changedSince = null;
           _moved = null;
@@ -296,7 +282,7 @@ class _SearchScreenState extends State<SearchScreen>
       ),
     if (_projectId != null)
       (
-        label: _names[_projectId] ?? SearchScreen.allProjects,
+        label: _names[_projectId] ?? words.allProjects,
         off: () => setState(() {
           _projectId = null;
           _load();
@@ -304,9 +290,11 @@ class _SearchScreenState extends State<SearchScreen>
       ),
   ];
 
-  String _valueLabel(int valueId) {
+  String _valueLabel(Words words, int valueId) {
     final held = widget.store.dimensionValue(valueId);
-    return held == null ? '$valueId' : '${held.dimension}: ${held.value}';
+    return held == null
+        ? '$valueId'
+        : words.valueChip(held.dimension, held.value);
   }
 
   /// Whether the screen is showing what it holds rather than an answer to something.
@@ -319,7 +307,8 @@ class _SearchScreenState extends State<SearchScreen>
   @override
   Widget build(BuildContext context) {
     final today = widget.clock();
-    final narrowings = _narrowings;
+    final words = Words.of(context);
+    final narrowings = _narrowings(words);
     return Scaffold(
       appBar: AppBar(
         title: TextField(
@@ -328,14 +317,14 @@ class _SearchScreenState extends State<SearchScreen>
           onChanged: _typed,
           onSubmitted: (_) => _submitted(),
           decoration: InputDecoration(
-            hintText: SearchScreen.hint,
+            hintText: words.searchHint,
             border: InputBorder.none,
             prefixIcon: const Icon(Icons.search),
             suffixIcon: _text.isEmpty
                 ? null
                 : IconButton(
                     icon: const Icon(Icons.close),
-                    tooltip: SearchScreen.clear,
+                    tooltip: words.searchClear,
                     onPressed: _clear,
                   ),
           ),
@@ -346,17 +335,14 @@ class _SearchScreenState extends State<SearchScreen>
           if (_projects.length > 1)
             PopupMenuButton<int?>(
               icon: const Icon(Icons.folder_outlined),
-              tooltip: SearchScreen.chooseProject,
+              tooltip: words.chooseProject,
               initialValue: _projectId,
               onSelected: (chosen) => setState(() {
                 _projectId = chosen;
                 _load();
               }),
               itemBuilder: (context) => [
-                const PopupMenuItem(
-                  value: null,
-                  child: Text(SearchScreen.allProjects),
-                ),
+                PopupMenuItem(value: null, child: Text(words.allProjects)),
                 for (final project in _projects)
                   PopupMenuItem(value: project.id, child: Text(project.name)),
               ],
@@ -365,9 +351,9 @@ class _SearchScreenState extends State<SearchScreen>
         bottom: TabBar(
           controller: _tabs,
           tabs: [
-            Tab(text: SearchScreen.tab(SearchScreen.tasksTab, _taskTotal)),
+            Tab(text: SearchScreen.tab(words, words.tabTasks, _taskTotal)),
             Tab(
-              text: SearchScreen.tab(SearchScreen.decisionsTab, _decisionTotal),
+              text: SearchScreen.tab(words, words.tabDecisions, _decisionTotal),
             ),
           ],
         ),
@@ -378,7 +364,7 @@ class _SearchScreenState extends State<SearchScreen>
           Expanded(
             child: TabBarView(
               controller: _tabs,
-              children: [_taskList(today), _decisionList(today)],
+              children: [_taskList(words, today), _decisionList(words, today)],
             ),
           ),
         ],
@@ -415,11 +401,11 @@ class _SearchScreenState extends State<SearchScreen>
     ),
   );
 
-  Widget _taskList(DateTime today) {
+  Widget _taskList(Words words, DateTime today) {
     final header = <Widget>[
-      if (!_asked) ..._recent(_seenTasks.map(_seenTaskRow).toList()),
+      if (!_asked) ..._recent(words, _seenTasks.map(_seenTaskRow).toList()),
       if (!_asked && _tasks.isNotEmpty && _headed)
-        const BundleHeading(title: SearchScreen.allTasks),
+        BundleHeading(title: words.allTasksNewest),
     ];
     return _window(
       header: header,
@@ -443,11 +429,12 @@ class _SearchScreenState extends State<SearchScreen>
     );
   }
 
-  Widget _decisionList(DateTime today) {
+  Widget _decisionList(Words words, DateTime today) {
     final header = <Widget>[
-      if (!_asked) ..._recent(_seenDecisions.map(_seenDecisionRow).toList()),
+      if (!_asked)
+        ..._recent(words, _seenDecisions.map(_seenDecisionRow).toList()),
       if (!_asked && _decisions.isNotEmpty && _headed)
-        const BundleHeading(title: SearchScreen.allDecisions),
+        BundleHeading(title: words.allDecisionsNewest),
     ];
     return _window(
       header: header,
@@ -466,9 +453,9 @@ class _SearchScreenState extends State<SearchScreen>
   ///
   /// The same thing is looked up again and again — a word half-remembered on Monday is the word
   /// typed again on Wednesday — so the two shortcuts are the words and the rows themselves.
-  List<Widget> _recent(List<Widget> seen) => [
+  List<Widget> _recent(Words words, List<Widget> seen) => [
     if (_terms.isNotEmpty) ...[
-      const BundleHeading(title: SearchScreen.recentTerms),
+      BundleHeading(title: words.recentTerms),
       Padding(
         padding: const EdgeInsets.fromLTRB(Space.s4, 0, Space.s4, Space.s1),
         child: Wrap(
@@ -492,7 +479,7 @@ class _SearchScreenState extends State<SearchScreen>
       ),
     ],
     if (seen.isNotEmpty) ...[
-      const BundleHeading(title: SearchScreen.recentlyOpened),
+      BundleHeading(title: words.recentlyOpened),
       ...seen,
     ],
   ];
@@ -539,7 +526,9 @@ class _SearchScreenState extends State<SearchScreen>
               Space.pageGutter,
             ),
             child: Text(
-              _asked ? SearchScreen.nothingMatched : SearchScreen.nothingYet,
+              _asked
+                  ? Words.of(context).nothingMatched
+                  : Words.of(context).nothingHereYet,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
