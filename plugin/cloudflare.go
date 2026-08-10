@@ -278,6 +278,12 @@ func writePart(form *multipart.Writer, name, filename, contentType string, conte
 // theirs to choose and is taken account-wide, so nothing here may pick one for them.
 var errNoSubdomain = errors.New("this account has no workers.dev subdomain yet")
 
+// codeNoSubdomain is what Cloudflare puts in the envelope when that is what happened. The same
+// call is also turned down for a token that is missing the permission, for a rate limit, and for
+// the API's own bad days — none of which a user can do anything about by choosing a name — so
+// this code, and nothing else, is what becomes errNoSubdomain.
+const codeNoSubdomain = 10007
+
 // theSubdomain reads the account's workers.dev name, which is the middle of every URL a Worker
 // in it answers on.
 func (s sky) theSubdomain(account string) (string, error) {
@@ -286,7 +292,7 @@ func (s sky) theSubdomain(account string) (string, error) {
 	}
 	if err := s.ask(http.MethodGet, "/accounts/"+account+"/workers/subdomain", "", nil, &said); err != nil {
 		var refused refusedByCloudflare
-		if errors.As(err, &refused) {
+		if errors.As(err, &refused) && refused.code == codeNoSubdomain {
 			return "", errNoSubdomain
 		}
 		return "", err
