@@ -181,8 +181,8 @@ make dist      # リリース資産一式と、カタログに貼る digest
 amenbo に起動してもらわずに、観測面へイベントを1つ流す。
 
 ```sh
-B=$(mktemp -d)                                  # 使い捨てのベース
-(cd "$(mktemp -d)" && AMENBO_HOME="$B" amenbo init --actor human)
+B=$(mktemp -d); W=$(mktemp -d)                  # 使い捨てのベースと、それに束ねる作業場
+(cd "$W" && AMENBO_HOME="$B" amenbo init --actor human)
 make fire AMENBO_BASE="$B"                      # store.changed を1つ
 make fire AMENBO_BASE="$B" EVENT=task.done ID=42 STORE_VERSION=7
 make fire AMENBO_BASE="$B" WORKER_URL=http://127.0.0.1:8787
@@ -206,4 +206,14 @@ mkdir -p "$B/machine/Library/Mobile Documents/iCloud~work~amenbo~viewer/Document
 ```sh
 AMENBO_CONFIG_ENCRYPTION_KEY=$(head -c 32 /dev/urandom | base64 | tr '+/' '-_' | tr -d '=') \
   make fire AMENBO_BASE="$B"
+```
+
+コマンド面（`setup` / `push` / `qr`）は amenbo から呼ぶので、`make fire` を通らない。
+**amenbo が向けてくれるのは `AMENBO_HOME` だけで、`HOME` は実物のまま**——iCloud を探す先が
+本物のコンテナになるので、`make fire` が渡していた分を自分で渡す。
+
+```sh
+AMENBO_HOME="$B" amenbo plugin enable viewer --actor human       # install ≠ enable
+cd "$W"                                                          # 束ねた作業場から呼ぶ
+HOME="$B/machine" AMENBO_HOME="$B" amenbo --actor human plugin run viewer push
 ```
