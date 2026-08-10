@@ -195,6 +195,60 @@ void main() {
       );
     });
 
+    test('three are lifted, and they are the three with a way out', () {
+      // The cap is the point: a fourth would cost the other three the attention they are lifted
+      // for. Anything that is not on this list is a state the person cannot act on from here.
+      expect(Standing.values.where(standingIsLifted).toSet(), {
+        Standing.unreadable,
+        Standing.refused,
+        Standing.noICloud,
+      });
+      for (final standing in Standing.values) {
+        expect(
+          standingMark(standing) != null,
+          standingIsLifted(standing),
+          reason: '$standing wears a mark exactly when it is lifted',
+        );
+      }
+    });
+
+    testWidgets('a lifted line does not look like a quiet one', (tester) async {
+      Color surfaceOf(WidgetTester tester) =>
+          (tester
+                  .widgetList<Container>(find.byType(Container))
+                  .firstWhere((one) => one.color != null))
+              .color!;
+
+      await tester.pumpWidget(band(Standing.offline));
+      final quiet = surfaceOf(tester);
+      expect(find.byType(Icon), findsNothing);
+
+      await tester.pumpWidget(band(Standing.unreadable, onPairAgain: () {}));
+      final lifted = surfaceOf(tester);
+
+      expect(lifted, isNot(quiet));
+      // Not the alarm, though: the person is being asked to do something, not told the app broke.
+      expect(lifted, isNot(viewerTheme(Brightness.light).colorScheme.error));
+      // The colour is never the only thing saying which of the three this is.
+      expect(find.byIcon(standingMark(Standing.unreadable)!), findsOneWidget);
+      expect(find.byType(FilledButton), findsOneWidget);
+    });
+
+    testWidgets('a quiet line still says what is happening', (tester) async {
+      for (final standing in [
+        Standing.offline,
+        Standing.waiting,
+        Standing.tooNew,
+      ]) {
+        await tester.pumpWidget(band(standing));
+        expect(
+          find.text(standingWords(words, standing)),
+          findsOneWidget,
+          reason: 'quiet is not silent: $standing',
+        );
+      }
+    });
+
     testWidgets('nothing overflows at the largest text a phone offers', (
       tester,
     ) async {

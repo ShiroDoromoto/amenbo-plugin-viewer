@@ -6,12 +6,14 @@
 /// because the next thing to do is different in every case and identical silence is what makes
 /// somebody reinstall an app that was working.
 ///
-/// Two rules hold across all of them.
+/// Three rules hold across all of them.
 ///
 /// * **What is on the device stays readable.** The band sits above the picture; it never replaces
 ///   it. Only a device that has never had anything has nothing to put underneath.
 /// * **Nothing here is drawn as a failure.** No dialog, no red screen, no empty list. Offline is
 ///   not a fault, it is one of the shapes ordinary use takes.
+/// * **The ones with a way out are the ones drawn to be seen** ([standingIsLifted]). The rest keep
+///   the quiet strip — still said, in words, and not made to look like something went wrong.
 library;
 
 import 'package:flutter/material.dart';
@@ -107,6 +109,31 @@ String standingDetail(Words words, Standing standing) => switch (standing) {
   _ => '',
 };
 
+/// The three the person can do something about, and the only three drawn to be noticed.
+///
+/// Seven lines all wearing the same quiet strip is seven lines nobody reads, and the one that
+/// matters — a device whose key does not open what arrives — then goes on receiving nothing for as
+/// long as it is ignored. So these are lifted: a colour of their own, a mark, and their way out as
+/// a button that looks like one.
+///
+/// **Three is the cap, not the count so far.** Every state that is lifted makes the lifting mean
+/// less, and a band that is loud about everything is the quiet band again. The line is drawn at
+/// what the person can act on from here: a contract this build cannot read is real and is not on
+/// this list, because nothing in this app will fix it.
+bool standingIsLifted(Standing standing) => switch (standing) {
+  Standing.unreadable || Standing.refused || Standing.noICloud => true,
+  _ => false,
+};
+
+/// The mark a lifted line wears. It says which of the three this is, so the colour is never
+/// carrying that on its own.
+IconData? standingMark(Standing standing) => switch (standing) {
+  Standing.unreadable => Icons.key_off_outlined,
+  Standing.refused => Icons.do_not_disturb_on_outlined,
+  Standing.noICloud => Icons.cloud_off_outlined,
+  _ => null,
+};
+
 class StateBand extends StatelessWidget {
   const StateBand({
     super.key,
@@ -165,6 +192,18 @@ class StateBand extends StatelessWidget {
       _ => null,
     };
 
+    final lifted = standingIsLifted(standing);
+    final mark = standingMark(standing);
+    // The accent, and not the error colour. Something is in the way and the person can move it —
+    // that is the same thing the accent says everywhere else in the app, where red would say the
+    // app has broken.
+    final onBand = lifted
+        ? theme.colorScheme.onPrimaryContainer
+        : theme.colorScheme.onSurface;
+    final under = lifted
+        ? theme.colorScheme.onPrimaryContainer
+        : theme.colorScheme.onSurfaceVariant;
+
     final lines = Column(
       crossAxisAlignment: whole
           ? CrossAxisAlignment.center
@@ -173,30 +212,36 @@ class StateBand extends StatelessWidget {
         Text(
           standingWords(words, standing),
           textAlign: whole ? TextAlign.center : TextAlign.start,
-          style: whole
-              ? theme.textTheme.titleMedium
-              : theme.textTheme.bodyMedium,
+          style:
+              (whole || lifted
+                      ? theme.textTheme.titleMedium
+                      : theme.textTheme.bodyMedium)
+                  ?.copyWith(color: onBand),
         ),
         if (detail.isNotEmpty)
           Text(
             detail,
             textAlign: whole ? TextAlign.center : TextAlign.start,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
+            style: theme.textTheme.bodySmall?.copyWith(color: under),
           ),
         if (taken != null)
           TimeOnHold(
             when: taken,
             child: Text(
               takenAt(words, taken, now: clock()),
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
+              style: theme.textTheme.bodySmall?.copyWith(color: under),
             ),
           ),
+        // A way out that is drawn as one. The three that carry a button are the three worth
+        // pressing, so nothing is gained by making them look like text.
         if (action != null)
-          TextButton(onPressed: action.onTap, child: Text(action.label)),
+          Padding(
+            padding: const EdgeInsets.only(top: Space.hair),
+            child: FilledButton(
+              onPressed: action.onTap,
+              child: Text(action.label),
+            ),
+          ),
       ],
     );
 
@@ -208,19 +253,46 @@ class StateBand extends StatelessWidget {
           Space.pageGutter,
           Space.pageGutter,
         ),
-        child: lines,
+        child: Column(
+          children: [
+            if (mark != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: Space.s3),
+                child: Icon(mark, color: onBand),
+              ),
+            lines,
+          ],
+        ),
       );
     }
     return Container(
       width: double.infinity,
-      // The same quiet surface for all seven. None of them is an error, and a band that turned
-      // red for some of them would teach the person to read the colour instead of the words.
-      color: theme.colorScheme.surfaceContainerHighest,
+      // Two surfaces, not seven: the quiet one for what the person cannot do anything about, and
+      // the accent for the three they can. Neither is the error colour — a band that turned red
+      // for being out of signal would teach the person to read the colour instead of the words,
+      // and then the colour would be all that is read.
+      color: lifted
+          ? theme.colorScheme.primaryContainer
+          : theme.colorScheme.surfaceContainerHighest,
       padding: const EdgeInsets.symmetric(
         horizontal: Space.gutter,
         vertical: Space.s3,
       ),
-      child: lines,
+      child: mark == null
+          ? lines
+          : Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(
+                    top: Space.hair,
+                    right: Space.s3,
+                  ),
+                  child: Icon(mark, color: onBand),
+                ),
+                Expanded(child: lines),
+              ],
+            ),
     );
   }
 }
