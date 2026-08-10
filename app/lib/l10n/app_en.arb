@@ -5,8 +5,6 @@
   "@tabNow": { "description": "Bottom tab. The front screen, with the four bundles." },
   "tabSearch": "Search",
   "@tabSearch": { "description": "Bottom tab. The one list face." },
-  "tabSettings": "Settings",
-  "@tabSettings": { "description": "Bottom tab." },
   "nothingOpen": "Open something to read it here",
   "@nothingOpen": { "description": "The empty half of a two-pane screen, before anything has been opened into it." },
 
