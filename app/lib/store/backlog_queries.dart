@@ -39,22 +39,6 @@ enum Bundle {
 /// large number of days but no cut-off at all.
 const finishedDaysDefault = 7;
 
-/// The three things the "since you last looked" card counts.
-///
-/// They are the three shapes an overnight change comes in: work that ended, work that appeared,
-/// and somebody writing. Anything finer would be a report, and the card is read in the two seconds
-/// before the person decides whether to scroll.
-enum Moved {
-  /// Closed — `done` or `rejected`.
-  finished,
-
-  /// Filed on the PC since.
-  filed,
-
-  /// Written on a task since.
-  commented,
-}
-
 /// How many rows a face holds at once.
 class Windows {
   /// A bundle on the front screen. Past this it says "N more" and the rest is another face.
@@ -236,18 +220,16 @@ class DecisionEdgeLine {
   final String status;
 }
 
-/// What a list face was asked for. All five inputs are optional and they combine.
+/// What a list face was asked for. All four inputs are optional and they combine.
 ///
 /// One face answers every list in the app — search results, the rest of a bundle, the tasks under
-/// a category value, what changed since a moment, one project — so the screens do not multiply
-/// with the ways of arriving at a list.
+/// a category value, one project — so the screens do not multiply with the ways of arriving at a
+/// list.
 class TaskQuery {
   const TaskQuery({
     this.text,
     this.bundle,
     this.valueId,
-    this.changedSince,
-    this.moved,
     this.projectId,
     this.finishedDays = finishedDaysDefault,
   });
@@ -262,16 +244,6 @@ class TaskQuery {
 
   /// A category value (`dimension_value.id`), from a chip in a detail.
   final int? valueId;
-
-  /// Only what moved after this instant — what the "since you last looked" card opens into.
-  final DateTime? changedSince;
-
-  /// Which of the three shapes of change [changedSince] means, or null for any change at all.
-  ///
-  /// The card counts three numbers and each one is its own way in, so a number pressed has to
-  /// land on the rows it counted. Without this they would all open the same list, and two of the
-  /// three would be lying about what they had counted.
-  final Moved? moved;
 
   /// Every project on the machine arrives, so every face has to be able to narrow to one.
   final int? projectId;
@@ -635,40 +607,6 @@ extension BacklogQueries on BacklogStore {
     [?stamp, ?projectId],
   );
 
-  /// What has happened since [stamp] — the three numbers on the card at the top of the screen.
-  ///
-  /// They are counted inside whatever narrowing the screen is holding. A card that counts the
-  /// whole machine while the bundles under it count one project would send the person, from a
-  /// number they pressed, to a list of a different length.
-  ///
-  /// [stamp] is the moment the app was last brought to the front, so this is deliberately not the
-  /// same question as [movedSince], which asks what arrived while the screen was being read.
-  Map<Moved, Counted> sinceLastLook(String stamp, {int? projectId}) {
-    final narrowed = projectId == null ? '' : ' AND t.project_id = ?';
-    final args = [stamp, ?projectId];
-    return {
-      Moved.finished: _count(
-        'SELECT 1 FROM task t WHERE $_liveProject '
-        "AND t.status IN ('done', 'rejected') "
-        'AND COALESCE(t.completed_at, t.status_changed_at, t.updated_at) > ?'
-        '$narrowed',
-        args,
-      ),
-      Moved.filed: _count(
-        'SELECT 1 FROM task t WHERE $_liveProject AND t.created_at > ?$narrowed',
-        args,
-      ),
-      // Left join, so a comment that arrived ahead of the task it belongs to is still counted
-      // while nothing is narrowed — pages land in the order the place hands them over, and a row
-      // that is merely early must not go missing. Narrowed, it cannot be placed, so it is out.
-      Moved.commented: _count(
-        'SELECT 1 FROM task_comment c LEFT JOIN task t ON t.id = c.task_id '
-        'WHERE $_liveProject AND c.created_at > ?$narrowed',
-        args,
-      ),
-    };
-  }
-
   // ------------------------------------------------------------- internals
 
   List<CommentLine> _comments({
@@ -852,21 +790,6 @@ List<Object?> _orderArgs(Bundle bundle, DateTime today) =>
     );
     args.add(query.valueId);
   }
-  if (query.changedSince != null) {
-    // The card counts comments where this counts tasks: a task written on three times is three
-    // of the card's number and one row to open, which is the only row there could be.
-    clauses.add(switch (query.moved) {
-      null => 't.updated_at > ?',
-      Moved.finished =>
-        "(t.status IN ('done', 'rejected') "
-            'AND COALESCE(t.completed_at, t.status_changed_at, t.updated_at) > ?)',
-      Moved.filed => 't.created_at > ?',
-      Moved.commented =>
-        'EXISTS (SELECT 1 FROM task_comment c '
-            'WHERE c.task_id = t.id AND c.created_at > ?)',
-    });
-    args.add(amenboStamp(query.changedSince!));
-  }
   if (query.projectId != null) {
     clauses.add('t.project_id = ?');
     args.add(query.projectId);
@@ -932,7 +855,7 @@ String _day(DateTime when) {
       '${local.day.toString().padLeft(2, '0')}';
 }
 
-/// An instant in the shape amenbo writes them, for the one mark the device makes itself — when it
-/// was last looked at. Everything else compared against it came stamped from the PC.
+/// An instant in the shape amenbo writes them, so a day the phone works out — how far back the
+/// finished bundle reaches — can be compared against stamps that came from the PC.
 String amenboStamp(DateTime when) =>
     '${when.toUtc().toIso8601String().split('.').first}Z';

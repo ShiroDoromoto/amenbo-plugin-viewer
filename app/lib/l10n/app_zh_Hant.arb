@@ -10,19 +10,12 @@
   "bundleFinished": "已完成",
   "bundleFinishedWithin": "{days, plural, other{已完成（{days} 天內）}}",
 
-  "movedFinished": "完成",
-  "movedFiled": "新建",
-  "movedCommented": "留言",
-
   "allProjects": "全部專案",
   "chooseProject": "選擇專案",
   "refresh": "去取",
   "more": "{count, plural, other{還有 {count} 條}}",
   "moreCapped": "還有 {count} 條",
   "newActivity": "新動靜 · {count}",
-  "sinceLastLook": "上次查看之後",
-  "sinceLastLookSpoken": "上次查看之後",
-  "sinceMoved": "上次查看之後的{name}",
 
   "standingTooNew": "電腦寫的格式比這個 App 讀得懂的更新",
   "standingUnreadable": "本機的金鑰打不開收到的內容",
@@ -58,7 +51,6 @@
   "dueToday": "今天到期",
   "dueOn": "{day} 到期",
 
-  "rowUnread": "未讀",
   "rowAssignedToAi": "交給了 AI",
   "markAi": "AI",
   "markYou": "你",

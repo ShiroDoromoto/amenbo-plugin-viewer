@@ -10,19 +10,12 @@
   "bundleFinished": "Terminado",
   "bundleFinishedWithin": "{days, plural, one{Terminado (1 día)} other{Terminado ({days} días)}}",
 
-  "movedFinished": "Terminado",
-  "movedFiled": "Nuevo",
-  "movedCommented": "Comentarios",
-
   "allProjects": "Todos los proyectos",
   "chooseProject": "Elegir un proyecto",
   "refresh": "Traer",
   "more": "{count, plural, one{1 más} other{{count} más}}",
   "moreCapped": "{count} más",
   "newActivity": "Novedades · {count}",
-  "sinceLastLook": "Desde la última vez que miraste",
-  "sinceLastLookSpoken": "desde la última vez que miraste",
-  "sinceMoved": "{name} desde la última vez que miraste",
 
   "standingTooNew": "Tu PC escribe un formato más nuevo del que lee esta app",
   "standingUnreadable": "La clave de este dispositivo no abre lo que llegó",
@@ -58,7 +51,6 @@
   "dueToday": "Vence hoy",
   "dueOn": "Vence {day}",
 
-  "rowUnread": "sin leer",
   "rowAssignedToAi": "asignado a la IA",
   "markAi": "IA",
   "markYou": "Tú",

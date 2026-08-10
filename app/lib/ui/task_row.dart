@@ -58,7 +58,6 @@ class TaskRow extends StatelessWidget {
     required this.onOpen,
     this.projectName,
     this.movedAt,
-    this.unread = false,
     this.showStatus = false,
   });
 
@@ -77,8 +76,6 @@ class TaskRow extends StatelessWidget {
   /// When it last moved, for the one bundle where movement is the subject. Elsewhere freshness is
   /// not what the person is judging, and a time on every row reads as noise.
   final DateTime? movedAt;
-
-  final bool unread;
 
   /// Whether to say what state it is in. A bundle already said it in its heading; a search result
   /// stands on its own, and there the state is half of what the person came back to find out.
@@ -138,7 +135,6 @@ class TaskRow extends StatelessWidget {
         title: line.title,
         status: line.status,
         priority: line.priority,
-        unread: unread,
         assigneeKind: line.assigneeKind,
         comments: line.comments,
         due: reason == null && line.dueOn != null
@@ -151,7 +147,7 @@ class TaskRow extends StatelessWidget {
       ),
       child: RowSurface(
         onOpen: onOpen,
-        lead: RowLead(unread: unread, priority: line.priority),
+        lead: RowLead(priority: line.priority),
         title: line.title,
         second: second,
         excerpt: excerpt,

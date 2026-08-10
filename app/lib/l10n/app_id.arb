@@ -10,19 +10,12 @@
   "bundleFinished": "Selesai",
   "bundleFinishedWithin": "{days, plural, other{Selesai ({days} hari)}}",
 
-  "movedFinished": "Selesai",
-  "movedFiled": "Baru",
-  "movedCommented": "Komentar",
-
   "allProjects": "Semua proyek",
   "chooseProject": "Pilih proyek",
   "refresh": "Ambil",
   "more": "{count, plural, other{{count} lagi}}",
   "moreCapped": "{count} lagi",
   "newActivity": "Ada yang baru · {count}",
-  "sinceLastLook": "Sejak terakhir kamu melihat",
-  "sinceLastLookSpoken": "sejak terakhir kamu melihat",
-  "sinceMoved": "{name} sejak terakhir kamu melihat",
 
   "standingTooNew": "PC-mu menulis dalam format yang lebih baru daripada yang dibaca aplikasi ini",
   "standingUnreadable": "Kunci perangkat ini tidak membuka apa yang datang",
@@ -58,7 +51,6 @@
   "dueToday": "Tenggat hari ini",
   "dueOn": "Tenggat {day}",
 
-  "rowUnread": "belum dibaca",
   "rowAssignedToAi": "diserahkan ke AI",
   "markAi": "AI",
   "markYou": "Kamu",

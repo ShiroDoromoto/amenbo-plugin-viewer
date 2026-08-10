@@ -10,19 +10,12 @@
   "bundleFinished": "끝난 일",
   "bundleFinishedWithin": "{days, plural, other{끝난 일 ({days}일)}}",
 
-  "movedFinished": "완료",
-  "movedFiled": "새로 생김",
-  "movedCommented": "댓글",
-
   "allProjects": "모든 프로젝트",
   "chooseProject": "프로젝트 고르기",
   "refresh": "가져오기",
   "more": "{count, plural, other{{count}개 더}}",
   "moreCapped": "{count}개 더",
   "newActivity": "새로운 움직임 · {count}",
-  "sinceLastLook": "마지막으로 본 뒤로",
-  "sinceLastLookSpoken": "마지막으로 본 뒤로",
-  "sinceMoved": "마지막으로 본 뒤로 {name}",
 
   "standingTooNew": "PC가 쓰는 형식이 이 앱이 읽는 것보다 새롭습니다",
   "standingUnreadable": "이 기기의 키로는 도착한 것을 열 수 없습니다",
@@ -58,7 +51,6 @@
   "dueToday": "오늘까지",
   "dueOn": "{day}까지",
 
-  "rowUnread": "읽지 않음",
   "rowAssignedToAi": "AI 담당",
   "markAi": "AI",
   "markYou": "나",

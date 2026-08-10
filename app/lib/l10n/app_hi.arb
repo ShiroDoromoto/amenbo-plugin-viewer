@@ -10,19 +10,12 @@
   "bundleFinished": "पूरे हुए",
   "bundleFinishedWithin": "{days, plural, one{पूरे हुए (1 दिन)} other{पूरे हुए ({days} दिन)}}",
 
-  "movedFinished": "पूरे हुए",
-  "movedFiled": "नए",
-  "movedCommented": "टिप्पणियाँ",
-
   "allProjects": "सभी प्रोजेक्ट",
   "chooseProject": "प्रोजेक्ट चुनें",
   "refresh": "लाएँ",
   "more": "{count, plural, one{1 और} other{{count} और}}",
   "moreCapped": "{count} और",
   "newActivity": "नई हलचल · {count}",
-  "sinceLastLook": "पिछली बार देखने के बाद से",
-  "sinceLastLookSpoken": "पिछली बार देखने के बाद से",
-  "sinceMoved": "पिछली बार देखने के बाद से {name}",
 
   "standingTooNew": "आपका पीसी जिस रूप में लिख रहा है, यह ऐप उससे पुराना पढ़ता है",
   "standingUnreadable": "जो आया है, उसे इस डिवाइस की कुंजी नहीं खोलती",
@@ -58,7 +51,6 @@
   "dueToday": "आज तक",
   "dueOn": "{day} तक",
 
-  "rowUnread": "बिना पढ़ा",
   "rowAssignedToAi": "एआई को सौंपा गया",
   "markAi": "एआई",
   "markYou": "आप",

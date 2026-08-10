@@ -12,9 +12,9 @@
 /// * **Newest first, never by relevance.** A relevance order cannot explain why one row is above
 ///   another, and memory reaches for things by when they happened.
 /// * **It is the only list face there is.** Search words, a bundle's remainder, a category value,
-///   what changed since a moment, one project — five inputs into one screen, so that arriving from
-///   somewhere narrower does not need a screen of its own. Whatever narrowing the person arrived
-///   with is shown as a chip they can take off, which turns any of those into plain search.
+///   one project — four inputs into one screen, so that arriving from somewhere narrower does not
+///   need a screen of its own. Whatever narrowing the person arrived with is shown as a chip they
+///   can take off, which turns any of those into plain search.
 library;
 
 import 'dart:async';
@@ -22,7 +22,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'l10n/words.dart';
-import 'now_screen.dart' show bundleHeading, movedHeading;
+import 'now_screen.dart' show bundleHeading;
 import 'store/backlog_queries.dart';
 import 'store/backlog_store.dart';
 import 'store/recents.dart';
@@ -48,9 +48,8 @@ class SearchScreen extends StatefulWidget {
   final void Function(TaskLine line) onOpenTask;
   final void Function(DecisionLine line) onOpenDecision;
 
-  /// What the person arrived holding — the rest of a bundle, a chip from a detail, a number on the
-  /// "since you last looked" card, the project the front screen was narrowed to. Empty when they
-  /// came here to type.
+  /// What the person arrived holding — the rest of a bundle, a chip from a detail, the project the
+  /// front screen was narrowed to. Empty when they came here to type.
   final TaskQuery narrowing;
 
   /// Passed in rather than read here, so every row on the screen agrees about what today was.
@@ -60,15 +59,6 @@ class SearchScreen extends StatefulWidget {
   /// one-handed on the move; running on every keystroke spends the device's battery answering
   /// prefixes nobody meant to ask about.
   final Duration settle;
-
-  /// What the narrowing the person arrived with calls itself, once the screen it came from is
-  /// behind them.
-  ///
-  /// Said with the number it came from where there is one — the card has three, and a chip that
-  /// said only "since you last looked" would not say which one was pressed.
-  static String since(Words words, Moved? moved) => moved == null
-      ? words.sinceLastLook
-      : words.sinceMoved(movedHeading(words, moved));
 
   static String tab(Words words, String name, Counted count) =>
       '$name ${countLabel(words, count)}';
@@ -85,12 +75,10 @@ class _SearchScreenState extends State<SearchScreen>
 
   String _text = '';
 
-  // The four narrowings that can arrive with the person. Each one is held here rather than read
+  // The three narrowings that can arrive with the person. Each one is held here rather than read
   // from the widget, because taking one off is the point of showing it.
   Bundle? _bundle;
   int? _valueId;
-  DateTime? _changedSince;
-  Moved? _moved;
   int? _projectId;
 
   /// The reach the finished bundle was read with on the screen behind this one. It travels with
@@ -120,8 +108,6 @@ class _SearchScreenState extends State<SearchScreen>
     super.initState();
     _bundle = widget.narrowing.bundle;
     _valueId = widget.narrowing.valueId;
-    _changedSince = widget.narrowing.changedSince;
-    _moved = widget.narrowing.moved;
     _projectId = widget.narrowing.projectId;
     _finishedDays = widget.narrowing.finishedDays;
     _text = widget.narrowing.text ?? '';
@@ -145,8 +131,6 @@ class _SearchScreenState extends State<SearchScreen>
     text: _text,
     bundle: _bundle,
     valueId: _valueId,
-    changedSince: _changedSince,
-    moved: _moved,
     projectId: _projectId,
     finishedDays: _finishedDays,
   );
@@ -157,8 +141,8 @@ class _SearchScreenState extends State<SearchScreen>
     _tasks = widget.store.tasks(query, today: today);
     _taskTotal = widget.store.taskCount(query, today: today);
     _moreTasks = _tasks.length == Windows.list;
-    // The other three inputs are a task's — a decision is in no bundle, wears no category value
-    // and is not what the difference card counts. Words and project are what both halves share.
+    // The other two inputs are a task's — a decision is in no bundle and wears no category value.
+    // Words and project are what both halves share.
     _decisions = widget.store.decisions(text: _text, projectId: _projectId);
     _decisionTotal = widget.store.decisionCount(
       text: _text,
@@ -209,7 +193,7 @@ class _SearchScreenState extends State<SearchScreen>
   /// Everything, from a screen that answered nothing.
   ///
   /// The words and every narrowing go together rather than one at a time: what the person is
-  /// saying by pressing it is that they would rather start again than work out which of the four
+  /// saying by pressing it is that they would rather start again than work out which of the three
   /// things they are holding is the one keeping the row out.
   void _everything() {
     _settling?.cancel();
@@ -218,8 +202,6 @@ class _SearchScreenState extends State<SearchScreen>
       _text = '';
       _bundle = null;
       _valueId = null;
-      _changedSince = null;
-      _moved = null;
       _projectId = null;
       _load();
     });
@@ -291,15 +273,6 @@ class _SearchScreenState extends State<SearchScreen>
           _load();
         }),
       ),
-    if (_changedSince != null)
-      (
-        label: SearchScreen.since(words, _moved),
-        off: () => setState(() {
-          _changedSince = null;
-          _moved = null;
-          _load();
-        }),
-      ),
     if (_projectId != null)
       (
         label: _names[_projectId] ?? words.allProjects,
@@ -319,10 +292,7 @@ class _SearchScreenState extends State<SearchScreen>
 
   /// Whether the screen is showing what it holds rather than an answer to something.
   bool get _asked =>
-      _text.trim().isNotEmpty ||
-      _bundle != null ||
-      _valueId != null ||
-      _changedSince != null;
+      _text.trim().isNotEmpty || _bundle != null || _valueId != null;
 
   @override
   Widget build(BuildContext context) {

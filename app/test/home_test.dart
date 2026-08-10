@@ -396,44 +396,6 @@ void main() {
       );
     });
 
-    testWidgets('a number on the card opens what that number counted', (
-      tester,
-    ) async {
-      // A visit that ended, so the next one has something to count from.
-      store.setMeta(MetaKey.lastOpenedAt, '2026-08-08T00:00:00Z');
-      store.applyPage([
-        BacklogChange.put(
-          'task',
-          99,
-          task(
-            id: 99,
-            title: 'おわった',
-            status: 'done',
-            completedAt: '2026-08-09T09:00:00Z',
-          ),
-        ),
-      ]);
-
-      await tester.pumpWidget(home());
-      await tester.pumpAndSettle();
-
-      await tester.tap(
-        find.text(
-          NowScreen.moved(words, Moved.finished, const Counted(1, false)),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.byType(SearchScreen), findsOneWidget);
-      expect(
-        find.text(SearchScreen.since(words, Moved.finished)),
-        findsOneWidget,
-      );
-      // The list is what the number counted, and not everything that moved.
-      expect(find.text('おわった'), findsOneWidget);
-      expect(find.text('しごと 1'), findsNothing);
-    });
-
     testWidgets('with width for two, what is opened sits beside the list', (
       tester,
     ) async {
@@ -526,7 +488,7 @@ void main() {
       expect(round.ran, isEmpty);
 
       // The thumb still fetches: what the setting turns off is the app going on its own.
-      await tester.tap(find.widgetWithText(TextButton, words.refresh));
+      await tester.tap(find.byTooltip(words.refresh));
       await tester.pumpAndSettle();
       expect(round.ran, hasLength(1));
     });
@@ -629,7 +591,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(round.ran, isEmpty);
 
-      await tester.tap(find.widgetWithText(TextButton, words.refresh));
+      await tester.tap(find.byTooltip(words.refresh));
       await tester.pumpAndSettle();
 
       expect(round.ran, hasLength(1));

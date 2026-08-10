@@ -10,19 +10,12 @@
   "bundleFinished": "Concluse",
   "bundleFinishedWithin": "{days, plural, one{Concluse (1 giorno)} other{Concluse ({days} giorni)}}",
 
-  "movedFinished": "Concluse",
-  "movedFiled": "Nuove",
-  "movedCommented": "Commenti",
-
   "allProjects": "Tutti i progetti",
   "chooseProject": "Scegli un progetto",
   "refresh": "Recupera",
   "more": "{count, plural, one{1 in più} other{altre {count}}}",
   "moreCapped": "altre {count}",
   "newActivity": "Novità · {count}",
-  "sinceLastLook": "Dall'ultima volta che hai guardato",
-  "sinceLastLookSpoken": "dall'ultima volta che hai guardato",
-  "sinceMoved": "{name} dall'ultima volta che hai guardato",
 
   "standingTooNew": "Il tuo PC scrive in un formato più nuovo di quello che questa app legge",
   "standingUnreadable": "La chiave di questo dispositivo non apre ciò che è arrivato",
@@ -58,7 +51,6 @@
   "dueToday": "Scade oggi",
   "dueOn": "Scade {day}",
 
-  "rowUnread": "non letto",
   "rowAssignedToAi": "assegnata all'IA",
   "markAi": "IA",
   "markYou": "Tu",

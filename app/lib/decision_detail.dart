@@ -66,7 +66,6 @@ class _DecisionDetailScreenState extends State<DecisionDetailScreen> {
   var _attachments = const <AttachmentLine>[];
   var _comments = const <CommentLine>[];
   late Counted _commentCount;
-  String? _lastLooked;
 
   @override
   void initState() {
@@ -89,19 +88,9 @@ class _DecisionDetailScreenState extends State<DecisionDetailScreen> {
     _tasks = store.tasksFor(id);
     _attachments = store.attachments('decision', id);
     _commentCount = store.decisionCommentCount(id);
-    _lastLooked = store.meta(MetaKey.lastOpenedAt);
-    _comments = _openingComments(store, id);
-  }
-
-  /// The newest few, opened back far enough to reach what has not been read — the same window a
-  /// task's timeline uses, for the same reason: a conversation is read forwards.
-  List<CommentLine> _openingComments(BacklogStore store, int id) {
-    final first = store.decisionComments(id);
-    if (first.isEmpty || !_unread(first.first.createdAt)) return first;
-    return store.decisionComments(
-      id,
-      limit: Windows.comments + Windows.commentPage,
-    );
+    // The newest few — the same window a task's timeline opens with, for the same reason: a
+    // conversation is read forwards.
+    _comments = store.decisionComments(id);
   }
 
   void _readEarlier() {
@@ -113,11 +102,6 @@ class _DecisionDetailScreenState extends State<DecisionDetailScreen> {
     );
     if (more.isEmpty) return;
     setState(() => _comments = [...more, ..._comments]);
-  }
-
-  bool _unread(String stamp) {
-    final since = _lastLooked;
-    return since != null && stamp.compareTo(since) > 0;
   }
 
   /// What is actually stopped by it — a task that is already finished was not waiting.
@@ -349,7 +333,6 @@ class _DecisionDetailScreenState extends State<DecisionDetailScreen> {
             children: [
               Row(
                 children: [
-                  UnreadDot(unread: _unread(one.createdAt)),
                   Text(
                     one.authorKind == 'ai' ? words.markAi : words.markYou,
                     style: theme.textTheme.labelMedium,

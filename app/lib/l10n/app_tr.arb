@@ -10,19 +10,12 @@
   "bundleFinished": "Bitmiş",
   "bundleFinishedWithin": "{days, plural, other{Bitmiş ({days} gün)}}",
 
-  "movedFinished": "Biten",
-  "movedFiled": "Yeni",
-  "movedCommented": "Yorum",
-
   "allProjects": "Bütün projeler",
   "chooseProject": "Proje seç",
   "refresh": "Getir",
   "more": "{count, plural, other{{count} tane daha}}",
   "moreCapped": "{count} tane daha",
   "newActivity": "Yeni hareket · {count}",
-  "sinceLastLook": "En son baktığından beri",
-  "sinceLastLookSpoken": "en son baktığından beri",
-  "sinceMoved": "En son baktığından beri {name}",
 
   "standingTooNew": "Bilgisayarın, bu uygulamanın okuduğundan daha yeni bir biçimde yazıyor",
   "standingUnreadable": "Bu cihazın anahtarı geleni açmıyor",
@@ -58,7 +51,6 @@
   "dueToday": "Bugün teslim",
   "dueOn": "{day} teslim",
 
-  "rowUnread": "okunmadı",
   "rowAssignedToAi": "yapay zekâya verildi",
   "markAi": "YZ",
   "markYou": "Sen",

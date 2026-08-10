@@ -11,8 +11,8 @@
 ///   person made in their OS. A number written into a widget stops following it.
 /// * **nothing states its colour, spacing or corner either.** They come from [Palette], [Space]
 ///   and [Corner], so the whole app can be moved at once.
-/// * **no state is carried by colour alone.** Priority, lateness and unread all come with a word
-///   or a shape beside them — see `marks.dart`.
+/// * **no state is carried by colour alone.** Priority and lateness both come with a word or a
+///   shape beside them — see `marks.dart`.
 /// * **nothing pressable is smaller than a finger.** Whatever answers a tap is wrapped in
 ///   [TapTarget], which is the only place [Layout.touch] is read.
 library;

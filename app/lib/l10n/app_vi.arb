@@ -10,19 +10,12 @@
   "bundleFinished": "Đã xong",
   "bundleFinishedWithin": "{days, plural, other{Đã xong ({days} ngày)}}",
 
-  "movedFinished": "Xong",
-  "movedFiled": "Mới",
-  "movedCommented": "Bình luận",
-
   "allProjects": "Tất cả dự án",
   "chooseProject": "Chọn dự án",
   "refresh": "Lấy về",
   "more": "{count, plural, other{còn {count} mục}}",
   "moreCapped": "còn {count} mục",
   "newActivity": "Có cái mới · {count}",
-  "sinceLastLook": "Từ lần bạn xem gần nhất",
-  "sinceLastLookSpoken": "từ lần bạn xem gần nhất",
-  "sinceMoved": "{name} từ lần bạn xem gần nhất",
 
   "standingTooNew": "Máy tính của bạn ghi bằng định dạng mới hơn những gì ứng dụng này đọc được",
   "standingUnreadable": "Khoá của máy này không mở được thứ vừa tới",
@@ -58,7 +51,6 @@
   "dueToday": "Hạn hôm nay",
   "dueOn": "Hạn {day}",
 
-  "rowUnread": "chưa đọc",
   "rowAssignedToAi": "giao cho AI",
   "markAi": "AI",
   "markYou": "Bạn",

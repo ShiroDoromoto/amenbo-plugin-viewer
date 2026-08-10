@@ -10,19 +10,12 @@
   "bundleFinished": "Afgerond",
   "bundleFinishedWithin": "{days, plural, one{Afgerond (1 dag)} other{Afgerond ({days} dagen)}}",
 
-  "movedFinished": "Afgerond",
-  "movedFiled": "Nieuw",
-  "movedCommented": "Reacties",
-
   "allProjects": "Alle projecten",
   "chooseProject": "Kies een project",
   "refresh": "Ophalen",
   "more": "{count, plural, one{nog 1} other{nog {count}}}",
   "moreCapped": "nog {count}",
   "newActivity": "Nieuwe activiteit · {count}",
-  "sinceLastLook": "Sinds je laatste bezoek",
-  "sinceLastLookSpoken": "sinds je laatste bezoek",
-  "sinceMoved": "{name} sinds je laatste bezoek",
 
   "standingTooNew": "Je pc schrijft een nieuwer formaat dan deze app leest",
   "standingUnreadable": "De sleutel van dit toestel opent niet wat er is aangekomen",
@@ -58,7 +51,6 @@
   "dueToday": "Vandaag klaar",
   "dueOn": "Klaar op {day}",
 
-  "rowUnread": "ongelezen",
   "rowAssignedToAi": "toegewezen aan de AI",
   "markAi": "AI",
   "markYou": "Jij",

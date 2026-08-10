@@ -10,19 +10,12 @@
   "bundleFinished": "เสร็จแล้ว",
   "bundleFinishedWithin": "{days, plural, other{เสร็จแล้ว ({days} วัน)}}",
 
-  "movedFinished": "เสร็จ",
-  "movedFiled": "ใหม่",
-  "movedCommented": "ความเห็น",
-
   "allProjects": "ทุกโครงการ",
   "chooseProject": "เลือกโครงการ",
   "refresh": "ไปเอามา",
   "more": "{count, plural, other{อีก {count} รายการ}}",
   "moreCapped": "อีก {count} รายการ",
   "newActivity": "มีความเคลื่อนไหวใหม่ · {count}",
-  "sinceLastLook": "ตั้งแต่ครั้งล่าสุดที่คุณดู",
-  "sinceLastLookSpoken": "ตั้งแต่ครั้งล่าสุดที่คุณดู",
-  "sinceMoved": "{name} ตั้งแต่ครั้งล่าสุดที่คุณดู",
 
   "standingTooNew": "คอมพิวเตอร์ของคุณเขียนด้วยรูปแบบที่ใหม่กว่าที่แอปนี้อ่านได้",
   "standingUnreadable": "กุญแจของเครื่องนี้เปิดสิ่งที่ส่งมาไม่ได้",
@@ -58,7 +51,6 @@
   "dueToday": "ครบกำหนดวันนี้",
   "dueOn": "ครบกำหนด {day}",
 
-  "rowUnread": "ยังไม่ได้อ่าน",
   "rowAssignedToAi": "มอบให้ AI",
   "markAi": "AI",
   "markYou": "คุณ",

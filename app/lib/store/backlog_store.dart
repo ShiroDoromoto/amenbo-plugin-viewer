@@ -74,10 +74,6 @@ class MetaKey {
   /// say how old the picture is while offline.
   static const fetchedAt = 'fetched_at';
 
-  /// When the app was last brought to the front. The "since you last looked" card counts from
-  /// here, and it must not move while the person is reading.
-  static const lastOpenedAt = 'last_opened_at';
-
   /// When the app goes and looks — see `settings.dart`.
   static const refresh = 'refresh';
 
@@ -98,7 +94,6 @@ class MetaKey {
   /// person holding the phone, who has not changed their mind — nor forgotten what they were
   /// looking for — just because the PC re-uploaded everything.
   static const deviceOwn = {
-    lastOpenedAt,
     refresh,
     appearance,
     doneWindow,

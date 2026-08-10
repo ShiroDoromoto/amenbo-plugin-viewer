@@ -10,19 +10,12 @@
   "bundleFinished": "Завершені",
   "bundleFinishedWithin": "{days, plural, one{Завершені (1 день)} few{Завершені ({days} дні)} many{Завершені ({days} днів)} other{Завершені ({days} дня)}}",
 
-  "movedFinished": "Завершено",
-  "movedFiled": "Нових",
-  "movedCommented": "Коментарів",
-
   "allProjects": "Усі проєкти",
   "chooseProject": "Вибрати проєкт",
   "refresh": "Завантажити",
   "more": "{count, plural, one{ще 1} few{ще {count}} many{ще {count}} other{ще {count}}}",
   "moreCapped": "ще {count}",
   "newActivity": "Нове · {count}",
-  "sinceLastLook": "Відколи ви востаннє дивилися",
-  "sinceLastLookSpoken": "відколи ви востаннє дивилися",
-  "sinceMoved": "{name} відколи ви востаннє дивилися",
 
   "standingTooNew": "Комп'ютер пише новішим форматом, ніж читає цей застосунок",
   "standingUnreadable": "Ключ цього пристрою не відкриває те, що прийшло",
@@ -58,7 +51,6 @@
   "dueToday": "Термін сьогодні",
   "dueOn": "Термін {day}",
 
-  "rowUnread": "непрочитане",
   "rowAssignedToAi": "доручено ШІ",
   "markAi": "ШІ",
   "markYou": "Ви",

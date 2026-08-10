@@ -77,7 +77,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   var _attachments = const <AttachmentLine>[];
   var _comments = const <CommentLine>[];
   late Counted _commentCount;
-  String? _lastLooked;
   bool _commitsOpen = false;
 
   @override
@@ -104,20 +103,10 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     _commits = store.commits(id);
     _attachments = store.attachments('task', id);
     _commentCount = store.commentCount(id);
-    _lastLooked = store.meta(MetaKey.lastOpenedAt);
-    _comments = _openingComments(store, id);
-  }
-
-  /// The newest few, opened back far enough to reach what has not been read.
-  ///
-  /// A conversation is read forwards, so the window sits at the end of it. Unread comments are
-  /// marked where they are rather than lifted out of order — which only works if the window
-  /// reaches them, hence the one extra page. Past that the person asks: a task somebody has left
-  /// alone for a month is not a task whose whole timeline should load itself.
-  List<CommentLine> _openingComments(BacklogStore store, int id) {
-    final first = store.comments(id);
-    if (first.isEmpty || !_unread(first.first.createdAt)) return first;
-    return store.comments(id, limit: Windows.comments + Windows.commentPage);
+    // A conversation is read forwards, so the window sits at the end of it. Past that the person
+    // asks: a task somebody has left alone for a month is not a task whose whole timeline should
+    // load itself.
+    _comments = store.comments(id);
   }
 
   void _readEarlier() {
@@ -129,11 +118,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     );
     if (more.isEmpty) return;
     setState(() => _comments = [...more, ..._comments]);
-  }
-
-  bool _unread(String stamp) {
-    final since = _lastLooked;
-    return since != null && stamp.compareTo(since) > 0;
   }
 
   @override
@@ -439,7 +423,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             children: [
               Row(
                 children: [
-                  UnreadDot(unread: _unread(one.createdAt)),
                   Text(
                     one.authorKind == 'ai' ? words.markAi : words.markYou,
                     style: theme.textTheme.labelMedium,
