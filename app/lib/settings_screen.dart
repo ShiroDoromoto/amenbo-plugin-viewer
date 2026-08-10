@@ -15,6 +15,7 @@ import 'package:flutter/material.dart';
 import 'about_screen.dart';
 import 'connection.dart';
 import 'connection_screen.dart';
+import 'l10n/words.dart';
 import 'settings.dart';
 import 'ui/tokens.dart';
 
@@ -38,14 +39,6 @@ class SettingsScreen extends StatelessWidget {
   /// a route, and popping one would take the whole app off the screen.
   final VoidCallback? onErased;
 
-  static const title = 'Settings';
-  static const refreshHeading = 'Go and look';
-  static const appearanceHeading = 'Appearance';
-  static const doneHeading = 'Finished work stays on the list for';
-  static const refreshNote =
-      'Automatically means when the app opens and when you come back to it. '
-      'It never runs in the background.';
-
   Future<void> _openConnection(BuildContext context) async {
     final erased = await Navigator.of(context).push<bool>(
       MaterialPageRoute(builder: (_) => ConnectionScreen(facts: connection)),
@@ -61,8 +54,9 @@ class SettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final words = Words.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text(title)),
+      appBar: AppBar(title: Text(words.settingsTitle)),
       body: ListenableBuilder(
         listenable: settings,
         builder: (context, _) {
@@ -70,7 +64,7 @@ class SettingsScreen extends StatelessWidget {
           return ListView(
             padding: const EdgeInsets.only(bottom: Space.s7),
             children: [
-              const _Heading(refreshHeading),
+              _Heading(words.refreshHeading),
               RadioGroup<Refresh>(
                 groupValue: chosen.refresh,
                 onChanged: (picked) {
@@ -81,13 +75,13 @@ class SettingsScreen extends StatelessWidget {
                     for (final one in Refresh.values)
                       RadioListTile<Refresh>(
                         value: one,
-                        title: Text(one.words),
+                        title: Text(refreshWords(words, one)),
                       ),
                   ],
                 ),
               ),
-              const _Note(refreshNote),
-              const _Heading(appearanceHeading),
+              _Note(words.refreshNote),
+              _Heading(words.appearanceHeading),
               RadioGroup<Appearance>(
                 groupValue: chosen.appearance,
                 onChanged: (picked) {
@@ -98,12 +92,12 @@ class SettingsScreen extends StatelessWidget {
                     for (final one in Appearance.values)
                       RadioListTile<Appearance>(
                         value: one,
-                        title: Text(one.words),
+                        title: Text(appearanceWords(words, one)),
                       ),
                   ],
                 ),
               ),
-              const _Heading(doneHeading),
+              _Heading(words.doneHeading),
               RadioGroup<DoneWindow>(
                 groupValue: chosen.doneWindow,
                 onChanged: (picked) {
@@ -114,19 +108,19 @@ class SettingsScreen extends StatelessWidget {
                     for (final one in DoneWindow.values)
                       RadioListTile<DoneWindow>(
                         value: one,
-                        title: Text(one.words),
+                        title: Text(doneWindowWords(words, one)),
                       ),
                   ],
                 ),
               ),
               const Divider(),
               ListTile(
-                title: const Text(ConnectionScreen.title),
+                title: Text(words.connectionTitle),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => _openConnection(context),
               ),
               ListTile(
-                title: const Text(AboutScreen.title),
+                title: Text(words.aboutTitle),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(

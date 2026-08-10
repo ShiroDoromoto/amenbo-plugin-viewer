@@ -4,12 +4,15 @@
 
 import 'dart:async';
 
+import 'package:amenbo_viewer/l10n/words.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:amenbo_viewer/cloudflare_intake.dart';
 import 'package:amenbo_viewer/first_sync.dart';
+
+import 'words_fixture.dart';
 
 /// A round the test moves by hand.
 class Round {
@@ -71,6 +74,8 @@ void main() {
     IntakeReport? finished;
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: Words.localizationsDelegates,
+        supportedLocales: Words.supportedLocales,
         home: Builder(
           builder: (context) => TextButton(
             onPressed: () async {
@@ -97,14 +102,14 @@ void main() {
 
     // Asked, not answered. An empty backlog and a place that has not spoken yet look nothing
     // alike to someone waiting.
-    expect(find.text(FirstSyncScreen.opening), findsOneWidget);
+    expect(find.text(words.firstSyncOpening), findsOneWidget);
 
     round.reached(0, seq: 0);
     await tester.pump();
     round.reached(800, seq: 25);
     await tester.pump();
 
-    expect(find.text(FirstSyncScreen.taken(800)), findsOneWidget);
+    expect(find.text(words.firstSyncTaken(800)), findsOneWidget);
     expect(
       tester
           .widget<LinearProgressIndicator>(find.byType(LinearProgressIndicator))
@@ -124,8 +129,8 @@ void main() {
     round.reached(0, seq: 0, target: 27);
     await tester.pump();
 
-    expect(find.text(FirstSyncScreen.opening), findsOneWidget);
-    expect(find.text(FirstSyncScreen.taken(0)), findsNothing);
+    expect(find.text(words.firstSyncOpening), findsOneWidget);
+    expect(find.text(words.firstSyncTaken(0)), findsNothing);
     // And the bar goes on moving rather than standing at a zero it cannot leave.
     expect(
       tester
@@ -162,7 +167,7 @@ void main() {
 
     expect(find.text('the place could not be reached'), findsOneWidget);
     expect(find.textContaining('Nothing was lost'), findsOneWidget);
-    expect(find.text(FirstSyncScreen.tryAgain), findsOneWidget);
+    expect(find.text(words.tryAgain), findsOneWidget);
     // Nothing was celebrated, so nothing was felt.
     expect(felt, isEmpty);
   });
@@ -178,10 +183,10 @@ void main() {
 
     // Retrying a refusal cannot work — the way out is the PC, so there is no button offering it.
     expect(find.textContaining('fresh code from the PC'), findsOneWidget);
-    expect(find.text(FirstSyncScreen.tryAgain), findsNothing);
+    expect(find.text(words.tryAgain), findsNothing);
     // And nothing is left saying it carries on, because it does not carry on until the PC hands
     // out a new code.
-    expect(find.text(FirstSyncScreen.carriesOn), findsNothing);
+    expect(find.text(words.firstSyncCarriesOn), findsNothing);
   });
 
   testWidgets('an app the place has outgrown is not offered a retry either', (
@@ -194,7 +199,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Update this app'), findsOneWidget);
-    expect(find.text(FirstSyncScreen.tryAgain), findsNothing);
+    expect(find.text(words.tryAgain), findsNothing);
   });
 
   testWidgets('trying again carries on rather than counting back down', (
@@ -208,17 +213,17 @@ void main() {
     flaky.rounds[0].stop(IntakeFailure.unreachable, 'gone');
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text(FirstSyncScreen.tryAgain));
+    await tester.tap(find.text(words.tryAgain));
     await tester.pumpAndSettle();
 
     // The second round starts from the cursor, so its own count starts at zero. What the person
     // is watching is how much is on the phone, which never goes backwards.
     flaky.rounds[1].reached(0, seq: 30);
     await tester.pump();
-    expect(find.text(FirstSyncScreen.taken(800)), findsOneWidget);
+    expect(find.text(words.firstSyncTaken(800)), findsOneWidget);
 
     flaky.rounds[1].reached(200, seq: 60);
     await tester.pump();
-    expect(find.text(FirstSyncScreen.taken(1000)), findsOneWidget);
+    expect(find.text(words.firstSyncTaken(1000)), findsOneWidget);
   });
 }

@@ -24,6 +24,7 @@ import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import 'l10n/words.dart';
 import 'pairing_code.dart';
 import 'pairing_store.dart';
 import 'ui/tokens.dart';
@@ -119,14 +120,6 @@ class PairingScanScreen extends StatefulWidget {
   final Camera camera;
   final PairingStore store;
 
-  static const title = 'Pair this phone';
-  static const heading = 'Read the code on your PC';
-  static const why =
-      'The code is on the PC screen, so the camera is how it gets here. '
-      'It is read on this phone and sent nowhere.';
-  static const inFrame = 'Hold the code inside the frame.';
-  static const refused = 'The camera is off for this app.';
-
   @override
   State<PairingScanScreen> createState() => _PairingScanScreenState();
 }
@@ -178,7 +171,8 @@ class _PairingScanScreenState extends State<PairingScanScreen> {
     } catch (error) {
       // The code was right and the phone would not keep it. Saying so beats a screen that goes
       // on scanning a code it has already read correctly.
-      _say('This phone could not keep the pairing: $error');
+      if (!mounted) return;
+      _say(Words.of(context).pairCouldNotKeep('$error'));
       return;
     }
 
@@ -197,7 +191,7 @@ class _PairingScanScreenState extends State<PairingScanScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text(PairingScanScreen.title)),
+      appBar: AppBar(title: Text(Words.of(context).pairTitle)),
       body: switch (_stage) {
         _Stage.explaining => _Explaining(
           onAsk: _busy ? null : _askForTheCamera,
@@ -223,6 +217,7 @@ class _Explaining extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final words = Words.of(context);
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(
@@ -232,11 +227,11 @@ class _Explaining extends StatelessWidget {
         Space.s7,
       ),
       children: [
-        Text(PairingScanScreen.heading, style: theme.textTheme.headlineSmall),
+        Text(words.pairHeading, style: theme.textTheme.headlineSmall),
         const SizedBox(height: Space.s4),
-        Text(PairingScanScreen.why, style: theme.textTheme.bodyLarge),
+        Text(words.pairWhy, style: theme.textTheme.bodyLarge),
         const SizedBox(height: Space.s7),
-        FilledButton(onPressed: onAsk, child: const Text('Turn on the camera')),
+        FilledButton(onPressed: onAsk, child: Text(words.pairTurnOnCamera)),
       ],
     );
   }
@@ -266,7 +261,7 @@ class _Scanning extends StatelessWidget {
                 padding: const EdgeInsets.all(Space.pageGutter),
                 child: _OverTheView(
                   child: Text(
-                    trouble ?? PairingScanScreen.inFrame,
+                    trouble ?? Words.of(context).pairInFrame,
                     textAlign: TextAlign.center,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: OverCamera.frame,
@@ -340,6 +335,7 @@ class _Refused extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final words = Words.of(context);
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(
@@ -349,17 +345,13 @@ class _Refused extends StatelessWidget {
         Space.s7,
       ),
       children: [
-        Text(PairingScanScreen.refused, style: theme.textTheme.headlineSmall),
+        Text(words.pairCameraRefused, style: theme.textTheme.headlineSmall),
         const SizedBox(height: Space.s4),
-        Text(
-          'Pairing needs to read one code off your PC screen. Turn the camera '
-          'on in the settings, and come back here.',
-          style: theme.textTheme.bodyLarge,
-        ),
+        Text(words.pairRefusedDetail, style: theme.textTheme.bodyLarge),
         const SizedBox(height: Space.s7),
         FilledButton(
           onPressed: onSettings,
-          child: const Text('Open the settings'),
+          child: Text(words.pairOpenSettings),
         ),
       ],
     );

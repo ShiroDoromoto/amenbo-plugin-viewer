@@ -13,6 +13,7 @@ library;
 // every time it uses it. Material's widget of the same name is not drawn here.
 import 'package:flutter/material.dart' hide Chip;
 
+import 'l10n/words.dart';
 import 'store/backlog_queries.dart';
 import 'store/backlog_store.dart';
 import 'ui/markdown.dart';
@@ -59,22 +60,6 @@ class TaskDetailScreen extends StatefulWidget {
   final Future<void> Function(String text) onShare;
 
   final DateTime Function() clock;
-
-  static const stalled = 'Cannot start';
-  static const ties = 'Ties';
-  static const waitingOn = 'Waiting on';
-  static const waitedOn = 'Waited on by';
-  static const decisions = 'Decisions';
-  static const comments = 'Comments';
-  static const earlier = 'Read earlier comments';
-  static const attachments = 'Attachments';
-
-  /// The rows travel; the bytes do not. Saying so is the whole of what the section is for.
-  static const attachmentsStayOnThePc = 'The files themselves stay on the PC';
-
-  static const commits = 'Commits';
-  static const gone = 'This task is not on the phone';
-  static const share = 'Share';
 
   @override
   State<TaskDetailScreen> createState() => _TaskDetailScreenState();
@@ -154,6 +139,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   Widget build(BuildContext context) {
     final task = _task;
     final today = widget.clock();
+    final words = Words.of(context);
     return Scaffold(
       appBar: AppBar(
         actions: [
@@ -162,19 +148,19 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           if (task != null)
             IconButton(
               icon: const Icon(Icons.share),
-              tooltip: TaskDetailScreen.share,
+              tooltip: words.share,
               onPressed: () => widget.onShare(
                 handoffText(
                   ref: taskRef(task.id),
                   title: task.title,
-                  state: statusWords(task.status),
+                  state: statusWords(words, task.status),
                 ),
               ),
             ),
         ],
       ),
       body: task == null
-          ? Center(child: Text(TaskDetailScreen.gone))
+          ? Center(child: Text(words.taskGone))
           : ListView(
               padding: const EdgeInsets.fromLTRB(
                 Space.gutter,
@@ -183,21 +169,26 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                 Space.s7,
               ),
               children: [
-                _header(context, task, today),
-                ..._stall(context, task, today),
+                _header(context, words, task, today),
+                ..._stall(context, words, task, today),
                 if (_notes.trim().isNotEmpty)
                   MarkdownSections(source: _notes, onLink: widget.onLink),
-                ..._tiesSection(context),
-                ..._chipsSection(context),
-                ..._attachmentsSection(context),
-                ..._commitsSection(context),
-                ..._commentsSection(context, today),
+                ..._tiesSection(context, words),
+                ..._chipsSection(context, words),
+                ..._attachmentsSection(context, words),
+                ..._commitsSection(context, words),
+                ..._commentsSection(context, words, today),
               ],
             ),
     );
   }
 
-  Widget _header(BuildContext context, TaskLine task, DateTime today) {
+  Widget _header(
+    BuildContext context,
+    Words words,
+    TaskLine task,
+    DateTime today,
+  ) {
     final theme = Theme.of(context);
     final project = widget.projectName;
     return Column(
@@ -244,11 +235,11 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             StatusMark(task.status),
             if (task.priority != null) PriorityMark(task.priority),
             if (task.assigneeKind == 'ai')
-              Text('AI', style: theme.textTheme.labelMedium),
+              Text(words.markAi, style: theme.textTheme.labelMedium),
             TimeOnHold(
               when: DateTime.parse(task.updatedAt),
               child: Text(
-                relativeTime(DateTime.parse(task.updatedAt), now: today),
+                relativeTime(words, DateTime.parse(task.updatedAt), now: today),
                 style: theme.textTheme.labelMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -257,7 +248,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             if (task.dueOn != null) DueMark(task.dueOn!, today: today),
             if (task.startOn != null)
               Text(
-                'Starts ${dayLabel(task.startOn!, now: today)}',
+                words.stallStarts(dayLabel(words, task.startOn!, now: today)),
                 style: theme.textTheme.labelMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -269,8 +260,13 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     );
   }
 
-  List<Widget> _stall(BuildContext context, TaskLine task, DateTime today) {
-    final reason = stallReason(task, today: today);
+  List<Widget> _stall(
+    BuildContext context,
+    Words words,
+    TaskLine task,
+    DateTime today,
+  ) {
+    final reason = stallReason(words, task, today: today);
     if (reason == null) return const [];
     final theme = Theme.of(context);
     return [
@@ -289,7 +285,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               child: Text(
                 reason,
                 style: theme.textTheme.bodyMedium,
-                semanticsLabel: '${TaskDetailScreen.stalled}, $reason',
+                semanticsLabel: '${words.detailStalled}, $reason',
               ),
             ),
           ],
@@ -298,38 +294,38 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     ];
   }
 
-  List<Widget> _tiesSection(BuildContext context) {
+  List<Widget> _tiesSection(BuildContext context, Words words) {
     if (_blockers.isEmpty && _blocking.isEmpty && _decisions.isEmpty) {
       return const [];
     }
     return [
-      _sectionHeading(context, TaskDetailScreen.ties),
+      _sectionHeading(context, words.ties),
       for (final one in _blockers)
         _tie(
           context,
-          lead: TaskDetailScreen.waitingOn,
+          lead: words.waitingOn,
           ref: taskRef(one.id),
           title: one.title,
           // Whether the other one is finished is the whole of what waiting means.
-          state: statusWords(one.status),
+          state: statusWords(words, one.status),
           onTap: () => widget.onOpenTask(one.id),
         ),
       for (final one in _blocking)
         _tie(
           context,
-          lead: TaskDetailScreen.waitedOn,
+          lead: words.waitedOnBy,
           ref: taskRef(one.id),
           title: one.title,
-          state: statusWords(one.status),
+          state: statusWords(words, one.status),
           onTap: () => widget.onOpenTask(one.id),
         ),
       for (final one in _decisions)
         _tie(
           context,
-          lead: TaskDetailScreen.decisions,
+          lead: words.decisionsSection,
           ref: decisionRef(one.id),
           title: one.title,
-          state: decisionStatusWords(one.status),
+          state: decisionStatusWords(words, one.status),
           onTap: () => widget.onOpenDecision(one.id),
         ),
       const SizedBox(height: Space.s3),
@@ -379,7 +375,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     );
   }
 
-  List<Widget> _chipsSection(BuildContext context) {
+  List<Widget> _chipsSection(BuildContext context, Words words) {
     if (_chips.isEmpty) return const [];
     return [
       Wrap(
@@ -388,7 +384,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         children: [
           for (final chip in _chips)
             ActionChip(
-              label: Text('${chip.dimension}=${chip.value}'),
+              label: Text(words.chipLabel(chip.dimension, chip.value)),
               onPressed: widget.onValue == null
                   ? null
                   : () => widget.onValue!(chip.valueId),
@@ -399,13 +395,13 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     ];
   }
 
-  List<Widget> _attachmentsSection(BuildContext context) {
+  List<Widget> _attachmentsSection(BuildContext context, Words words) {
     if (_attachments.isEmpty) return const [];
     final theme = Theme.of(context);
     return [
-      _sectionHeading(context, TaskDetailScreen.attachments),
+      _sectionHeading(context, words.attachments),
       Text(
-        TaskDetailScreen.attachmentsStayOnThePc,
+        words.attachmentsStayOnThePc,
         style: theme.textTheme.bodySmall?.copyWith(
           color: theme.colorScheme.onSurfaceVariant,
         ),
@@ -427,7 +423,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               const SizedBox(width: Space.s3),
               Expanded(child: Text(file.filename)),
               Text(
-                fileSize(file.bytes),
+                fileSize(words, file.bytes),
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -439,7 +435,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     ];
   }
 
-  List<Widget> _commitsSection(BuildContext context) {
+  List<Widget> _commitsSection(BuildContext context, Words words) {
     if (_commits.isEmpty) return const [];
     final theme = Theme.of(context);
     return [
@@ -451,7 +447,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             children: [
               Expanded(
                 child: Text(
-                  '${TaskDetailScreen.commits} ${_commits.length}',
+                  '${words.commits} ${_commits.length}',
                   style: theme.textTheme.titleSmall,
                 ),
               ),
@@ -476,19 +472,20 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     ];
   }
 
-  List<Widget> _commentsSection(BuildContext context, DateTime today) {
+  List<Widget> _commentsSection(
+    BuildContext context,
+    Words words,
+    DateTime today,
+  ) {
     if (_commentCount.value == 0) return const [];
     final theme = Theme.of(context);
     return [
       _sectionHeading(
         context,
-        '${TaskDetailScreen.comments} ${countLabel(_commentCount)}',
+        '${words.commentsSection} ${countLabel(words, _commentCount)}',
       ),
       if (_comments.length < _commentCount.value)
-        TextButton(
-          onPressed: _readEarlier,
-          child: Text(TaskDetailScreen.earlier),
-        ),
+        TextButton(onPressed: _readEarlier, child: Text(words.readEarlier)),
       for (final one in _comments)
         Padding(
           padding: const EdgeInsets.only(bottom: Space.s4),
@@ -499,14 +496,18 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                 children: [
                   UnreadDot(unread: _unread(one.createdAt)),
                   Text(
-                    one.authorKind == 'ai' ? 'AI' : 'You',
+                    one.authorKind == 'ai' ? words.markAi : words.markYou,
                     style: theme.textTheme.labelMedium,
                   ),
                   const SizedBox(width: Space.s3),
                   TimeOnHold(
                     when: DateTime.parse(one.createdAt),
                     child: Text(
-                      relativeTime(DateTime.parse(one.createdAt), now: today),
+                      relativeTime(
+                        words,
+                        DateTime.parse(one.createdAt),
+                        now: today,
+                      ),
                       style: theme.textTheme.labelMedium?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -535,8 +536,10 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
 /// A file's size, near enough. The row exists to say the file is there and roughly how big — a
 /// figure to the byte would be precision about something nobody can open.
-String fileSize(int bytes) {
-  if (bytes < 1024) return '$bytes B';
-  if (bytes < 1024 * 1024) return '${(bytes / 1024).round()} KB';
-  return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+String fileSize(Words words, int bytes) {
+  if (bytes < 1024) return words.fileSizeBytes(bytes);
+  if (bytes < 1024 * 1024) {
+    return words.fileSizeKilobytes((bytes / 1024).round());
+  }
+  return words.fileSizeMegabytes((bytes / (1024 * 1024)).toStringAsFixed(1));
 }

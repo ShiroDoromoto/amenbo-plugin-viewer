@@ -17,6 +17,7 @@ library;
 import 'package:flutter/material.dart';
 
 import 'cloudflare_intake.dart';
+import 'l10n/words.dart';
 import 'ui/time.dart';
 import 'ui/tokens.dart';
 
@@ -83,26 +84,26 @@ Standing standingOf({
 }
 
 /// What each standing says.
-String standingWords(Standing standing) => switch (standing) {
+String standingWords(Words words, Standing standing) => switch (standing) {
   Standing.quiet => '',
-  Standing.tooNew => 'Your PC is writing a newer format than this app reads',
-  Standing.unreadable => "This device's key does not open what arrived",
-  Standing.refused => 'Your PC turned this device away',
-  Standing.noICloud => 'Sign in to iCloud to read what your PC leaves there',
-  Standing.offline => 'Offline',
-  Standing.waiting => 'Nothing has arrived yet',
+  Standing.tooNew => words.standingTooNew,
+  Standing.unreadable => words.standingUnreadable,
+  Standing.refused => words.standingRefused,
+  Standing.noICloud => words.standingNoICloud,
+  Standing.offline => words.standingOffline,
+  Standing.waiting => words.standingWaiting,
 };
 
 /// The line under it, where there is something useful to add.
 ///
 /// Every one of these says what happens next without asking for a retry. There is nothing to press
 /// again: the app takes another round on its own the moment it can.
-String standingDetail(Standing standing) => switch (standing) {
-  Standing.tooNew => 'Update the app and the rest will read',
-  Standing.unreadable => 'Pair this device again to get a key that opens it',
-  Standing.refused => 'Pair this device again',
-  Standing.noICloud => 'It is the iPhone settings, not this app',
-  Standing.waiting => 'Your PC sends it the next time your backlog changes',
+String standingDetail(Words words, Standing standing) => switch (standing) {
+  Standing.tooNew => words.standingDetailTooNew,
+  Standing.unreadable => words.standingDetailUnreadable,
+  Standing.refused => words.standingDetailRefused,
+  Standing.noICloud => words.standingDetailNoICloud,
+  Standing.waiting => words.standingDetailWaiting,
   _ => '',
 };
 
@@ -133,9 +134,6 @@ class StateBand extends StatelessWidget {
   /// same words take the screen instead of a strip of it.
   final bool whole;
 
-  static const pairAgain = 'Pair again';
-  static const openSettings = 'Open settings';
-
   /// The clock, not "3 h ago".
   ///
   /// This is the one place the app spells a time out. What the person is judging here is how old
@@ -145,22 +143,25 @@ class StateBand extends StatelessWidget {
   /// The day comes with it once it is not today's. This line is the only thing a phone with no
   /// signal has to date what it is reading by, and out of signal is exactly where a picture stops
   /// being hours old and starts being days old.
-  static String takenAt(DateTime when, {required DateTime now}) =>
-      'Taken ${clockOnDay(when, now: now)}';
+  static String takenAt(Words words, DateTime when, {required DateTime now}) =>
+      words.takenAt(clockOnDay(words, when, now: now));
 
   @override
   Widget build(BuildContext context) {
     if (standing == Standing.quiet) return const SizedBox.shrink();
     final theme = Theme.of(context);
-    final detail = standingDetail(standing);
+    final words = Words.of(context);
+    final detail = standingDetail(words, standing);
     final taken = lastTakenAt;
     final action = switch (standing) {
       Standing.unreadable || Standing.refused =>
-        onPairAgain == null ? null : (label: pairAgain, onTap: onPairAgain!),
+        onPairAgain == null
+            ? null
+            : (label: words.bandPairAgain, onTap: onPairAgain!),
       Standing.noICloud =>
         onOpenSettings == null
             ? null
-            : (label: openSettings, onTap: onOpenSettings!),
+            : (label: words.bandOpenSettings, onTap: onOpenSettings!),
       _ => null,
     };
 
@@ -170,7 +171,7 @@ class StateBand extends StatelessWidget {
           : CrossAxisAlignment.start,
       children: [
         Text(
-          standingWords(standing),
+          standingWords(words, standing),
           textAlign: whole ? TextAlign.center : TextAlign.start,
           style: whole
               ? theme.textTheme.titleMedium
@@ -188,7 +189,7 @@ class StateBand extends StatelessWidget {
           TimeOnHold(
             when: taken,
             child: Text(
-              takenAt(taken, now: clock()),
+              takenAt(words, taken, now: clock()),
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),

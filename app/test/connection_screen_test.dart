@@ -4,9 +4,11 @@
 
 import 'package:amenbo_viewer/connection.dart';
 import 'package:amenbo_viewer/connection_screen.dart';
-import 'package:amenbo_viewer/pairing_scan.dart';
+import 'package:amenbo_viewer/l10n/words.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'words_fixture.dart';
 
 class FakeFacts implements ConnectionFacts {
   FakeFacts(this.connection);
@@ -42,6 +44,8 @@ Future<bool?> pumpConnection(WidgetTester tester, ConnectionFacts facts) async {
   bool? popped;
   await tester.pumpWidget(
     MaterialApp(
+      localizationsDelegates: Words.localizationsDelegates,
+      supportedLocales: Words.supportedLocales,
       home: Builder(
         builder: (context) => Scaffold(
           body: TextButton(
@@ -69,7 +73,7 @@ void main() {
   ) async {
     await pumpConnection(tester, FakeFacts(_cloudflare));
 
-    expect(find.text(ConnectionScreen.thisPhone), findsOneWidget);
+    expect(find.text(words.thisPhone), findsOneWidget);
     expect(find.text('iPhone'), findsOneWidget);
   });
 
@@ -88,7 +92,7 @@ void main() {
       ),
     );
 
-    expect(find.text(ConnectionScreen.thisPhone), findsNothing);
+    expect(find.text(words.thisPhone), findsNothing);
   });
 
   testWidgets('the Cloudflare route names its host and can be paired again', (
@@ -97,7 +101,7 @@ void main() {
     await pumpConnection(tester, FakeFacts(_cloudflare));
 
     expect(find.text('amenbo.example.workers.dev'), findsOneWidget);
-    expect(find.text(ConnectionScreen.pairAgain), findsOneWidget);
+    expect(find.text(words.pairAgainTitle), findsOneWidget);
     // The freshness of the picture, which is what a phone with no signal is really asking.
     expect(find.text('12 min ago'), findsOneWidget);
     expect(find.textContaining('version 91'), findsOneWidget);
@@ -109,7 +113,7 @@ void main() {
     await pumpConnection(tester, FakeFacts(_iCloud));
 
     // There is no code to read again: the container was never handed a URL, a token or a key.
-    expect(find.text(ConnectionScreen.pairAgain), findsNothing);
+    expect(find.text(words.pairAgainTitle), findsNothing);
     // And the way out of an unavailable container is in the phone's settings, not in this app.
     expect(find.textContaining('Not available'), findsOneWidget);
     expect(
@@ -132,7 +136,7 @@ void main() {
     );
 
     // Paired is not fed, and this is not an error — the PC simply has not written yet.
-    expect(find.text(ConnectionScreen.nothingYet), findsOneWidget);
+    expect(find.text(words.nothingArrivedYet), findsOneWidget);
   });
 
   group('erasing this phone', () {
@@ -142,15 +146,15 @@ void main() {
       final facts = FakeFacts(_cloudflare);
       await pumpConnection(tester, facts);
 
-      await tester.tap(find.text(ConnectionScreen.erase));
+      await tester.tap(find.text(words.erase));
       await tester.pumpAndSettle();
-      expect(find.text(ConnectionScreen.eraseQuestion), findsOneWidget);
+      expect(find.text(words.eraseQuestion), findsOneWidget);
 
       await tester.tap(find.text('Keep it'));
       await tester.pumpAndSettle();
 
       expect(facts.erased, 0);
-      expect(find.text(ConnectionScreen.title), findsOneWidget);
+      expect(find.text(words.connectionTitle), findsOneWidget);
     });
 
     testWidgets('agreeing erases, and says so to whoever opened the screen', (
@@ -160,24 +164,24 @@ void main() {
       final popped = await pumpConnection(tester, facts);
       expect(popped, isNull);
 
-      await tester.tap(find.text(ConnectionScreen.erase));
+      await tester.tap(find.text(words.erase));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Erase'));
       await tester.pumpAndSettle();
 
       expect(facts.erased, 1);
       // The screen behind is holding a backlog that no longer exists, so it has to be told.
-      expect(find.text(ConnectionScreen.title), findsNothing);
+      expect(find.text(words.connectionTitle), findsNothing);
     });
   });
 
   testWidgets('pairing again goes to the code on the PC', (tester) async {
     await pumpConnection(tester, FakeFacts(_cloudflare));
 
-    await tester.tap(find.text(ConnectionScreen.pairAgain));
+    await tester.tap(find.text(words.pairAgainTitle));
     await tester.pumpAndSettle();
 
     // The reason for the camera, before the camera — the scanning screen's own rule.
-    expect(find.text(PairingScanScreen.heading), findsOneWidget);
+    expect(find.text(words.pairHeading), findsOneWidget);
   });
 }

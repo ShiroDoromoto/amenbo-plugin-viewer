@@ -1,0 +1,16 @@
+# Where the words live, and what reads them.
+#
+# One sheet per language under `lib/l10n/`, and `Words` generated from them — the same shape the
+# one sheet of numbers (`lib/ui/tokens.dart`) has, for the same reason: a screen that writes its
+# own text is a screen that cannot be moved.
+#
+# The generated file is not in the repository. It is derived from the sheets beside it, and
+# `make -C app analyze` writes it before anything reads it.
+arb-dir: lib/l10n
+template-arb-file: app_en.arb
+output-dir: lib/l10n
+output-localization-file: words.dart
+output-class: Words
+# The words are always there — every screen would otherwise carry a null check for a sheet that
+# is compiled in.
+nullable-getter: false

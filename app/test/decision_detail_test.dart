@@ -7,10 +7,12 @@ import 'package:amenbo_viewer/ui/marks.dart';
 import 'package:amenbo_viewer/ui/refs.dart';
 import 'package:amenbo_viewer/ui/task_row.dart';
 import 'package:amenbo_viewer/ui/theme.dart';
+import 'package:amenbo_viewer/l10n/words.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'backlog_fixture.dart';
+import 'words_fixture.dart';
 
 final today = DateTime(2026, 8, 9, 12);
 
@@ -30,6 +32,8 @@ void main() {
 
   Widget face({int id = 31, String? project, void Function(int)? onProject}) =>
       MaterialApp(
+        localizationsDelegates: Words.localizationsDelegates,
+        supportedLocales: Words.supportedLocales,
         theme: viewerTheme(Brightness.light),
         home: DecisionDetailScreen(
           store: store,
@@ -82,7 +86,7 @@ void main() {
       await tester.pumpWidget(face());
 
       // One of the two: work already finished was not waiting on the answer.
-      expect(find.textContaining(DecisionDetailScreen.held(1)), findsOneWidget);
+      expect(find.textContaining(words.decisionHeld(1)), findsOneWidget);
     });
 
     testWidgets('a settled one says nothing about waiting', (tester) async {
@@ -100,9 +104,9 @@ void main() {
 
       await tester.pumpWidget(face());
 
-      expect(find.text(DecisionDetailScreen.waiting), findsNothing);
+      expect(find.text(words.decisionWaiting), findsNothing);
       expect(
-        find.textContaining(decisionStatusWords('accepted')),
+        find.textContaining(decisionStatusWords(words, 'accepted')),
         findsWidgets,
       );
     });
@@ -121,7 +125,7 @@ void main() {
 
     await tester.pumpWidget(face());
 
-    expect(find.text(edgeWords('builds_on')), findsOneWidget);
+    expect(find.text(edgeWords(words, 'builds_on')), findsOneWidget);
     await tester.tap(find.text('もとの'));
     expect(openedDecisions, [12]);
   });
@@ -179,7 +183,7 @@ void main() {
     ]);
 
     await tester.pumpWidget(face());
-    await tester.tap(find.byTooltip(DecisionDetailScreen.share));
+    await tester.tap(find.byTooltip(words.share));
 
     expect(shared, ['${decisionRef(31)}\nきめた\nProposed']);
   });
@@ -189,8 +193,8 @@ void main() {
     (tester) async {
       await tester.pumpWidget(face(id: 4242));
 
-      expect(find.text(DecisionDetailScreen.gone), findsOneWidget);
-      expect(find.byTooltip(DecisionDetailScreen.share), findsNothing);
+      expect(find.text(words.decisionGone), findsOneWidget);
+      expect(find.byTooltip(words.share), findsNothing);
       expect(tester.takeException(), isNull);
     },
   );
@@ -226,6 +230,8 @@ void main() {
     for (final scale in [1.0, 2.0, 3.2]) {
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: Words.localizationsDelegates,
+          supportedLocales: Words.supportedLocales,
           theme: viewerTheme(Brightness.light),
           home: MediaQuery(
             data: MediaQueryData(textScaler: TextScaler.linear(scale)),

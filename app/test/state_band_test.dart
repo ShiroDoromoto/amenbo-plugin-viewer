@@ -5,8 +5,11 @@
 import 'package:amenbo_viewer/cloudflare_intake.dart';
 import 'package:amenbo_viewer/state_band.dart';
 import 'package:amenbo_viewer/ui/theme.dart';
+import 'package:amenbo_viewer/l10n/words.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'words_fixture.dart';
 
 void main() {
   group('which one is owed', () {
@@ -81,7 +84,7 @@ void main() {
     test('every standing but the quiet one has words', () {
       for (final standing in Standing.values) {
         expect(
-          standingWords(standing).isEmpty,
+          standingWords(words, standing).isEmpty,
           standing == Standing.quiet,
           reason: '$standing',
         );
@@ -101,6 +104,8 @@ void main() {
       VoidCallback? onPairAgain,
       VoidCallback? onOpenSettings,
     }) => MaterialApp(
+      localizationsDelegates: Words.localizationsDelegates,
+      supportedLocales: Words.supportedLocales,
       theme: viewerTheme(Brightness.light),
       home: Scaffold(
         body: StateBand(
@@ -125,7 +130,7 @@ void main() {
       final taken = DateTime(2026, 8, 10, 12, 34);
       await tester.pumpWidget(band(Standing.offline, taken: taken));
 
-      expect(find.text(standingWords(Standing.offline)), findsOneWidget);
+      expect(find.text(standingWords(words, Standing.offline)), findsOneWidget);
       // The clock, not "3 h ago": a phone whose clock is out can still name the hour.
       expect(find.text('Taken 12:34'), findsOneWidget);
       // No dialog, no retry to press — another round happens on its own.
@@ -159,8 +164,11 @@ void main() {
         band(Standing.unreadable, onPairAgain: () => paired++),
       );
 
-      expect(find.text(standingWords(Standing.unreadable)), findsOneWidget);
-      await tester.tap(find.text(StateBand.pairAgain));
+      expect(
+        find.text(standingWords(words, Standing.unreadable)),
+        findsOneWidget,
+      );
+      await tester.tap(find.text(words.bandPairAgain));
       expect(paired, 1);
     });
 
@@ -172,7 +180,7 @@ void main() {
         band(Standing.noICloud, onOpenSettings: () => opened++),
       );
 
-      await tester.tap(find.text(StateBand.openSettings));
+      await tester.tap(find.text(words.bandOpenSettings));
       expect(opened, 1);
     });
 
@@ -180,8 +188,11 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(band(Standing.waiting, whole: true));
-      expect(find.text(standingWords(Standing.waiting)), findsOneWidget);
-      expect(find.text(standingDetail(Standing.waiting)), findsOneWidget);
+      expect(find.text(standingWords(words, Standing.waiting)), findsOneWidget);
+      expect(
+        find.text(standingDetail(words, Standing.waiting)),
+        findsOneWidget,
+      );
     });
 
     testWidgets('nothing overflows at the largest text a phone offers', (
@@ -191,6 +202,8 @@ void main() {
         for (final standing in Standing.values) {
           await tester.pumpWidget(
             MaterialApp(
+              localizationsDelegates: Words.localizationsDelegates,
+              supportedLocales: Words.supportedLocales,
               theme: viewerTheme(Brightness.light),
               home: MediaQuery(
                 data: MediaQueryData(textScaler: TextScaler.linear(scale)),

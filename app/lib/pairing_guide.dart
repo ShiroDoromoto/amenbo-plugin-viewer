@@ -22,6 +22,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import 'l10n/words.dart';
 import 'pairing_scan.dart';
 import 'pairing_store.dart';
 import 'ui/theme.dart';
@@ -31,55 +32,14 @@ import 'ui/tokens.dart';
 ///
 /// They differ only in where the file sits. What is carried, how it is encrypted, that it goes
 /// one way and that each snapshot replaces the last are the same either way.
-class PairingRoute {
-  const PairingRoute({
-    required this.name,
-    required this.who,
-    required this.cost,
-    required this.steps,
-    this.action,
-  });
-
-  final String name;
-
-  /// Who this route is for. The two are not ranked by quality — they are picked by what the
-  /// person already owns.
-  final String who;
-
-  /// What it asks of the person before it works. The iCloud route asks nothing, and saying so is
-  /// most of why someone would choose it.
-  final String cost;
-  final List<String> steps;
-
-  /// The one thing this phone can do about the route, or null where there is nothing to do. A
-  /// route whose whole setup is on the PC gets no button: one that did nothing would read as the
-  /// app being broken rather than as the person's next step being elsewhere.
-  final String? action;
-
+enum PairingRoute {
   /// mac and iPhone. iOS only — the place both ends meet is this app's own iCloud container, and
   /// Android has no equivalent at all.
-  static const iCloud = PairingRoute(
-    name: 'iCloud Drive',
-    who: 'A Mac and an iPhone, both signed in to the same iCloud.',
-    cost: 'Nothing to sign up for.',
-    steps: [
-      'In amenbo on your Mac, turn on the iCloud route.',
-      'Nothing to do on this phone. Opening the app is what made the place to write to.',
-    ],
-  );
+  iCloud,
 
   /// Everything else. It costs an account, which is the price of not being on Apple's two
   /// machines.
-  static const cloudflare = PairingRoute(
-    name: 'Your own Cloudflare',
-    who: 'Any other combination of PC and phone.',
-    cost: 'A Cloudflare account, free of charge.',
-    steps: [
-      'In amenbo on your PC, set up the Worker. It does the work; you press and paste.',
-      'Scan the QR code it shows you with this app.',
-    ],
-    action: 'Scan the QR code',
-  );
+  cloudflare;
 
   /// What the phone in hand can actually do.
   static List<PairingRoute> forPlatform(TargetPlatform platform) =>
@@ -87,6 +47,31 @@ class PairingRoute {
       ? const [iCloud, cloudflare]
       : const [cloudflare];
 }
+
+/// What a card says about a route.
+///
+/// [who] is who it is for — the two are not ranked by quality, they are picked by what the person
+/// already owns. [cost] is what it asks before it works, and the iCloud route asking nothing is
+/// most of why somebody would choose it. [action] is the one thing this phone can do about the
+/// route, and it is null where there is nothing to do: a button that did nothing would read as
+/// the app being broken rather than as the person's next step being elsewhere.
+({String name, String who, String cost, List<String> steps, String? action})
+pairingRouteWords(Words words, PairingRoute route) => switch (route) {
+  PairingRoute.iCloud => (
+    name: words.routeICloud,
+    who: words.guideICloudWho,
+    cost: words.guideICloudCost,
+    steps: [words.guideICloudStepOne, words.guideICloudStepTwo],
+    action: null,
+  ),
+  PairingRoute.cloudflare => (
+    name: words.routeCloudflare,
+    who: words.guideCloudflareWho,
+    cost: words.guideCloudflareCost,
+    steps: [words.guideCloudflareStepOne, words.guideCloudflareStepTwo],
+    action: words.guideCloudflareAction,
+  ),
+};
 
 class PairingGuideScreen extends StatelessWidget {
   const PairingGuideScreen({
@@ -108,8 +93,6 @@ class PairingGuideScreen extends StatelessWidget {
   /// How a code gets read. The default opens the camera; a test hands back an answer.
   final Future<Pairing?> Function(BuildContext context) readACode;
 
-  static const heading = 'No backlog is reaching this phone yet.';
-
   /// The scanning screen, which saves the pairing itself and hands it back on the way out.
   static Future<Pairing?> scanForACode(BuildContext context) => Navigator.of(
     context,
@@ -123,6 +106,7 @@ class PairingGuideScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final words = Words.of(context);
     // Read off the theme rather than dart:io, so the Android screen can be looked at on a Mac and
     // both are reachable from a test.
     final routes = PairingRoute.forPlatform(theme.platform);
@@ -137,12 +121,10 @@ class PairingGuideScreen extends StatelessWidget {
           Space.s7,
         ),
         children: [
-          Text(heading, style: theme.textTheme.headlineSmall),
+          Text(words.guideHeading, style: theme.textTheme.headlineSmall),
           const SizedBox(height: Space.s4),
           Text(
-            routes.length > 1
-                ? 'Set up either route on the PC that runs amenbo, and your tasks turn up here.'
-                : 'Set this up on the PC that runs amenbo, and your tasks turn up here.',
+            routes.length > 1 ? words.guideBothRoutes : words.guideOneRoute,
             style: theme.textTheme.bodyLarge,
           ),
           const SizedBox(height: Space.s6),
@@ -169,6 +151,7 @@ class _RouteCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final said = pairingRouteWords(Words.of(context), route);
 
     return Card(
       margin: EdgeInsets.zero,
@@ -177,19 +160,19 @@ class _RouteCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(route.name, style: theme.textTheme.titleLarge),
+            Text(said.name, style: theme.textTheme.titleLarge),
             const SizedBox(height: Space.s3),
-            Text(route.who, style: theme.textTheme.bodyMedium),
+            Text(said.who, style: theme.textTheme.bodyMedium),
             Text(
-              route.cost,
+              said.cost,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.primary,
               ),
             ),
             const SizedBox(height: Space.s5),
-            for (var i = 0; i < route.steps.length; i++)
-              _Step(number: i + 1, text: route.steps[i]),
-            if (route.action case final action?) ...[
+            for (var i = 0; i < said.steps.length; i++)
+              _Step(number: i + 1, text: said.steps[i]),
+            if (said.action case final action?) ...[
               const SizedBox(height: Space.s3),
               // Left where the steps are, not stretched across the card: it is the last step's
               // other half, not a decision about the whole screen.
@@ -258,8 +241,7 @@ class _Assurance extends StatelessWidget {
         const SizedBox(width: Space.s4),
         Expanded(
           child: Text(
-            'Either way, the snapshot goes to a place you own and nowhere else. '
-            'This app only reads it, and never writes anything back.',
+            Words.of(context).guideAssurance,
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),

@@ -12,6 +12,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import 'l10n/words.dart';
 import 'store/backlog_queries.dart';
 import 'store/backlog_store.dart';
 import 'task_detail.dart';
@@ -50,21 +51,6 @@ class DecisionDetailScreen extends StatefulWidget {
   final void Function(String url)? onLink;
   final Future<void> Function(String text) onShare;
   final DateTime Function() clock;
-
-  static const gone = 'This decision is not on the phone';
-  static const share = 'Share';
-
-  /// Said plainly, because it is the one thing on this screen that is asking for something.
-  static const waiting = 'Waiting on your answer';
-
-  static String held(int tasks) =>
-      '$tasks ${tasks == 1 ? 'task is' : 'tasks are'} held by it';
-
-  static const ties = 'Ties';
-  static const tasks = 'Tasks';
-  static const comments = 'Comments';
-  static const earlier = 'Read earlier comments';
-  static const attachments = 'Attachments';
 
   @override
   State<DecisionDetailScreen> createState() => _DecisionDetailScreenState();
@@ -141,25 +127,26 @@ class _DecisionDetailScreenState extends State<DecisionDetailScreen> {
   Widget build(BuildContext context) {
     final decision = _decision;
     final today = widget.clock();
+    final words = Words.of(context);
     return Scaffold(
       appBar: AppBar(
         actions: [
           if (decision != null)
             IconButton(
               icon: const Icon(Icons.share),
-              tooltip: DecisionDetailScreen.share,
+              tooltip: words.share,
               onPressed: () => widget.onShare(
                 handoffText(
                   ref: decisionRef(decision.id),
                   title: decision.title,
-                  state: decisionStatusWords(decision.status),
+                  state: decisionStatusWords(words, decision.status),
                 ),
               ),
             ),
         ],
       ),
       body: decision == null
-          ? Center(child: Text(DecisionDetailScreen.gone))
+          ? Center(child: Text(words.decisionGone))
           : ListView(
               padding: const EdgeInsets.fromLTRB(
                 Space.gutter,
@@ -168,20 +155,25 @@ class _DecisionDetailScreenState extends State<DecisionDetailScreen> {
                 Space.s7,
               ),
               children: [
-                _header(context, decision, today),
-                ..._undecided(context, decision),
+                _header(context, words, decision, today),
+                ..._undecided(context, words, decision),
                 if (_body.trim().isNotEmpty)
                   MarkdownSections(source: _body, onLink: widget.onLink),
-                ..._tiesSection(context),
-                ..._tasksSection(context, today),
-                ..._attachmentsSection(context),
-                ..._commentsSection(context, today),
+                ..._tiesSection(context, words),
+                ..._tasksSection(context, words, today),
+                ..._attachmentsSection(context, words),
+                ..._commentsSection(context, words, today),
               ],
             ),
     );
   }
 
-  Widget _header(BuildContext context, DecisionLine decision, DateTime today) {
+  Widget _header(
+    BuildContext context,
+    Words words,
+    DecisionLine decision,
+    DateTime today,
+  ) {
     final theme = Theme.of(context);
     final project = widget.projectName;
     // Decided when it was ruled on, raised when nobody has — either way the date on the screen is
@@ -233,7 +225,7 @@ class _DecisionDetailScreenState extends State<DecisionDetailScreen> {
               TimeOnHold(
                 when: when,
                 child: Text(
-                  relativeTime(when, now: today),
+                  relativeTime(words, when, now: today),
                   style: theme.textTheme.labelMedium?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -250,13 +242,17 @@ class _DecisionDetailScreenState extends State<DecisionDetailScreen> {
   ///
   /// It stands where a task's reason for being stuck stands, and for the same reason: finding out
   /// at the bottom of the body that nothing can move is finding out too late.
-  List<Widget> _undecided(BuildContext context, DecisionLine decision) {
+  List<Widget> _undecided(
+    BuildContext context,
+    Words words,
+    DecisionLine decision,
+  ) {
     if (decision.status != 'proposed') return const [];
     final theme = Theme.of(context);
     final held = _heldTasks;
     final line = held == 0
-        ? DecisionDetailScreen.waiting
-        : '${DecisionDetailScreen.waiting} · ${DecisionDetailScreen.held(held)}';
+        ? words.decisionWaiting
+        : '${words.decisionWaiting} · ${words.decisionHeld(held)}';
     return [
       Container(
         padding: const EdgeInsets.all(Space.s4),
@@ -276,17 +272,17 @@ class _DecisionDetailScreenState extends State<DecisionDetailScreen> {
     ];
   }
 
-  List<Widget> _tiesSection(BuildContext context) {
+  List<Widget> _tiesSection(BuildContext context, Words words) {
     if (_edges.isEmpty) return const [];
     return [
-      _sectionHeading(context, DecisionDetailScreen.ties),
+      _sectionHeading(context, words.ties),
       for (final edge in _edges)
         _tie(
           context,
-          lead: edgeWords(edge.kind),
+          lead: edgeWords(words, edge.kind),
           ref: decisionRef(edge.targetId),
           title: edge.title,
-          state: decisionStatusWords(edge.status),
+          state: decisionStatusWords(words, edge.status),
           onTap: () => widget.onOpenDecision(edge.targetId),
         ),
       const SizedBox(height: Space.s3),
@@ -338,10 +334,14 @@ class _DecisionDetailScreenState extends State<DecisionDetailScreen> {
 
   /// The work this decision produced. It is the way back out: a decision reached from a search is
   /// otherwise a dead end, however much it explains.
-  List<Widget> _tasksSection(BuildContext context, DateTime today) {
+  List<Widget> _tasksSection(
+    BuildContext context,
+    Words words,
+    DateTime today,
+  ) {
     if (_tasks.isEmpty) return const [];
     return [
-      _sectionHeading(context, DecisionDetailScreen.tasks),
+      _sectionHeading(context, words.tasksSection),
       for (final task in _tasks)
         TaskRow(
           line: task,
@@ -352,13 +352,13 @@ class _DecisionDetailScreenState extends State<DecisionDetailScreen> {
     ];
   }
 
-  List<Widget> _attachmentsSection(BuildContext context) {
+  List<Widget> _attachmentsSection(BuildContext context, Words words) {
     if (_attachments.isEmpty) return const [];
     final theme = Theme.of(context);
     return [
-      _sectionHeading(context, DecisionDetailScreen.attachments),
+      _sectionHeading(context, words.attachments),
       Text(
-        TaskDetailScreen.attachmentsStayOnThePc,
+        words.attachmentsStayOnThePc,
         style: theme.textTheme.bodySmall?.copyWith(
           color: theme.colorScheme.onSurfaceVariant,
         ),
@@ -378,7 +378,7 @@ class _DecisionDetailScreenState extends State<DecisionDetailScreen> {
               const SizedBox(width: Space.s3),
               Expanded(child: Text(file.filename)),
               Text(
-                fileSize(file.bytes),
+                fileSize(words, file.bytes),
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -390,19 +390,20 @@ class _DecisionDetailScreenState extends State<DecisionDetailScreen> {
     ];
   }
 
-  List<Widget> _commentsSection(BuildContext context, DateTime today) {
+  List<Widget> _commentsSection(
+    BuildContext context,
+    Words words,
+    DateTime today,
+  ) {
     if (_commentCount.value == 0) return const [];
     final theme = Theme.of(context);
     return [
       _sectionHeading(
         context,
-        '${DecisionDetailScreen.comments} ${countLabel(_commentCount)}',
+        '${words.commentsSection} ${countLabel(words, _commentCount)}',
       ),
       if (_comments.length < _commentCount.value)
-        TextButton(
-          onPressed: _readEarlier,
-          child: Text(DecisionDetailScreen.earlier),
-        ),
+        TextButton(onPressed: _readEarlier, child: Text(words.readEarlier)),
       for (final one in _comments)
         Padding(
           padding: const EdgeInsets.only(bottom: Space.s4),
@@ -413,14 +414,18 @@ class _DecisionDetailScreenState extends State<DecisionDetailScreen> {
                 children: [
                   UnreadDot(unread: _unread(one.createdAt)),
                   Text(
-                    one.authorKind == 'ai' ? 'AI' : 'You',
+                    one.authorKind == 'ai' ? words.markAi : words.markYou,
                     style: theme.textTheme.labelMedium,
                   ),
                   const SizedBox(width: Space.s3),
                   TimeOnHold(
                     when: DateTime.parse(one.createdAt),
                     child: Text(
-                      relativeTime(DateTime.parse(one.createdAt), now: today),
+                      relativeTime(
+                        words,
+                        DateTime.parse(one.createdAt),
+                        now: today,
+                      ),
                       style: theme.textTheme.labelMedium?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -451,9 +456,9 @@ class _DecisionDetailScreenState extends State<DecisionDetailScreen> {
 ///
 /// The edge is drawn from this decision outwards, so every one of these reads as something this
 /// decision did to an older one.
-String edgeWords(String kind) => switch (kind) {
-  'builds_on' => 'Builds on',
-  'supersedes' => 'Supersedes',
-  'amends' => 'Amends',
+String edgeWords(Words words, String kind) => switch (kind) {
+  'builds_on' => words.edgeBuildsOn,
+  'supersedes' => words.edgeSupersedes,
+  'amends' => words.edgeAmends,
   _ => kind,
 };

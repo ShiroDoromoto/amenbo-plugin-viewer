@@ -11,6 +11,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../l10n/words.dart';
 import 'theme.dart';
 import 'time.dart';
 import 'tokens.dart';
@@ -34,12 +35,17 @@ class PriorityMark extends StatelessWidget {
     return _Mark(
       icon: icon,
       colour: colour,
-      text: _priorityWords[priority] ?? priority!,
+      text: priorityWords(Words.of(context), priority!),
     );
   }
 }
 
-const _priorityWords = {'high': 'High', 'medium': 'Med', 'low': 'Low'};
+String priorityWords(Words words, String priority) => switch (priority) {
+  'high' => words.priorityHigh,
+  'medium' => words.priorityMedium,
+  'low' => words.priorityLow,
+  _ => priority,
+};
 
 /// amenbo's status, for the places that show it outright — a detail, or a search result whose
 /// row is not in a bundle that already says it.
@@ -58,16 +64,20 @@ class StatusMark extends StatelessWidget {
       'blocked' => (Icons.block, colours.statusBlocked),
       _ => (Icons.radio_button_unchecked, colours.statusTodo),
     };
-    return _Mark(icon: icon, colour: colour, text: statusWords(status));
+    return _Mark(
+      icon: icon,
+      colour: colour,
+      text: statusWords(Words.of(context), status),
+    );
   }
 }
 
-String statusWords(String status) => switch (status) {
-  'todo' => 'Next',
-  'in_progress' => 'In progress',
-  'done' => 'Done',
-  'rejected' => 'Rejected',
-  'blocked' => 'Blocked',
+String statusWords(Words words, String status) => switch (status) {
+  'todo' => words.statusTodo,
+  'in_progress' => words.statusInProgress,
+  'done' => words.statusDone,
+  'rejected' => words.statusRejected,
+  'blocked' => words.statusBlocked,
   _ => status,
 };
 
@@ -90,14 +100,18 @@ class DecisionStatusMark extends StatelessWidget {
       'rejected' => (Icons.close, scheme.onSurfaceVariant),
       _ => (Icons.remove, scheme.onSurfaceVariant),
     };
-    return _Mark(icon: icon, colour: colour, text: decisionStatusWords(status));
+    return _Mark(
+      icon: icon,
+      colour: colour,
+      text: decisionStatusWords(Words.of(context), status),
+    );
   }
 }
 
-String decisionStatusWords(String status) => switch (status) {
-  'proposed' => 'Proposed',
-  'accepted' => 'Accepted',
-  'rejected' => 'Rejected',
+String decisionStatusWords(Words words, String status) => switch (status) {
+  'proposed' => words.decisionProposed,
+  'accepted' => words.decisionAccepted,
+  'rejected' => words.decisionRejected,
   _ => status,
 };
 
@@ -115,7 +129,7 @@ class DueMark extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colours = palette(context);
-    final label = dueLabel(dueOn, today: today);
+    final label = dueLabel(Words.of(context), dueOn, today: today);
     final late = isOverdue(dueOn, today: today);
     return _Mark(
       icon: late ? Icons.priority_high : Icons.event_outlined,
@@ -128,11 +142,13 @@ class DueMark extends StatelessWidget {
 bool isOverdue(String dueOn, {required DateTime today}) =>
     dueOn.compareTo(isoDay(today)) < 0;
 
-String dueLabel(String dueOn, {required DateTime today}) {
+String dueLabel(Words words, String dueOn, {required DateTime today}) {
   final day = isoDay(today);
-  if (dueOn.compareTo(day) < 0) return 'Overdue ${dayLabel(dueOn, now: today)}';
-  if (dueOn == day) return 'Due today';
-  return 'Due ${dayLabel(dueOn, now: today)}';
+  if (dueOn.compareTo(day) < 0) {
+    return words.dueOverdue(dayLabel(words, dueOn, now: today));
+  }
+  if (dueOn == day) return words.dueToday;
+  return words.dueOn(dayLabel(words, dueOn, now: today));
 }
 
 /// Not read since the person last looked.
@@ -197,7 +213,8 @@ class _Mark extends StatelessWidget {
 /// A screen reader that walks the marks one at a time reads out a list of glyph names between
 /// every two useful words. Rows are given this instead, and their contents are hidden — see
 /// [SpokenAsOne].
-String rowLabel({
+String rowLabel(
+  Words words, {
   required String ref,
   required String title,
   required String status,
@@ -211,19 +228,19 @@ String rowLabel({
   String? when,
   String? excerpt,
 }) => [
-  if (unread) 'unread',
+  if (unread) words.rowUnread,
   ref,
   title,
   // Only where the row shows it — a list narrowed to one project would otherwise say the same
   // name on every line.
   ?project,
-  statusWords(status),
-  if (priority != null) '${_priorityWords[priority] ?? priority} priority',
+  statusWords(words, status),
+  if (priority != null) words.rowPriority(priorityWords(words, priority)),
   ?due,
   ?stallReason,
   ?when,
-  if (assigneeKind == 'ai') 'assigned to AI',
-  if (comments == 1) '1 comment' else if (comments > 1) '$comments comments',
+  if (assigneeKind == 'ai') words.rowAssignedToAi,
+  if (comments > 0) words.comments(comments),
   // Last, and read as part of the row: it is why the row is in a list of results, and it is the
   // longest thing on it.
   ?excerpt,

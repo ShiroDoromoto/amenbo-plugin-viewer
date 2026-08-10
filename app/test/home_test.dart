@@ -22,12 +22,14 @@ import 'package:amenbo_viewer/store/backlog_store.dart';
 import 'package:amenbo_viewer/task_detail.dart';
 import 'package:amenbo_viewer/ui/theme.dart';
 import 'package:amenbo_viewer/ui/two_pane.dart';
+import 'package:amenbo_viewer/l10n/words.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'backlog_fixture.dart';
+import 'words_fixture.dart';
 
 final today = DateTime(2026, 8, 9, 12);
 
@@ -68,6 +70,8 @@ void main() {
     bool hasICloud = false,
     SettingsController? settings,
   }) => MaterialApp(
+    localizationsDelegates: Words.localizationsDelegates,
+    supportedLocales: Words.supportedLocales,
     theme: viewerTheme(Brightness.light),
     home: MediaQuery(
       data: MediaQueryData(size: size),
@@ -209,20 +213,20 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(NowScreen), findsOneWidget);
-      expect(find.text(HomeShell.now), findsOneWidget);
-      expect(find.text(HomeShell.search), findsOneWidget);
-      expect(find.text(HomeShell.settingsTab), findsOneWidget);
+      expect(find.text(words.tabNow), findsOneWidget);
+      expect(find.text(words.tabSearch), findsOneWidget);
+      expect(find.text(words.tabSettings), findsOneWidget);
     });
 
     testWidgets('each destination is one press away', (tester) async {
       await tester.pumpWidget(home());
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text(HomeShell.settingsTab));
+      await tester.tap(find.text(words.tabSettings));
       await tester.pumpAndSettle();
       expect(find.byType(SettingsScreen), findsOneWidget);
 
-      await tester.tap(find.text(HomeShell.search));
+      await tester.tap(find.text(words.tabSearch));
       await tester.pumpAndSettle();
       expect(find.byType(SearchScreen), findsOneWidget);
     });
@@ -233,14 +237,14 @@ void main() {
       await tester.pumpWidget(home());
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text(HomeShell.search));
+      await tester.tap(find.text(words.tabSearch));
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField), 'のこらない');
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text(HomeShell.now));
+      await tester.tap(find.text(words.tabNow));
       await tester.pumpAndSettle();
-      await tester.tap(find.text(HomeShell.search));
+      await tester.tap(find.text(words.tabSearch));
       await tester.pumpAndSettle();
 
       // A word left behind on the way out would narrow a screen the person came to fresh.
@@ -273,14 +277,14 @@ void main() {
       await tester.pumpWidget(home());
       await tester.pumpAndSettle();
 
-      await tester.scrollUntilVisible(find.text(NowScreen.more(2)), 200);
-      await tester.tap(find.text(NowScreen.more(2)));
+      await tester.scrollUntilVisible(find.text(NowScreen.more(words, 2)), 200);
+      await tester.tap(find.text(NowScreen.more(words, 2)));
       await tester.pumpAndSettle();
 
       expect(find.byType(SearchScreen), findsOneWidget);
       // Not plain search: the bundle came with it, in the form that can be taken off.
       expect(
-        find.widgetWithText(InputChip, bundleHeading(Bundle.next)),
+        find.widgetWithText(InputChip, bundleHeading(words, Bundle.next)),
         findsOneWidget,
       );
     });
@@ -307,12 +311,17 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.tap(
-        find.text(NowScreen.moved(Moved.finished, const Counted(1, false))),
+        find.text(
+          NowScreen.moved(words, Moved.finished, const Counted(1, false)),
+        ),
       );
       await tester.pumpAndSettle();
 
       expect(find.byType(SearchScreen), findsOneWidget);
-      expect(find.text(SearchScreen.since(Moved.finished)), findsOneWidget);
+      expect(
+        find.text(SearchScreen.since(words, Moved.finished)),
+        findsOneWidget,
+      );
       // The list is what the number counted, and not everything that moved.
       expect(find.text('おわった'), findsOneWidget);
       expect(find.text('しごと 1'), findsNothing);
@@ -408,7 +417,7 @@ void main() {
       expect(round.ran, isEmpty);
 
       // The thumb still fetches: what the setting turns off is the app going on its own.
-      await tester.tap(find.byTooltip(NowScreen.refresh));
+      await tester.tap(find.byTooltip(words.refresh));
       await tester.pumpAndSettle();
       expect(round.ran, hasLength(1));
     });
@@ -511,7 +520,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(round.ran, isEmpty);
 
-      await tester.tap(find.byTooltip(NowScreen.refresh));
+      await tester.tap(find.byTooltip(words.refresh));
       await tester.pumpAndSettle();
 
       expect(round.ran, hasLength(1));
@@ -554,7 +563,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text(standingWords(Standing.noICloud)), findsNothing);
+      expect(find.text(standingWords(words, Standing.noICloud)), findsNothing);
 
       signedIn = false;
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
@@ -562,8 +571,11 @@ void main() {
 
       // Not "Offline": the container was asked again rather than believed from the launch, and
       // being signed out is the one of the two with something to do about it.
-      expect(find.text(standingWords(Standing.noICloud)), findsOneWidget);
-      expect(find.text(standingWords(Standing.offline)), findsNothing);
+      expect(
+        find.text(standingWords(words, Standing.noICloud)),
+        findsOneWidget,
+      );
+      expect(find.text(standingWords(words, Standing.offline)), findsNothing);
     });
   });
 }

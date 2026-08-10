@@ -10,10 +10,12 @@ import 'package:amenbo_viewer/store/backlog_store.dart';
 import 'package:amenbo_viewer/ui/task_row.dart';
 import 'package:amenbo_viewer/ui/theme.dart';
 import 'package:amenbo_viewer/ui/time.dart';
+import 'package:amenbo_viewer/l10n/words.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'backlog_fixture.dart';
+import 'words_fixture.dart';
 
 /// One day for the whole file, so a row and the heading over it cannot disagree about it.
 final today = DateTime(2026, 8, 9, 12);
@@ -42,6 +44,8 @@ void main() {
     IntakeFailure? failure,
     DoneWindow doneWindow = DoneWindow.sevenDays,
   }) => MaterialApp(
+    localizationsDelegates: Words.localizationsDelegates,
+    supportedLocales: Words.supportedLocales,
     theme: viewerTheme(Brightness.light),
     home: NowScreen(
       store: store,
@@ -65,7 +69,7 @@ void main() {
 
       await tester.pumpWidget(screen(failure: IntakeFailure.unreachable));
 
-      expect(find.text(standingWords(Standing.offline)), findsOneWidget);
+      expect(find.text(standingWords(words, Standing.offline)), findsOneWidget);
       // The whole promise: what is on the device stays readable whatever the network did.
       expect(find.text('よめる'), findsOneWidget);
     });
@@ -76,8 +80,8 @@ void main() {
       await tester.pumpWidget(screen(failure: IntakeFailure.tooNew));
 
       // Not "nothing has arrived yet" — something did, and this build cannot read it.
-      expect(find.text(standingWords(Standing.tooNew)), findsOneWidget);
-      expect(find.text(standingWords(Standing.waiting)), findsNothing);
+      expect(find.text(standingWords(words, Standing.tooNew)), findsOneWidget);
+      expect(find.text(standingWords(words, Standing.waiting)), findsNothing);
     });
   });
 
@@ -94,10 +98,10 @@ void main() {
       await tester.pumpWidget(screen());
 
       for (final bundle in [Bundle.moving, Bundle.stalled, Bundle.next]) {
-        expect(find.text(bundleHeading(bundle)), findsOneWidget);
+        expect(find.text(bundleHeading(words, bundle)), findsOneWidget);
       }
       // A heading over nothing would say only that a question had been asked.
-      expect(find.text(bundleHeading(Bundle.finished)), findsNothing);
+      expect(find.text(bundleHeading(words, Bundle.finished)), findsNothing);
     });
 
     testWidgets('a stalled row says the reason, by number', (tester) async {
@@ -117,7 +121,10 @@ void main() {
           .bundle(Bundle.stalled, today: today)
           .rows
           .singleWhere((row) => row.id == 5);
-      expect(find.text(stallReason(line, today: today)!), findsOneWidget);
+      expect(
+        find.text(stallReason(words, line, today: today)!),
+        findsOneWidget,
+      );
     });
 
     testWidgets('a day that has not come is a reason like any other', (
@@ -131,7 +138,7 @@ void main() {
 
       // It lands in the stalled bundle, so the row owes an answer for why — even the one stall
       // nobody has to do anything about.
-      expect(find.text(bundleHeading(Bundle.stalled)), findsOneWidget);
+      expect(find.text(bundleHeading(words, Bundle.stalled)), findsOneWidget);
       expect(find.textContaining('Starts'), findsOneWidget);
     });
 
@@ -149,7 +156,7 @@ void main() {
       await tester.pumpWidget(screen());
 
       expect(
-        find.text(relativeTime(DateTime.parse(moved), now: today)),
+        find.text(relativeTime(words, DateTime.parse(moved), now: today)),
         findsOneWidget,
       );
     });
@@ -171,10 +178,10 @@ void main() {
       ]);
 
       await tester.pumpWidget(screen());
-      expect(find.text(bundleHeading(Bundle.finished)), findsOneWidget);
+      expect(find.text(bundleHeading(words, Bundle.finished)), findsOneWidget);
       expect(find.text('ぜんぶ終わった'), findsNothing);
 
-      await tester.tap(find.text(bundleHeading(Bundle.finished)));
+      await tester.tap(find.text(bundleHeading(words, Bundle.finished)));
       await tester.pumpAndSettle();
       expect(find.text('ぜんぶ終わった'), findsOneWidget);
     });
@@ -197,10 +204,10 @@ void main() {
 
       // A week back does not reach it, so there is no bundle at all.
       await tester.pumpWidget(screen());
-      expect(find.text(bundleHeading(Bundle.finished)), findsNothing);
+      expect(find.text(bundleHeading(words, Bundle.finished)), findsNothing);
 
       await tester.pumpWidget(screen(doneWindow: DoneWindow.thirtyDays));
-      final heading = bundleHeading(Bundle.finished, finishedDays: 30);
+      final heading = bundleHeading(words, Bundle.finished, finishedDays: 30);
       // The heading says the reach it was read with, or the setting would look like it missed.
       expect(find.text(heading), findsOneWidget);
       await tester.tap(find.text(heading));
@@ -226,13 +233,13 @@ void main() {
       ]);
 
       await tester.pumpWidget(screen(doneWindow: DoneWindow.everything));
-      final heading = bundleHeading(Bundle.finished, finishedDays: null);
+      final heading = bundleHeading(words, Bundle.finished, finishedDays: null);
       expect(find.text(heading), findsOneWidget);
       await tester.tap(find.text(heading));
       await tester.pumpAndSettle();
 
-      await tester.scrollUntilVisible(find.text(NowScreen.more(3)), 200);
-      await tester.tap(find.text(NowScreen.more(3)));
+      await tester.scrollUntilVisible(find.text(NowScreen.more(words, 3)), 200);
+      await tester.tap(find.text(NowScreen.more(words, 3)));
       expect(widened.single.bundle, Bundle.finished);
       // The reach travels with it: the rest of a list that stopped at a different day would not
       // be the rest of this one.
@@ -246,9 +253,9 @@ void main() {
       ]);
 
       await tester.pumpWidget(screen());
-      await tester.scrollUntilVisible(find.text(NowScreen.more(3)), 200);
+      await tester.scrollUntilVisible(find.text(NowScreen.more(words, 3)), 200);
 
-      await tester.tap(find.text(NowScreen.more(3)));
+      await tester.tap(find.text(NowScreen.more(words, 3)));
       expect(widened.single.bundle, Bundle.next);
     });
 
@@ -278,7 +285,7 @@ void main() {
     ) async {
       await tester.pumpWidget(screen());
 
-      expect(find.text(NowScreen.allProjects), findsOneWidget);
+      expect(find.text(words.allProjects), findsOneWidget);
       expect(find.byType(TaskRow), findsNWidgets(2));
       expect(find.text('viewer'), findsOneWidget);
       expect(find.text('nsys'), findsOneWidget);
@@ -289,7 +296,7 @@ void main() {
     ) async {
       await tester.pumpWidget(screen());
 
-      await tester.tap(find.text(NowScreen.allProjects));
+      await tester.tap(find.text(words.allProjects));
       await tester.pumpAndSettle();
       await tester.tap(find.text('viewer').last);
       await tester.pumpAndSettle();
@@ -309,6 +316,8 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: Words.localizationsDelegates,
+          supportedLocales: Words.supportedLocales,
           home: NowScreen(
             store: alone,
             doneWindow: DoneWindow.sevenDays,
@@ -350,11 +359,13 @@ void main() {
 
       expect(find.text('あとから'), findsNothing);
       expect(
-        find.text(NowScreen.arrived(const Counted(1, false))),
+        find.text(NowScreen.arrived(words, const Counted(1, false))),
         findsOneWidget,
       );
 
-      await tester.tap(find.text(NowScreen.arrived(const Counted(1, false))));
+      await tester.tap(
+        find.text(NowScreen.arrived(words, const Counted(1, false))),
+      );
       await tester.pumpAndSettle();
       expect(find.text('あとから'), findsOneWidget);
       expect(find.textContaining('New activity'), findsNothing);
@@ -364,7 +375,7 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(screen());
-      expect(find.text(standingWords(Standing.waiting)), findsOneWidget);
+      expect(find.text(standingWords(words, Standing.waiting)), findsOneWidget);
 
       store.applyPage([
         BacklogChange.put('task', 1, task(id: 1, title: 'とどいた')),
@@ -411,7 +422,7 @@ void main() {
         ),
       );
 
-      await tester.tap(find.byTooltip(NowScreen.refresh));
+      await tester.tap(find.byTooltip(words.refresh));
       await tester.pumpAndSettle();
 
       expect(takes, 1);
@@ -427,7 +438,7 @@ void main() {
       ]);
       await tester.pumpWidget(screen(take: () async => throw Exception('off')));
 
-      await tester.tap(find.byTooltip(NowScreen.refresh));
+      await tester.tap(find.byTooltip(words.refresh));
       await tester.pumpAndSettle();
 
       expect(find.text('のこる'), findsOneWidget);
@@ -447,7 +458,7 @@ void main() {
 
       await tester.pumpWidget(screen());
 
-      expect(find.text(NowScreen.sinceLastLook), findsNothing);
+      expect(find.text(words.sinceLastLook), findsNothing);
     });
 
     testWidgets('the three numbers are counted from the last visit', (
@@ -471,10 +482,10 @@ void main() {
 
       await tester.pumpWidget(screen());
 
-      expect(find.text(NowScreen.sinceLastLook), findsOneWidget);
+      expect(find.text(words.sinceLastLook), findsOneWidget);
       for (final moved in Moved.values) {
         expect(
-          find.text(NowScreen.moved(moved, const Counted(1, false))),
+          find.text(NowScreen.moved(words, moved, const Counted(1, false))),
           findsOneWidget,
         );
       }
@@ -490,8 +501,11 @@ void main() {
 
       await tester.pumpWidget(screen());
 
-      expect(find.text(NowScreen.sinceLastLook), findsNothing);
-      expect(find.textContaining(movedHeading(Moved.filed)), findsNothing);
+      expect(find.text(words.sinceLastLook), findsNothing);
+      expect(
+        find.textContaining(movedHeading(words, Moved.filed)),
+        findsNothing,
+      );
     });
 
     testWidgets('a number opens the list of just what it counted', (
@@ -508,7 +522,9 @@ void main() {
 
       await tester.pumpWidget(screen());
       await tester.tap(
-        find.text(NowScreen.moved(Moved.finished, const Counted(1, false))),
+        find.text(
+          NowScreen.moved(words, Moved.finished, const Counted(1, false)),
+        ),
       );
 
       expect(sinced.single.moved, Moved.finished);
@@ -538,17 +554,17 @@ void main() {
 
       await tester.pumpWidget(screen());
       expect(
-        find.text(NowScreen.moved(Moved.filed, const Counted(2, false))),
+        find.text(NowScreen.moved(words, Moved.filed, const Counted(2, false))),
         findsOneWidget,
       );
 
-      await tester.tap(find.text(NowScreen.allProjects));
+      await tester.tap(find.text(words.allProjects));
       await tester.pumpAndSettle();
       await tester.tap(find.text('viewer').last);
       await tester.pumpAndSettle();
 
       expect(
-        find.text(NowScreen.moved(Moved.filed, const Counted(1, false))),
+        find.text(NowScreen.moved(words, Moved.filed, const Counted(1, false))),
         findsOneWidget,
       );
     });
@@ -575,11 +591,13 @@ void main() {
       ]);
       arrivals.tick();
       await tester.pumpAndSettle();
-      await tester.tap(find.text(NowScreen.arrived(const Counted(1, false))));
+      await tester.tap(
+        find.text(NowScreen.arrived(words, const Counted(1, false))),
+      );
       await tester.pumpAndSettle();
 
       expect(
-        find.text(NowScreen.moved(Moved.filed, const Counted(2, false))),
+        find.text(NowScreen.moved(words, Moved.filed, const Counted(2, false))),
         findsOneWidget,
       );
     });
@@ -630,6 +648,8 @@ void main() {
     for (final scale in [1.0, 2.0, 3.2]) {
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: Words.localizationsDelegates,
+          supportedLocales: Words.supportedLocales,
           theme: viewerTheme(Brightness.light),
           home: MediaQuery(
             data: MediaQueryData(textScaler: TextScaler.linear(scale)),

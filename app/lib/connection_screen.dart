@@ -14,6 +14,7 @@ library;
 import 'package:flutter/material.dart';
 
 import 'connection.dart';
+import 'l10n/words.dart';
 import 'pairing_scan.dart';
 import 'pairing_store.dart';
 import 'ui/time.dart';
@@ -25,16 +26,6 @@ class ConnectionScreen extends StatefulWidget {
   const ConnectionScreen({super.key, required this.facts});
 
   final ConnectionFacts facts;
-
-  static const title = 'Connection';
-  static const thisPhone = 'This phone';
-  static const nothingYet = 'Nothing has arrived yet.';
-  static const pairAgain = 'Pair this phone again';
-  static const erase = 'Erase this phone\'s copy';
-  static const eraseQuestion = 'Erase this phone\'s copy?';
-  static const eraseDetail =
-      'The backlog kept on this phone and the key that opens it are removed. '
-      'Nothing on your PC changes, and you can pair again whenever you like.';
 
   @override
   State<ConnectionScreen> createState() => _ConnectionScreenState();
@@ -68,19 +59,20 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
   }
 
   Future<void> _erase() async {
+    final words = Words.of(context);
     final agreed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text(ConnectionScreen.eraseQuestion),
-        content: const Text(ConnectionScreen.eraseDetail),
+        title: Text(words.eraseQuestion),
+        content: Text(words.eraseDialogDetail),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Keep it'),
+            child: Text(words.keepIt),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Erase'),
+            child: Text(words.eraseConfirm),
           ),
         ],
       ),
@@ -95,7 +87,7 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text(ConnectionScreen.title)),
+      appBar: AppBar(title: Text(Words.of(context).connectionTitle)),
       body: FutureBuilder<void>(
         future: _reading,
         builder: (context, _) {
@@ -131,6 +123,7 @@ class _Details extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final words = Words.of(context);
     final taken = connection.lastTaken;
 
     return ListView(
@@ -138,63 +131,52 @@ class _Details extends StatelessWidget {
       children: [
         if (connection.label case final named?)
           _Fact(
-            label: ConnectionScreen.thisPhone,
+            label: words.thisPhone,
             value: named,
-            detail: 'The name to cut this phone off by, on the PC.',
+            detail: words.thisPhoneDetail,
           ),
         _Fact(
-          label: 'Route',
-          value: connection.route.words,
+          label: words.factRoute,
+          value: connectionRouteWords(words, connection.route),
           detail: connection.host,
         ),
         if (connection.iCloudAvailable case final available?)
           _Fact(
-            label: 'iCloud',
-            value: available ? 'Signed in' : 'Not available on this phone',
-            detail: available
-                ? null
-                : 'Sign in to iCloud, and turn on iCloud Drive, in the phone\'s '
-                      'settings. There is nothing to choose in this app.',
+            label: words.factICloud,
+            value: available ? words.iCloudSignedIn : words.iCloudNotAvailable,
+            detail: available ? null : words.iCloudNotAvailableDetail,
           ),
         if (taken.isEmpty)
-          const _Fact(
-            label: 'Last taken',
-            value: ConnectionScreen.nothingYet,
-            detail: 'The PC writes when there is something to write.',
+          _Fact(
+            label: words.factLastTaken,
+            value: words.nothingArrivedYet,
+            detail: words.nothingArrivedYetDetail,
           )
         else
           TimeOnHold(
             when: taken.at!,
             child: _Fact(
-              label: 'Last taken',
-              value: relativeTime(taken.at!, now: now),
+              label: words.factLastTaken,
+              value: relativeTime(words, taken.at!, now: now),
               detail: [
-                if (taken.version case final version?) 'version $version',
-                'record ${taken.seq}',
+                if (taken.version case final version?)
+                  words.lastTakenVersion(version),
+                words.lastTakenRecord(taken.seq),
                 if (taken.specVersion case final specVersion?)
-                  'contract $specVersion',
+                  words.lastTakenContract(specVersion),
               ].join(' · '),
             ),
           ),
         const Divider(),
         if (connection.canPairAgain)
           ListTile(
-            title: const Text(ConnectionScreen.pairAgain),
-            subtitle: const Text(
-              'Reads a fresh code from the PC. The address, the token and the '
-              'key are all replaced.',
-            ),
+            title: Text(words.pairAgainTitle),
+            subtitle: Text(words.pairAgainDetail),
             onTap: onPairAgain,
           ),
         ListTile(
-          title: Text(
-            ConnectionScreen.erase,
-            style: TextStyle(color: scheme.error),
-          ),
-          subtitle: const Text(
-            'Removes the backlog kept here and the key that opens it. Nothing '
-            'on the PC changes.',
-          ),
+          title: Text(words.erase, style: TextStyle(color: scheme.error)),
+          subtitle: Text(words.eraseDetail),
           onTap: onErase,
         ),
       ],

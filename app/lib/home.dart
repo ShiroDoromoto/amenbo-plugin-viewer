@@ -30,6 +30,7 @@ import 'connection.dart';
 import 'decision_detail.dart';
 import 'first_sync.dart';
 import 'icloud_container.dart';
+import 'l10n/words.dart';
 import 'icloud_intake.dart';
 import 'now_screen.dart';
 import 'pairing_guide.dart';
@@ -318,14 +319,6 @@ class HomeShell extends StatefulWidget {
   final VoidCallback? onErased;
   final DateTime Function() clock;
 
-  static const now = 'Now';
-  static const search = 'Search';
-  static const settingsTab = 'Settings';
-
-  /// What the right-hand side says while nothing has been opened into it. Only ever seen where
-  /// there are two panes.
-  static const nothingOpen = 'Open something to read it here';
-
   @override
   State<HomeShell> createState() => _HomeShellState();
 }
@@ -420,7 +413,7 @@ class _HomeShellState extends State<HomeShell> {
       child: Padding(
         padding: const EdgeInsets.all(Space.pageGutter),
         child: Text(
-          HomeShell.nothingOpen,
+          Words.of(context).nothingOpen,
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -431,66 +424,69 @@ class _HomeShellState extends State<HomeShell> {
   );
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    // The three keep their state while the person moves between them — the front screen most of
-    // all, which counts from the moment the app came to the front and would count from a new one
-    // every time it was rebuilt.
-    body: IndexedStack(
-      index: _tab,
-      children: [
-        _pane(
-          NowScreen(
-            store: widget.store,
-            clock: widget.clock,
-            doneWindow: widget.settings.value.doneWindow,
-            take: widget.take,
-            arrivals: widget.arrivals,
-            failure: widget.failure,
-            iCloudAvailable: widget.iCloudAvailable,
-            onOpen: (line) => _open(line.id),
-            onMore: _list,
-            onSince: _list,
-            onPairAgain: widget.onPairAgain,
-            onOpenSettings: () => setState(() => _tab = 2),
+  Widget build(BuildContext context) {
+    final words = Words.of(context);
+    return Scaffold(
+      // The three keep their state while the person moves between them — the front screen most of
+      // all, which counts from the moment the app came to the front and would count from a new one
+      // every time it was rebuilt.
+      body: IndexedStack(
+        index: _tab,
+        children: [
+          _pane(
+            NowScreen(
+              store: widget.store,
+              clock: widget.clock,
+              doneWindow: widget.settings.value.doneWindow,
+              take: widget.take,
+              arrivals: widget.arrivals,
+              failure: widget.failure,
+              iCloudAvailable: widget.iCloudAvailable,
+              onOpen: (line) => _open(line.id),
+              onMore: _list,
+              onSince: _list,
+              onPairAgain: widget.onPairAgain,
+              onOpenSettings: () => setState(() => _tab = 2),
+            ),
           ),
-        ),
-        KeyedSubtree(
-          key: ValueKey(_visits),
-          child: _pane(_searchFace(const TaskQuery(), opens: _open)),
-        ),
-        SettingsScreen(
-          settings: widget.settings,
-          connection: widget.connection,
-          appName: widget.appName,
-          onErased: widget.onErased,
-        ),
-      ],
-    ),
-    bottomNavigationBar: NavigationBar(
-      selectedIndex: _tab,
-      onDestinationSelected: (chosen) => setState(() {
-        _tab = chosen;
-        // What was open belonged to the list being left.
-        _besideTaskId = null;
-        if (chosen == 1) _visits += 1;
-      }),
-      destinations: const [
-        NavigationDestination(
-          icon: Icon(Icons.list_alt_outlined),
-          selectedIcon: Icon(Icons.list_alt),
-          label: HomeShell.now,
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.search_outlined),
-          selectedIcon: Icon(Icons.search),
-          label: HomeShell.search,
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.settings_outlined),
-          selectedIcon: Icon(Icons.settings),
-          label: HomeShell.settingsTab,
-        ),
-      ],
-    ),
-  );
+          KeyedSubtree(
+            key: ValueKey(_visits),
+            child: _pane(_searchFace(const TaskQuery(), opens: _open)),
+          ),
+          SettingsScreen(
+            settings: widget.settings,
+            connection: widget.connection,
+            appName: widget.appName,
+            onErased: widget.onErased,
+          ),
+        ],
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _tab,
+        onDestinationSelected: (chosen) => setState(() {
+          _tab = chosen;
+          // What was open belonged to the list being left.
+          _besideTaskId = null;
+          if (chosen == 1) _visits += 1;
+        }),
+        destinations: [
+          NavigationDestination(
+            icon: const Icon(Icons.list_alt_outlined),
+            selectedIcon: const Icon(Icons.list_alt),
+            label: words.tabNow,
+          ),
+          NavigationDestination(
+            icon: const Icon(Icons.search_outlined),
+            selectedIcon: const Icon(Icons.search),
+            label: words.tabSearch,
+          ),
+          NavigationDestination(
+            icon: const Icon(Icons.settings_outlined),
+            selectedIcon: const Icon(Icons.settings),
+            label: words.tabSettings,
+          ),
+        ],
+      ),
+    );
+  }
 }

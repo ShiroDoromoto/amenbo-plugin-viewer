@@ -8,6 +8,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../l10n/words.dart';
 import '../store/backlog_queries.dart';
 import 'marks.dart';
 import 'refs.dart';
@@ -38,6 +39,7 @@ class DecisionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final words = Words.of(context);
     final quiet = theme.textTheme.bodySmall?.copyWith(
       color: theme.colorScheme.onSurfaceVariant,
     );
@@ -51,8 +53,8 @@ class DecisionRow extends StatelessWidget {
         decisionRef(line.id),
         line.title,
         ?projectName,
-        decisionStatusWords(line.status),
-        if (when != null) relativeTime(when, now: today),
+        decisionStatusWords(words, line.status),
+        if (when != null) relativeTime(words, when, now: today),
         ?excerpt,
       ].join(', '),
       child: InkWell(
@@ -84,7 +86,7 @@ class DecisionRow extends StatelessWidget {
                     ],
                     if (when != null) ...[
                       _dot(quiet),
-                      Text(relativeTime(when, now: today), style: quiet),
+                      Text(relativeTime(words, when, now: today), style: quiet),
                     ],
                   ],
                 ),

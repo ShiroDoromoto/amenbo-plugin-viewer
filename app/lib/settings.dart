@@ -15,22 +15,22 @@ library;
 
 import 'package:flutter/material.dart';
 
+import 'l10n/words.dart';
 import 'store/backlog_store.dart';
 
 /// When the app goes and looks.
 enum Refresh {
   /// On launch and on coming back to the front, and at no other moment.
-  automatic('automatic', 'Automatically'),
+  automatic('automatic'),
 
   /// Only when the person pulls the list down.
-  manualOnly('manual', 'Only when I pull to refresh');
+  manualOnly('manual');
 
-  const Refresh(this.stored, this.words);
+  const Refresh(this.stored);
 
   /// What goes in the store. Written out rather than an index, so reordering this list cannot
   /// silently change what a phone has already chosen.
   final String stored;
-  final String words;
 
   /// An unwritten or unrecognised choice reads as the default rather than as an error: a settings
   /// row is not worth failing a launch over.
@@ -38,32 +38,42 @@ enum Refresh {
       values.firstWhere((one) => one.stored == stored, orElse: () => automatic);
 }
 
+String refreshWords(Words words, Refresh refresh) => switch (refresh) {
+  Refresh.automatic => words.refreshAutomatic,
+  Refresh.manualOnly => words.refreshManualOnly,
+};
+
 /// Light or dark, or whatever the phone is doing.
 enum Appearance {
-  system('system', 'Match the phone', ThemeMode.system),
-  light('light', 'Light', ThemeMode.light),
-  dark('dark', 'Dark', ThemeMode.dark);
+  system('system', ThemeMode.system),
+  light('light', ThemeMode.light),
+  dark('dark', ThemeMode.dark);
 
-  const Appearance(this.stored, this.words, this.themeMode);
+  const Appearance(this.stored, this.themeMode);
 
   final String stored;
-  final String words;
   final ThemeMode themeMode;
 
   static Appearance read(String? stored) =>
       values.firstWhere((one) => one.stored == stored, orElse: () => system);
 }
 
+String appearanceWords(Words words, Appearance appearance) =>
+    switch (appearance) {
+      Appearance.system => words.appearanceSystem,
+      Appearance.light => words.appearanceLight,
+      Appearance.dark => words.appearanceDark,
+    };
+
 /// How far back the finished ones reach on the list.
 enum DoneWindow {
-  sevenDays('7', 'The last 7 days', 7),
-  thirtyDays('30', 'The last 30 days', 30),
-  everything('all', 'Everything', null);
+  sevenDays('7', 7),
+  thirtyDays('30', 30),
+  everything('all', null);
 
-  const DoneWindow(this.stored, this.words, this.days);
+  const DoneWindow(this.stored, this.days);
 
   final String stored;
-  final String words;
 
   /// Null for [everything] — no cut-off at all, which is not the same as a very large number of
   /// days and is worth being able to say.
@@ -72,6 +82,12 @@ enum DoneWindow {
   static DoneWindow read(String? stored) =>
       values.firstWhere((one) => one.stored == stored, orElse: () => sevenDays);
 }
+
+String doneWindowWords(Words words, DoneWindow window) => switch (window) {
+  DoneWindow.sevenDays => words.doneWindowSevenDays,
+  DoneWindow.thirtyDays => words.doneWindowThirtyDays,
+  DoneWindow.everything => words.doneWindowEverything,
+};
 
 /// The three choices, together.
 @immutable

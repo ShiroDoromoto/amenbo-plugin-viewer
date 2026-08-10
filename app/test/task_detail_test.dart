@@ -7,10 +7,12 @@ import 'package:amenbo_viewer/task_detail.dart';
 import 'package:amenbo_viewer/ui/marks.dart';
 import 'package:amenbo_viewer/ui/refs.dart';
 import 'package:amenbo_viewer/ui/theme.dart';
+import 'package:amenbo_viewer/l10n/words.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'backlog_fixture.dart';
+import 'words_fixture.dart';
 
 final today = DateTime(2026, 8, 9, 12);
 
@@ -30,6 +32,8 @@ void main() {
 
   Widget detail({int id = 1, String? project, void Function(int)? onProject}) =>
       MaterialApp(
+        localizationsDelegates: Words.localizationsDelegates,
+        supportedLocales: Words.supportedLocales,
         theme: viewerTheme(Brightness.light),
         home: TaskDetailScreen(
           store: store,
@@ -107,11 +111,14 @@ void main() {
 
     await tester.pumpWidget(detail());
 
-    expect(find.text(TaskDetailScreen.waitingOn), findsOneWidget);
-    expect(find.text(TaskDetailScreen.waitedOn), findsOneWidget);
+    expect(find.text(words.waitingOn), findsOneWidget);
+    expect(find.text(words.waitedOnBy), findsOneWidget);
     // Whether the other one is finished is the whole of what waiting means.
     expect(find.textContaining('Done'), findsOneWidget);
-    expect(find.textContaining(decisionStatusWords('proposed')), findsWidgets);
+    expect(
+      find.textContaining(decisionStatusWords(words, 'proposed')),
+      findsWidgets,
+    );
 
     await tester.tap(find.text('さきに'));
     expect(openedTasks, [9]);
@@ -136,7 +143,7 @@ void main() {
 
     expect(find.text('shot.png'), findsOneWidget);
     expect(find.text('2 KB'), findsOneWidget);
-    expect(find.text(TaskDetailScreen.attachmentsStayOnThePc), findsOneWidget);
+    expect(find.text(words.attachmentsStayOnThePc), findsOneWidget);
     // A row that looks pressable and does nothing is worse than one that never offered.
     expect(
       find.ancestor(of: find.text('shot.png'), matching: find.byType(InkWell)),
@@ -156,10 +163,10 @@ void main() {
     ]);
 
     await tester.pumpWidget(detail());
-    expect(find.text('${TaskDetailScreen.commits} 1'), findsOneWidget);
+    expect(find.text('${words.commits} 1'), findsOneWidget);
     expect(find.text(sha.substring(0, 12)), findsNothing);
 
-    await tester.tap(find.text('${TaskDetailScreen.commits} 1'));
+    await tester.tap(find.text('${words.commits} 1'));
     await tester.pumpAndSettle();
     expect(find.text(sha.substring(0, 12)), findsOneWidget);
   });
@@ -196,7 +203,7 @@ void main() {
         lessThan(tester.getTopLeft(shown.last).dy),
       );
 
-      await tester.tap(find.text(TaskDetailScreen.earlier));
+      await tester.tap(find.text(words.readEarlier));
       await tester.pumpAndSettle();
       expect(find.textContaining('こめんと'), findsNWidgets(5));
     });
@@ -227,7 +234,7 @@ void main() {
       ]);
 
       await tester.pumpWidget(detail());
-      await tester.tap(find.byTooltip(TaskDetailScreen.share));
+      await tester.tap(find.byTooltip(words.share));
 
       // The notes stay on the PC: what travels is what makes the row findable there.
       expect(shared, ['${taskRef(1)}\nかく\nIn progress']);
@@ -238,9 +245,9 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(detail(id: 4242));
-    expect(find.text(TaskDetailScreen.gone), findsOneWidget);
+    expect(find.text(words.taskGone), findsOneWidget);
     // Nothing to hand over either — a number with no task behind it is not a message.
-    expect(find.byTooltip(TaskDetailScreen.share), findsNothing);
+    expect(find.byTooltip(words.share), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -267,6 +274,8 @@ void main() {
     for (final scale in [1.0, 2.0, 3.2]) {
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: Words.localizationsDelegates,
+          supportedLocales: Words.supportedLocales,
           theme: viewerTheme(Brightness.light),
           home: MediaQuery(
             data: MediaQueryData(textScaler: TextScaler.linear(scale)),
