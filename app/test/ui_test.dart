@@ -7,6 +7,7 @@ import 'package:amenbo_viewer/main.dart';
 import 'package:amenbo_viewer/settings.dart';
 import 'package:amenbo_viewer/store/backlog_queries.dart';
 import 'package:amenbo_viewer/store/backlog_store.dart';
+import 'package:amenbo_viewer/ui/detail.dart';
 import 'package:amenbo_viewer/ui/marks.dart';
 import 'package:amenbo_viewer/ui/task_row.dart';
 import 'package:amenbo_viewer/ui/refs.dart';
@@ -488,6 +489,77 @@ void main() {
       final title = tester.widget<Text>(find.text('a task')).style!;
       expect(heading.fontSize!, greaterThanOrEqualTo(title.fontSize!));
       expect(heading.fontWeight!.value, greaterThan(title.fontWeight!.value));
+    });
+  });
+
+  group('nothing pressable is smaller than a finger', () {
+    /// What the finger actually has to land on: the box the tap is answered in, which is not the
+    /// same box as the text inside it.
+    Size pressed(WidgetTester tester, Type inside) => tester.getSize(
+      find
+          .descendant(of: find.byType(inside), matching: find.byType(InkWell))
+          .first,
+    );
+
+    testWidgets('the ref is a target, and still drawn as a label', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_wrap(RefChip(taskRef(2833))));
+
+      expect(
+        pressed(tester, RefChip).height,
+        greaterThanOrEqualTo(Layout.touch),
+      );
+      // The point of growing the area rather than the number: it is read as the quiet address on
+      // the bar, and hit as something a thumb can find.
+      expect(
+        tester.getSize(find.text(taskRef(2833))).height,
+        lessThan(Layout.touch),
+      );
+    });
+
+    testWidgets('a row with nothing under its title is still a target', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(
+          SizedBox(
+            width: 320,
+            child: RowSurface(
+              onOpen: () {},
+              lead: const RowLead(),
+              title: 'a task',
+              second: const [],
+            ),
+          ),
+        ),
+      );
+
+      expect(
+        pressed(tester, RowSurface).height,
+        greaterThanOrEqualTo(Layout.touch),
+      );
+    });
+
+    testWidgets('the project on a head is one too', (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          SizedBox(
+            width: 320,
+            child: DetailHead(
+              title: 'wire the store up',
+              marks: const [],
+              project: 'amenbo',
+              onProject: () {},
+            ),
+          ),
+        ),
+      );
+
+      expect(
+        pressed(tester, DetailHead).height,
+        greaterThanOrEqualTo(Layout.touch),
+      );
     });
   });
 }

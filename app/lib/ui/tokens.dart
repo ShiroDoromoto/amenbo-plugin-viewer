@@ -62,6 +62,14 @@ abstract final class Layout {
 
   /// The column a numbered step's number sits in.
   static const stepNumber = 26.0;
+
+  /// The smallest anything a finger presses is allowed to be.
+  ///
+  /// Both platforms ask for the same number, and it is not a matter of taste: it is roughly the
+  /// width of a fingertip, and a target under it is one that gets missed on a moving train. What
+  /// is *drawn* is free to be smaller — a number set in the running text of a card is the right
+  /// size for reading and the wrong size for hitting — but what answers the press is not.
+  static const touch = 48.0;
 }
 
 /// The two colours drawn over the camera.

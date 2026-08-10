@@ -212,6 +212,93 @@ void main() {
     });
   });
 
+  group('an empty screen says what to do next', () {
+    testWidgets('a search that answered nothing offers everything back', (
+      tester,
+    ) async {
+      store.applyPage([
+        BacklogChange.put('task', 1, task(id: 1, title: 'ペアリングの案内を書く')),
+      ]);
+
+      await tester.pumpWidget(screen());
+      await type(tester, 'こんな語はどこにも書いていない');
+
+      expect(find.text(words.nothingMatched), findsOneWidget);
+      expect(find.text(words.nothingMatchedDetail), findsOneWidget);
+
+      await tester.tap(find.text(words.showEverything));
+      await tester.pumpAndSettle();
+
+      expect(find.text('ペアリングの案内を書く'), findsOneWidget);
+    });
+
+    testWidgets('it drops the narrowing too, not only the words', (
+      tester,
+    ) async {
+      store.applyPage([
+        BacklogChange.put('task', 1, task(id: 1, title: 'つぎのしごと')),
+      ]);
+
+      // Stalled, arrived at from the front screen, and nothing on this phone is stalled.
+      await tester.pumpWidget(
+        screen(narrowing: const TaskQuery(bundle: Bundle.stalled)),
+      );
+      expect(find.text(words.nothingMatched), findsOneWidget);
+
+      await tester.tap(find.text(words.showEverything));
+      await tester.pumpAndSettle();
+
+      expect(find.text('つぎのしごと'), findsOneWidget);
+      // The chip went with it: what is on the screen and what is being searched agree.
+      expect(find.byType(InputChip), findsNothing);
+    });
+
+    testWidgets('it still fits at the largest text a phone offers', (
+      tester,
+    ) async {
+      for (final scale in [1.0, 2.0, 3.2]) {
+        await tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: Words.localizationsDelegates,
+            supportedLocales: Words.supportedLocales,
+            theme: viewerTheme(Brightness.light),
+            home: MediaQuery(
+              data: MediaQueryData(textScaler: TextScaler.linear(scale)),
+              child: SearchScreen(
+                store: store,
+                clock: () => today,
+                settle: settle,
+                narrowing: const TaskQuery(text: 'どこにも書いていない語'),
+                onOpenTask: (_) {},
+                onOpenDecision: (_) {},
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text(words.nothingMatched), findsOneWidget);
+        expect(
+          tester.takeException(),
+          isNull,
+          reason: 'nothing broke at $scale',
+        );
+      }
+    });
+
+    testWidgets('a phone the PC has not fed yet is told where to go', (
+      tester,
+    ) async {
+      await tester.pumpWidget(screen());
+      await tester.pumpAndSettle();
+
+      expect(find.text(words.nothingHereYet), findsOneWidget);
+      expect(find.text(words.nothingHereYetDetail), findsOneWidget);
+      // The fetch is on the other screen. Nothing here pretends to offer it.
+      expect(find.byType(FilledButton), findsNothing);
+    });
+  });
+
   group('every project, unless one is picked', () {
     setUp(
       () => store.applyPage([
