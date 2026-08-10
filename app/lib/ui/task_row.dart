@@ -87,8 +87,14 @@ class TaskRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final words = Words.of(context);
-    final quiet = theme.textTheme.bodySmall?.copyWith(
+    // The two voices of the second line. The first says the one thing that decides whether to
+    // open the row; the second is context, and is smaller and paler so the eye can pass over it.
+    final deciding = theme.textTheme.bodySmall?.copyWith(
       color: theme.colorScheme.onSurfaceVariant,
+    );
+    final aside = theme.textTheme.labelMedium?.copyWith(
+      color: palette(context).textFaint,
+      fontWeight: Lettering.normal,
     );
     final reason = stallReason(words, line, today: today);
     final moved = movedAt;
@@ -97,33 +103,30 @@ class TaskRow extends StatelessWidget {
 
     final second = <Widget>[
       if (showStatus) StatusMark(line.status),
-      if (projectName != null)
-        // The first thing to be cut when the line will not fit: which project a task is in is
-        // worth knowing, and never worth as much as why it is stuck or when it is due.
-        Flexible(
-          child: Text(
-            projectName!,
-            style: quiet,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
+      // Why it cannot move, or when it is wanted — whichever there is. This is the row's second
+      // strongest thing, so it leads, and nothing else on the line is drawn as loudly.
       if (reason != null)
-        Flexible(
-          flex: 3,
-          child: Text(
-            reason,
-            style: quiet,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
+        Text(
+          reason,
+          style: deciding,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         )
       else if (line.dueOn != null)
         DueMark(line.dueOn!, today: today),
-      if (line.assigneeKind == 'ai') Text(words.markAi, style: quiet),
+      if (projectName != null)
+        // The first thing to be pushed off when the line will not fit: which project a task is in
+        // is worth knowing, and never worth as much as why it is stuck or when it is due.
+        Text(
+          projectName!,
+          style: aside,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      if (line.assigneeKind == 'ai') Text(words.markAi, style: aside),
       if (moved != null)
-        Text(relativeTime(words, moved, now: today), style: quiet),
-      if (line.comments > 0) Text(words.comments(line.comments), style: quiet),
+        Text(relativeTime(words, moved, now: today), style: aside),
+      if (line.comments > 0) Text(words.comments(line.comments), style: aside),
     ];
 
     return SpokenAsOne(
@@ -144,72 +147,13 @@ class TaskRow extends StatelessWidget {
         when: moved == null ? null : relativeTime(words, moved, now: today),
         excerpt: excerpt,
       ),
-      child: InkWell(
-        onTap: onOpen,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: Space.gutter,
-            vertical: Space.s4,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  UnreadDot(unread: unread),
-                  PriorityMark(line.priority),
-                  const SizedBox(width: Space.s3),
-                  Expanded(child: RowTitle(line.title)),
-                ],
-              ),
-              if (second.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: Space.hair),
-                  child: _Separated(children: second),
-                ),
-              if (excerpt != null && excerpt.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: Space.hair),
-                  child: Text(
-                    excerpt,
-                    style: quiet,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-            ],
-          ),
-        ),
+      child: RowSurface(
+        onOpen: onOpen,
+        lead: RowLead(unread: unread, priority: line.priority),
+        title: line.title,
+        second: second,
+        excerpt: excerpt,
       ),
-    );
-  }
-}
-
-/// The second line's parts, with a dot between them.
-class _Separated extends StatelessWidget {
-  const _Separated({required this.children});
-
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    final dot = Padding(
-      padding: const EdgeInsets.symmetric(horizontal: Space.s2),
-      child: Text(
-        '·',
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
-        ),
-      ),
-    );
-    return Row(
-      children: [
-        for (var i = 0; i < children.length; i++) ...[
-          if (i > 0) dot,
-          children[i],
-        ],
-      ],
     );
   }
 }

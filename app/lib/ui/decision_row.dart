@@ -40,8 +40,9 @@ class DecisionRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final words = Words.of(context);
-    final quiet = theme.textTheme.bodySmall?.copyWith(
-      color: theme.colorScheme.onSurfaceVariant,
+    final aside = theme.textTheme.labelMedium?.copyWith(
+      color: palette(context).textFaint,
+      fontWeight: Lettering.normal,
     );
     final excerpt = line.matchLine?.trim();
     // When it was decided if it was, when it was raised if it was not — either way, the date the
@@ -57,59 +58,26 @@ class DecisionRow extends StatelessWidget {
         if (when != null) relativeTime(words, when, now: today),
         ?excerpt,
       ].join(', '),
-      child: InkWell(
-        onTap: onOpen,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: Space.gutter,
-            vertical: Space.s4,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              RowTitle(line.title),
-              Padding(
-                padding: const EdgeInsets.only(top: Space.hair),
-                child: Row(
-                  children: [
-                    DecisionStatusMark(line.status),
-                    if (projectName != null) ...[
-                      _dot(quiet),
-                      Flexible(
-                        child: Text(
-                          projectName!,
-                          style: quiet,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                    if (when != null) ...[
-                      _dot(quiet),
-                      Text(relativeTime(words, when, now: today), style: quiet),
-                    ],
-                  ],
-                ),
-              ),
-              if (excerpt != null && excerpt.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: Space.hair),
-                  child: Text(
-                    excerpt,
-                    style: quiet,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-            ],
-          ),
-        ),
+      child: RowSurface(
+        onOpen: onOpen,
+        // Empty, and still there: a decision has neither of the two marks, and a list that mixes
+        // the two kinds would step its titles in and out without it.
+        lead: const RowLead(),
+        title: line.title,
+        second: [
+          DecisionStatusMark(line.status),
+          if (projectName != null)
+            Text(
+              projectName!,
+              style: aside,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          if (when != null)
+            Text(relativeTime(words, when, now: today), style: aside),
+        ],
+        excerpt: excerpt,
       ),
     );
   }
-
-  Widget _dot(TextStyle? style) => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: Space.s2),
-    child: Text('·', style: style),
-  );
 }

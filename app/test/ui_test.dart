@@ -5,8 +5,10 @@ import 'dart:io';
 
 import 'package:amenbo_viewer/main.dart';
 import 'package:amenbo_viewer/settings.dart';
+import 'package:amenbo_viewer/store/backlog_queries.dart';
 import 'package:amenbo_viewer/store/backlog_store.dart';
 import 'package:amenbo_viewer/ui/marks.dart';
+import 'package:amenbo_viewer/ui/task_row.dart';
 import 'package:amenbo_viewer/ui/refs.dart';
 import 'package:amenbo_viewer/ui/theme.dart';
 import 'package:amenbo_viewer/ui/time.dart';
@@ -369,7 +371,149 @@ void main() {
     );
     expect(app.darkTheme?.colorScheme.brightness, Brightness.dark);
   });
+
+  group('a list is scanned down, not read across', () {
+    testWidgets('every title begins where every other title begins', (
+      tester,
+    ) async {
+      final lefts = <double>{};
+      for (final (unread, priority) in [
+        (false, null),
+        (true, 'high'),
+        (false, 'low'),
+        (true, null),
+      ]) {
+        await tester.pumpWidget(
+          _wrap(
+            Row(
+              children: [
+                RowLead(unread: unread, priority: priority),
+                const Expanded(child: RowTitle('a task')),
+              ],
+            ),
+          ),
+        );
+        lefts.add(tester.getTopLeft(find.byType(RowTitle)).dx);
+      }
+      // One place, for all four rows: the marks a row happens to wear are not allowed to move the
+      // column the eye is following.
+      expect(lefts, hasLength(1));
+    });
+
+    testWidgets('the priorities in that column differ in shape', (
+      tester,
+    ) async {
+      // They carry no word there, so the shape is what is left when the colour is not seen.
+      final shapes = <IconData>{};
+      for (final priority in ['high', 'medium', 'low']) {
+        await tester.pumpWidget(_wrap(RowLead(priority: priority)));
+        shapes.add(tester.widget<Icon>(find.byType(Icon)).icon!);
+      }
+      expect(shapes, hasLength(3));
+    });
+
+    testWidgets('a rule says where the next row starts', (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          RowSurface(
+            onOpen: () {},
+            lead: const RowLead(),
+            title: 'a task',
+            second: const [],
+          ),
+        ),
+      );
+      final decorated = tester.widget<DecoratedBox>(
+        find
+            .descendant(
+              of: find.byType(RowSurface),
+              matching: find.byType(DecoratedBox),
+            )
+            .first,
+      );
+      final border = (decorated.decoration as BoxDecoration).border as Border;
+      expect(border.bottom.width, Stroke.rule);
+      expect(border.bottom.color, lightPalette.border);
+    });
+
+    testWidgets('what is under a title is ranked, not enumerated', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(
+          SizedBox(
+            width: 320,
+            child: TaskRow(
+              line: _line(
+                title: 'wire the store up',
+                priority: 'high',
+                blockedBy: 2833,
+                comments: 3,
+              ),
+              today: now,
+              projectName: 'amenbo',
+              onOpen: () {},
+            ),
+          ),
+        ),
+      );
+
+      // No dot between the parts, and the one that decides whether to open the row is bigger and
+      // darker than the context beside it.
+      expect(find.text('·'), findsNothing);
+      final reason = tester.widget<Text>(
+        find.textContaining('is not finished'),
+      );
+      final project = tester.widget<Text>(find.text('amenbo'));
+      expect(reason.style!.fontSize!, greaterThan(project.style!.fontSize!));
+      expect(reason.style!.color, isNot(project.style!.color));
+    });
+
+    testWidgets('a heading does not read weaker than the rows under it', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(
+          const Column(
+            children: [
+              BundleHeading(title: 'Stalled'),
+              RowTitle('a task'),
+            ],
+          ),
+        ),
+      );
+      final heading = tester.widget<Text>(find.text('Stalled')).style!;
+      final title = tester.widget<Text>(find.text('a task')).style!;
+      expect(heading.fontSize!, greaterThanOrEqualTo(title.fontSize!));
+      expect(heading.fontWeight!.value, greaterThan(title.fontWeight!.value));
+    });
+  });
 }
+
+TaskLine _line({
+  required String title,
+  String status = 'todo',
+  String? priority,
+  int? blockedBy,
+  int comments = 0,
+}) => TaskLine(
+  id: 1,
+  projectId: 1,
+  title: title,
+  status: status,
+  priority: priority,
+  assigneeKind: null,
+  draft: false,
+  dueOn: null,
+  startOn: null,
+  updatedAt: '2026-08-09T00:00:00Z',
+  closedAt: null,
+  comments: comments,
+  blockedBy: blockedBy,
+  undecided: null,
+  excerpt: null,
+  matchedIn: null,
+);
 
 Widget _wrap(Widget child) => MaterialApp(
   localizationsDelegates: Words.localizationsDelegates,

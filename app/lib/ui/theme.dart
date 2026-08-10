@@ -202,10 +202,112 @@ class RowTitle extends StatelessWidget {
   );
 }
 
+/// The shape every row in every list has: a fixed column of marks, a title, the little under it,
+/// and a rule where the next row begins.
+///
+/// The rule is the row's own rather than something the lists put between them. Rows are two and
+/// three lines tall and of differing heights, and without a line drawn across them a long title
+/// and the aside under the row above it read as one block.
+///
+/// What goes under the title is laid out with space and not with separators. Dots between the
+/// parts made them one enumeration at one weight, which is exactly what stops an eye picking the
+/// one part that matters — so the parts arrive already differing in size and in colour, and the
+/// gap between them is the only punctuation. They wrap rather than overflow: at the largest text
+/// a phone offers, three of them do not fit across a narrow screen, and a row that has run out of
+/// width should get taller rather than lose what it was saying.
+class RowSurface extends StatelessWidget {
+  const RowSurface({
+    super.key,
+    required this.onOpen,
+    required this.lead,
+    required this.title,
+    required this.second,
+    this.excerpt,
+  });
+
+  final VoidCallback onOpen;
+
+  /// The fixed-width column — `RowLead` in `marks.dart`.
+  final Widget lead;
+
+  final String title;
+
+  /// What sits under the title, strongest first.
+  final List<Widget> second;
+
+  /// Why this row is in a list of search results, and nothing else.
+  final String? excerpt;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final found = excerpt;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color: theme.colorScheme.outlineVariant,
+            width: Stroke.rule,
+          ),
+        ),
+      ),
+      child: InkWell(
+        onTap: onOpen,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: Space.gutter,
+            vertical: Space.s4,
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              lead,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    RowTitle(title),
+                    if (second.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: Space.hair),
+                        child: Wrap(
+                          spacing: Space.s4,
+                          runSpacing: Space.hair,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: second,
+                        ),
+                      ),
+                    if (found != null && found.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: Space.hair),
+                        child: Text(
+                          found,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// A heading over a bundle, with how many are in it.
 ///
 /// The count is part of the heading rather than a badge: it is read out with the heading, and it
 /// is the number the person is actually after when they glance at the screen.
+///
+/// It is drawn heavier than the titles beneath it. A heading that is smaller or lighter than the
+/// rows it gathers stops being the thing that divides the screen, and the person scrolling past
+/// reads one long list instead of four short ones.
 class BundleHeading extends StatelessWidget {
   const BundleHeading({
     super.key,
@@ -229,7 +331,12 @@ class BundleHeading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = Theme.of(context).textTheme.titleSmall;
+    final theme = Theme.of(context);
+    final style = theme.textTheme.titleMedium?.copyWith(
+      fontWeight: Lettering.bold,
+    );
+    // The count belongs to the heading but is not the heading: same weight, quieter colour.
+    final counted = style?.copyWith(color: theme.colorScheme.onSurfaceVariant);
     final folds = expanded != null;
     final heading = Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -241,12 +348,12 @@ class BundleHeading extends StatelessWidget {
       child: Row(
         children: [
           Expanded(child: Text(title, style: style)),
-          if (count != null) Text(count!, style: style),
+          if (count != null) Text(count!, style: counted),
           if (folds)
             Icon(
               expanded! ? Icons.expand_less : Icons.expand_more,
-              size: (style?.fontSize ?? Lettering.md) * 1.4,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              size: (style?.fontSize ?? Lettering.lg) * 1.4,
+              color: theme.colorScheme.onSurfaceVariant,
             ),
         ],
       ),

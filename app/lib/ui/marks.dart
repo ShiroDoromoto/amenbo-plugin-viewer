@@ -25,19 +25,69 @@ class PriorityMark extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (priority == null) return const SizedBox.shrink();
-    final colours = palette(context);
-    // Shape carries the ranking on its own: full, half, hollow.
-    final (icon, colour) = switch (priority) {
-      'high' => (Icons.circle, colours.priorityHigh),
-      'medium' => (Icons.contrast, colours.priorityMedium),
-      _ => (Icons.circle_outlined, colours.priorityLow),
-    };
     return _Mark(
-      icon: icon,
-      colour: colour,
+      icon: priorityLook(context, priority!).$1,
+      colour: priorityLook(context, priority!).$2,
       text: priorityWords(Words.of(context), priority!),
     );
   }
+}
+
+/// Shape carries the ranking on its own: full, half, hollow. Colour says the same thing again,
+/// faster, for whoever can use it.
+(IconData, Color) priorityLook(BuildContext context, String priority) {
+  final colours = palette(context);
+  return switch (priority) {
+    'high' => (Icons.circle, colours.priorityHigh),
+    'medium' => (Icons.contrast, colours.priorityMedium),
+    _ => (Icons.circle_outlined, colours.priorityLow),
+  };
+}
+
+/// The column every row in every list begins with, and the reason each of their titles begins at
+/// the same place.
+///
+/// It is the width that matters. A mark that is only as wide as it needs to be moves the title
+/// beside it, and a column of titles that each start somewhere slightly different is a column the
+/// eye has to re-find on every line — which is the whole cost of a list read in seconds.
+///
+/// So the marks in it are shapes at a fixed size rather than glyphs with words: the ranking is in
+/// full / half / hollow, the word is in the sentence a screen reader is given ([rowLabel]), and
+/// nothing here is allowed to grow sideways.
+class RowLead extends StatelessWidget {
+  const RowLead({super.key, this.unread = false, this.priority});
+
+  final bool unread;
+  final String? priority;
+
+  /// Two slots and the gap that separates the column from the title.
+  static const width = Space.s5 * 2 + Space.s3;
+
+  @override
+  Widget build(BuildContext context) => ExcludeSemantics(
+    child: Padding(
+      // Sits the marks on the first line of the title rather than on the top of its line box.
+      padding: const EdgeInsets.only(top: Space.hair),
+      child: SizedBox(
+        width: width,
+        child: Row(
+          children: [
+            UnreadDot(unread: unread),
+            SizedBox(
+              width: Space.s5,
+              child: priority == null
+                  ? null
+                  : Icon(
+                      priorityLook(context, priority!).$1,
+                      size: Space.s4,
+                      color: priorityLook(context, priority!).$2,
+                    ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
 }
 
 String priorityWords(Words words, String priority) => switch (priority) {
