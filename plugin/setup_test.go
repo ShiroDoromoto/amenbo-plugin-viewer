@@ -22,6 +22,14 @@ type pretendCloudflare struct {
 	laidOut   bool
 	subdomain string
 
+	// The subdomain call turned down for a reason of its own — a token missing the permission, a
+	// limit, a bad day. Left at zero, the only refusal it has is the account not having
+	// registered a name, which is the one refusal the run may hand back to the user.
+	subdomainRefusedWith struct {
+		code    int
+		message string
+	}
+
 	// What the run did to it.
 	statements []string
 	deployed   struct {
@@ -105,6 +113,10 @@ func answers(t *testing.T, account *pretendCloudflare) {
 		said(w, map[string]any{"id": r.PathValue("script")})
 	})
 	road.HandleFunc("GET /client/v4/accounts/{account}/workers/subdomain", func(w http.ResponseWriter, r *http.Request) {
+		if account.subdomainRefusedWith.code != 0 {
+			refused(w, account.subdomainRefusedWith.code, account.subdomainRefusedWith.message)
+			return
+		}
 		if account.subdomain == "" {
 			refused(w, 10007, "this account has not registered a workers.dev subdomain")
 			return
@@ -426,6 +438,32 @@ func TestSetupSaysWhenTheAccountHasNoNameToAnswerOn(t *testing.T) {
 	}
 	if !strings.Contains(stderr, "workers.dev") || !strings.Contains(stderr, "dash.cloudflare.com") {
 		t.Errorf("the refusal does not say what to do about it: %q", stderr)
+	}
+	if _, kept := valueOf(*written, configWorkerURL); kept {
+		t.Error("an endpoint was kept for a Worker that answers nowhere")
+	}
+}
+
+// Every other refusal of that same call is something else entirely — a token short of a
+// permission, a limit, an outage. Told to go and choose a name they chose long ago, the user
+// opens the dashboard, finds nothing there to do, and stops.
+func TestSetupDoesNotBlameTheNameForEveryRefusal(t *testing.T) {
+	account := oneAccount()
+	account.subdomainRefusedWith.code = 10000
+	account.subdomainRefusedWith.message = "Authentication error"
+	written := watched(t, account)
+
+	var code int
+	_, stderr := capture(t, func() { code = run(input{}, []string{"setup"}) })
+
+	if code != 1 {
+		t.Fatalf("exit %d", code)
+	}
+	if strings.Contains(stderr, "dash.cloudflare.com") {
+		t.Errorf("the user is sent to choose a name, which is not what went wrong: %q", stderr)
+	}
+	if !strings.Contains(stderr, "Authentication error") || !strings.Contains(stderr, "10000") {
+		t.Errorf("what Cloudflare actually said did not reach the user: %q", stderr)
 	}
 	if _, kept := valueOf(*written, configWorkerURL); kept {
 		t.Error("an endpoint was kept for a Worker that answers nowhere")
