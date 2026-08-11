@@ -26,6 +26,16 @@ import 'ui/tokens.dart';
 /// carrying a plugin to do it, for one line of text. A test holds the two together.
 const appVersion = '1.0.0';
 
+/// The number the stores count with, which is the other half of `pubspec.yaml`'s `version:`.
+///
+/// A copy handed out for testing keeps the same version for build after build, so the version
+/// alone cannot tell somebody which one they are holding — and a tester who cannot say that is a
+/// tester whose report cannot be placed. Held to the pubspec by the same test as [appVersion].
+const appBuild = '2';
+
+/// The two together, the way both stores write them.
+const appVersionShown = '$appVersion ($appBuild)';
+
 /// Where the privacy policy is, written once.
 ///
 /// The same address in all nineteen languages: the site answers in the reader's own, and a link
@@ -116,7 +126,7 @@ class _AboutScreenState extends State<AboutScreen> {
           children: [
             ListTile(
               title: Text(widget.appName),
-              subtitle: Text(words.appVersion(appVersion)),
+              subtitle: Text(words.appVersion(appVersionShown)),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(
@@ -152,7 +162,7 @@ class _AboutScreenState extends State<AboutScreen> {
               onTap: () => showLicensePage(
                 context: context,
                 applicationName: widget.appName,
-                applicationVersion: appVersion,
+                applicationVersion: appVersionShown,
               ),
             ),
           ],

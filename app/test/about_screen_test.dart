@@ -66,7 +66,7 @@ void main() {
       expect(find.text(buildOriginWords(words, origin)), findsNothing);
     }
     // The rest of the screen is there while the answer is on its way.
-    expect(find.text(words.appVersion(appVersion)), findsOneWidget);
+    expect(find.text(words.appVersion(appVersionShown)), findsOneWidget);
 
     answer.complete(BuildOrigin.appStore);
     await tester.pumpAndSettle();

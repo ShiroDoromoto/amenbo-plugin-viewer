@@ -104,7 +104,11 @@ void main() {
         .last
         .trim();
 
-    // pubspec carries the build number as well; the screen shows the version alone.
+    // Both halves are on the screen, so both halves are held here. A build handed out for testing
+    // carries the same version as the last one, and the number is the only thing telling a tester
+    // which of them they have.
     expect(declared.split('+').first, appVersion);
+    expect(declared.split('+').last, appBuild);
+    expect(appVersionShown, "${declared.replaceFirst('+', ' (')})");
   });
 }
