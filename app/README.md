@@ -457,6 +457,30 @@ CI（[`.github/workflows/app.yml`](../.github/workflows/app.yml)）が `app/` �
 署名の情報はリポジトリに入れない。実機ビルドのときは Xcode で Team を選ぶ。
 CI は `--no-codesign`。
 
+## ストアへ出す手は、ブラウザではなく `tool/release/`
+
+```sh
+uv run app/tool/release/appstore.py state
+uv run app/tool/release/play.py state
+```
+
+`state` はどちらも読むだけなので、まず打って構わない。焼いたものを出すのはこの並び:
+
+| ストア | 打つもの |
+|---|---|
+| App Store | `appstore.py upload <ipa>` → 版が審査に居るなら `withdraw` → `bind <版> <番号>` → `submit <版>` |
+| Play | `play.py upload <aab> --track alpha` |
+
+- **鍵は手元の置き場から読む。** App Store は `~/.appstoreconnect/private_keys/` の `.p8` と
+  `~/.config/amenbo-release/asc.env` の2つの ID、Play は同じ場所のサービスアカウントの JSON。
+  **リポジトリには鍵も ID も書かない**
+- **`withdraw` は列の順番を失う。** 審査に入る前なら失うのは並んだぶんだけだが、入った後は最初からになる
+- **Play の編集はコミットするまで何も届かない。** 途中で落ちたら、その編集は捨てて構わない
+- リリースノートは掲載文の `release_notes` から引く。**Play に掲載の無い言語へ書くと断られる**ので、
+  出す先は `listings` が答えた言語だけ。配って試す版に「何が変わったか」を出したいときは
+  `play.py notes --track <t> --text-file <path>`
+- ゲートには入れない。ネットワークと本物の口座が要るので、掲載の画を撮る道具と同じ扱い
+
 ## ストアの掲載文
 
 **19言語ぶんが `store/` に、言語ごと1ファイルで置いてある。** 出すときはそこから写して貼る。
