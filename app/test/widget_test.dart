@@ -134,6 +134,21 @@ void main() {
     expect(pairingRouteWords(words, PairingRoute.iCloud).action, isNull);
   });
 
+  testWidgets('the privacy policy is reachable without pairing', (
+    tester,
+  ) async {
+    await tester.pumpWidget(app(unkeptSettings()));
+    await tester.pumpAndSettle();
+
+    // Both stores ask that somebody holding the app can reach the policy from inside it, and the
+    // person who checks is holding a phone that cannot pair — no PC, no Amenbo, no code to read.
+    // Every other way to that row is behind the front screen, and a pairing is what brings it.
+    await tester.tap(find.byIcon(Icons.info_outline));
+    await tester.pumpAndSettle();
+
+    expect(find.text(words.privacyPolicy), findsOneWidget);
+  });
+
   testWidgets('the button opens the camera on the code', (tester) async {
     await tester.pumpWidget(
       MaterialApp(

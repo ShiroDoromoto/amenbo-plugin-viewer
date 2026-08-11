@@ -11,6 +11,11 @@
 /// this phone's half of the Cloudflare route, and the iCloud route has no half at all — the phone
 /// held up its end by having been opened once. A second button would have to do nothing.
 ///
+/// The one thing the bar carries is the way to what this build is, and it is here because it is
+/// nowhere else: the settings are opened from the front screen, and the front screen is what a
+/// pairing brings. **Anyone who cannot pair would otherwise never reach the privacy policy** —
+/// and that is every reviewer either store sends, since none of them has a PC running Amenbo.
+///
 /// What follows a pairing is not decided here. This screen has said everything it has to say the
 /// moment the phone has one, and which screen replaces it is the root's judgement.
 ///
@@ -22,6 +27,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import 'about_screen.dart';
 import 'l10n/words.dart';
 import 'pairing_scan.dart';
 import 'pairing_store.dart';
@@ -113,7 +119,20 @@ class PairingGuideScreen extends StatelessWidget {
     final routes = PairingRoute.forPlatform(theme.platform);
 
     return Scaffold(
-      appBar: AppBar(title: Text(appName)),
+      appBar: AppBar(
+        title: Text(appName),
+        // Not a second way to pair — the way to the one screen that names the privacy policy,
+        // for the person who has no way through this one.
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.info_outline),
+            tooltip: words.aboutTitle,
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => AboutScreen(appName: appName)),
+            ),
+          ),
+        ],
+      ),
       // The first thing anybody sees is a page of prose, so it stops where every other page of
       // prose in this app stops rather than running the width of a tablet.
       body: Measured.prose(
