@@ -133,6 +133,8 @@
   "eraseConfirm": "지우기",
 
   "aboutTitle": "정보",
+  "privacyPolicy": "개인정보 처리방침",
+  "privacyPolicyUnopened": "브라우저를 열 수 없습니다. 개인정보 처리방침은 {url} 에 있습니다",
   "licences": "라이선스",
   "appVersion": "버전 {version}",
   "contractLine": "Amenbo 스냅샷 계약 {version}판을 읽습니다. 다른 판으로 쓰는 곳에는 다른 버전의 앱이 필요합니다.",

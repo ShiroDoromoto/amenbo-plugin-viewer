@@ -133,6 +133,8 @@
   "eraseConfirm": "Sil",
 
   "aboutTitle": "Hakkında",
+  "privacyPolicy": "Gizlilik politikası",
+  "privacyPolicyUnopened": "Hiçbir tarayıcı açılamadı. Gizlilik politikası şu adreste: {url}",
   "licences": "Lisanslar",
   "appVersion": "Sürüm {version}",
   "contractLine": "Amenbo anlık görüntü sözleşmesinin {version}. sürümünü okur. Başka bir sürümle yazan bir yer, bu uygulamanın başka bir sürümünü ister.",

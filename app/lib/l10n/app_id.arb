@@ -133,6 +133,8 @@
   "eraseConfirm": "Hapus",
 
   "aboutTitle": "Tentang",
+  "privacyPolicy": "Kebijakan privasi",
+  "privacyPolicyUnopened": "Tidak ada peramban yang dapat dibuka. Kebijakan privasi ada di {url}",
   "licences": "Lisensi",
   "appVersion": "Versi {version}",
   "contractLine": "Membaca kontrak snapshot Amenbo versi {version}. Tempat yang menulis versi lain butuh versi lain dari aplikasi ini.",

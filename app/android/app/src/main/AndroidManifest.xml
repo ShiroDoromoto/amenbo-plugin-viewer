@@ -41,5 +41,13 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <!-- The privacy policy is a page on the web, and from Android 11 an app cannot see the
+             browser that would open it unless it says here that it is looking for one. Without
+             this the link is handed to nobody, and the row does nothing at all — which is the one
+             outcome the stores are asking about. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="https"/>
+        </intent>
     </queries>
 </manifest>

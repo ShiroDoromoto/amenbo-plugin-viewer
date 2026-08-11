@@ -306,6 +306,13 @@
 
   "aboutTitle": "About",
   "@aboutTitle": { "description": "What this build is." },
+  "privacyPolicy": "Privacy policy",
+  "@privacyPolicy": { "description": "Opens the privacy policy in the phone's browser. It is a page on the product's website — one address, which answers in the reader's own language." },
+  "privacyPolicyUnopened": "No browser could be opened. The privacy policy is at {url}",
+  "@privacyPolicyUnopened": {
+    "description": "Said when the phone would not hand the link to a browser, so the address is there to be read or typed somewhere else. A link that quietly does nothing would leave somebody looking for a page they were told they could read.",
+    "placeholders": { "url": { "type": "String" } }
+  },
   "licences": "Licences",
   "@licences": { "description": "Opens the licences Flutter collected at build time." },
   "appVersion": "Version {version}",

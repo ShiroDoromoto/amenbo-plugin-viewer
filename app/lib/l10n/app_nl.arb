@@ -133,6 +133,8 @@
   "eraseConfirm": "Wissen",
 
   "aboutTitle": "Over",
+  "privacyPolicy": "Privacybeleid",
+  "privacyPolicyUnopened": "Er kon geen browser worden geopend. Het privacybeleid staat op {url}",
   "licences": "Licenties",
   "appVersion": "Versie {version}",
   "contractLine": "Leest versie {version} van het Amenbo-snapshotcontract. Een plek die een andere versie schrijft, vraagt om een andere versie van deze app.",

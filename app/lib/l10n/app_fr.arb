@@ -133,6 +133,8 @@
   "eraseConfirm": "Effacer",
 
   "aboutTitle": "À propos",
+  "privacyPolicy": "Politique de confidentialité",
+  "privacyPolicyUnopened": "Aucun navigateur n'a pu être ouvert. La politique de confidentialité se trouve sur {url}",
   "licences": "Licences",
   "appVersion": "Version {version}",
   "contractLine": "Lit la version {version} du contrat d'instantané Amenbo. Un dépôt qui écrit une autre version demande une autre version de cette app.",

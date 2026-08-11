@@ -133,6 +133,8 @@
   "eraseConfirm": "Usuń",
 
   "aboutTitle": "O aplikacji",
+  "privacyPolicy": "Polityka prywatności",
+  "privacyPolicyUnopened": "Nie udało się otworzyć przeglądarki. Polityka prywatności znajduje się pod adresem {url}",
   "licences": "Licencje",
   "appVersion": "Wersja {version}",
   "contractLine": "Czyta wersję {version} kontraktu migawek Amenbo. Miejsce piszące inną wersję wymaga innej wersji tej aplikacji.",

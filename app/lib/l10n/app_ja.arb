@@ -133,6 +133,8 @@
   "eraseConfirm": "消す",
 
   "aboutTitle": "これは何か",
+  "privacyPolicy": "プライバシーポリシー",
+  "privacyPolicyUnopened": "ブラウザを開けませんでした。プライバシーポリシーは {url} にあります",
   "licences": "ライセンス",
   "appVersion": "バージョン {version}",
   "contractLine": "Amenbo のスナップショット契約のバージョン {version} を読みます。ほかのバージョンで書かれた置き場には、別のバージョンのアプリが要ります。",

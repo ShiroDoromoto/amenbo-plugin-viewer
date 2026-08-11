@@ -133,6 +133,8 @@
   "eraseConfirm": "Xoá",
 
   "aboutTitle": "Giới thiệu",
+  "privacyPolicy": "Chính sách quyền riêng tư",
+  "privacyPolicyUnopened": "Không thể mở trình duyệt. Chính sách quyền riêng tư có tại {url}",
   "licences": "Giấy phép",
   "appVersion": "Phiên bản {version}",
   "contractLine": "Đọc phiên bản {version} của giao kèo ảnh chụp Amenbo. Nơi ghi bằng phiên bản khác cần một phiên bản khác của ứng dụng này.",

@@ -133,6 +133,8 @@
   "eraseConfirm": "ลบ",
 
   "aboutTitle": "เกี่ยวกับ",
+  "privacyPolicy": "นโยบายความเป็นส่วนตัว",
+  "privacyPolicyUnopened": "ไม่สามารถเปิดเบราว์เซอร์ได้ นโยบายความเป็นส่วนตัวอยู่ที่ {url}",
   "licences": "สัญญาอนุญาต",
   "appVersion": "รุ่น {version}",
   "contractLine": "อ่านข้อตกลงสแนปช็อตของ Amenbo รุ่นที่ {version} ที่เก็บซึ่งเขียนด้วยรุ่นอื่นต้องใช้แอปนี้อีกรุ่นหนึ่ง",

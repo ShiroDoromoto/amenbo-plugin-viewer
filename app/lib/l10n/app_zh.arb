@@ -133,6 +133,8 @@
   "eraseConfirm": "删除",
 
   "aboutTitle": "关于",
+  "privacyPolicy": "隐私政策",
+  "privacyPolicyUnopened": "无法打开浏览器。隐私政策位于 {url}",
   "licences": "许可",
   "appVersion": "版本 {version}",
   "contractLine": "读取 Amenbo 快照契约的第 {version} 版。写着其他版本的存放处，需要另一个版本的应用。",

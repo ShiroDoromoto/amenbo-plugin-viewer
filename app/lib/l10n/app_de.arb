@@ -133,6 +133,8 @@
   "eraseConfirm": "Löschen",
 
   "aboutTitle": "Über",
+  "privacyPolicy": "Datenschutzerklärung",
+  "privacyPolicyUnopened": "Es konnte kein Browser geöffnet werden. Die Datenschutzerklärung steht unter {url}",
   "licences": "Lizenzen",
   "appVersion": "Version {version}",
   "contractLine": "Liest Version {version} des Amenbo-Snapshot-Kontrakts. Ein Ablageort, der eine andere Version schreibt, braucht eine andere Version dieser App.",

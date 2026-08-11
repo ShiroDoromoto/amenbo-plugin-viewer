@@ -86,6 +86,12 @@ dependencies:
   # neither Dart nor a few lines of our own platform code can put up on both phones.
   share_plus: ^13.3.0
 
+  # One link, and it is not optional: both stores refuse an app whose privacy policy cannot be
+  # reached from inside it, and a URL somebody has to copy out and type is not reached. Handing a
+  # web address to the browser is a platform call on each side, so this is the one line of it we
+  # do not write twice.
+  url_launcher: ^6.3.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

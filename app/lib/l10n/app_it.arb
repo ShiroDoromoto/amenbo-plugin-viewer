@@ -133,6 +133,8 @@
   "eraseConfirm": "Cancella",
 
   "aboutTitle": "Informazioni",
+  "privacyPolicy": "Informativa sulla privacy",
+  "privacyPolicyUnopened": "Non è stato possibile aprire alcun browser. L'informativa sulla privacy si trova su {url}",
   "licences": "Licenze",
   "appVersion": "Versione {version}",
   "contractLine": "Legge la versione {version} del contratto di snapshot di Amenbo. Un posto che scrive un'altra versione richiede un'altra versione di questa app.",
