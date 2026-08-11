@@ -7,6 +7,7 @@ AGENTS.md
 CLAUDE.md
 /.claude/
 /.prompt/
+docs/wip/
 
 # --- OS / エディタ
 .DS_Store
