@@ -33,7 +33,7 @@ Palette palette(BuildContext context) {
 /// Carries [Palette] on the theme.
 ///
 /// It does not blend from one brightness to the other: these are the colours a mark is recognised
-/// by, and half of one is not a colour amenbo has. The swap happens inside the fade the rest of
+/// by, and half of one is not a colour Amenbo has. The swap happens inside the fade the rest of
 /// the theme is already doing.
 @immutable
 class _PaletteOf extends ThemeExtension<_PaletteOf> {
@@ -75,11 +75,11 @@ ThemeData viewerTheme(Brightness brightness) {
   );
 }
 
-/// amenbo's colours, on the Material roles that draw them.
+/// Amenbo's colours, on the Material roles that draw them.
 ///
-/// The roles amenbo has no colour for — an error wash, the fixed pairs — keep what Material
+/// The roles Amenbo has no colour for — an error wash, the fixed pairs — keep what Material
 /// derives from the accent. They are the ones nothing on these screens asks for; giving them
-/// invented values would put colours on the glass that amenbo does not have.
+/// invented values would put colours on the glass that Amenbo does not have.
 ColorScheme _scheme(Brightness brightness) {
   final colours = paletteFor(brightness);
   final opposite = paletteFor(
@@ -90,7 +90,7 @@ ColorScheme _scheme(Brightness brightness) {
     brightness: brightness,
   ).copyWith(
     // One accent, and no second one: secondary and tertiary are given the same colour rather than
-    // a hue amenbo never shows.
+    // a hue Amenbo never shows.
     primary: colours.accent,
     onPrimary: colours.onAccent,
     primaryContainer: colours.accentWeak,

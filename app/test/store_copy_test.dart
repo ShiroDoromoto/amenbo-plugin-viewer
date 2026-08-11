@@ -83,7 +83,7 @@ void main() {
       });
 
       test('is the same app as the other eighteen', () {
-        expect(fields['name'], equals('amenbo Viewer'));
+        expect(fields['name'], equals('Amenbo Viewer'));
       });
 
       test('spends no keyword room on spaces', () {

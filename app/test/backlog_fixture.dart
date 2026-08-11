@@ -1,4 +1,4 @@
-// Rows in amenbo's own shape, written by hand.
+// Rows in Amenbo's own shape, written by hand.
 //
 // The columns are the ones `amenbo sync snapshot` puts in `tables`; the defaults here are what a
 // freshly filed task looks like. Tests override only the column they are about, so what a test is

@@ -166,7 +166,7 @@ class PlaceStanding {
   /// there is anything to fetch — one small answer, so it can be asked often.
   final int seq;
 
-  /// amenbo's own version, or null when nothing has ever been placed.
+  /// Amenbo's own version, or null when nothing has ever been placed.
   final int? version;
   final String? updatedAt;
 }

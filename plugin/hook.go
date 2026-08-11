@@ -1,14 +1,14 @@
 package main
 
-// hook is the observation face: amenbo fired an event and moved on.
+// hook is the observation face: Amenbo fired an event and moved on.
 //
 // What an event means to this plugin is narrow and the same for all of them — **the store
 // changed, so what the phone holds is now behind.** It is a trigger, never an audience: the
 // records carry the backlog itself, so which one moved and who moved it are of no interest
-// here. That is why every event amenbo fires is subscribed to and none is treated specially.
+// here. That is why every event Amenbo fires is subscribed to and none is treated specially.
 //
 // It never fails. Nobody is waiting on the answer, and a non-zero exit would only put a warning
-// in amenbo's execution log for a run that had nothing to say.
+// in Amenbo's execution log for a run that had nothing to say.
 func hook(in input) {
 	if in.V != contractVersion || in.Event == "" {
 		return

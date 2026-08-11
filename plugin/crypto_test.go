@@ -218,7 +218,7 @@ func TestTheKeyIsTakenPaddedOrNot(t *testing.T) {
 }
 
 // A key that is not one is refused rather than stretched or truncated into shape, and the refusal
-// never quotes the key — these errors land in amenbo's execution log.
+// never quotes the key — these errors land in Amenbo's execution log.
 func TestAKeyThatIsNotAKeyIsRefused(t *testing.T) {
 	short := base64.RawURLEncoding.EncodeToString(make([]byte, keySize-1))
 	for name, spelling := range map[string]string{

@@ -18,7 +18,7 @@ void main() {
   tearDown(() => store.close());
 
   group('the four states', () {
-    test("a state is amenbo's status, whatever else is true of the row", () {
+    test("a state is Amenbo's status, whatever else is true of the row", () {
       store.applyPage([
         BacklogChange.put('task', 1, task(id: 1, status: 'in_progress')),
         BacklogChange.put(
@@ -59,7 +59,7 @@ void main() {
         ),
       ]);
 
-      // Only amenbo's own `blocked` is a state of its own. The rest are waiting, and waiting
+      // Only Amenbo's own `blocked` is a state of its own. The rest are waiting, and waiting
       // is something a row says about itself.
       final todo = store.inState(TaskState.todo, today: today);
       expect(todo.map((row) => row.id), [1, 3, 4, 5, 6]);

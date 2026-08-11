@@ -77,7 +77,7 @@ func (r refusedByCloudflare) Error() string {
 
 // ask makes one API call and hands back what the envelope carried as its result.
 //
-// **No error here quotes the token.** These sentences reach amenbo's execution log, and one that
+// **No error here quotes the token.** These sentences reach Amenbo's execution log, and one that
 // echoed the credential would put it somewhere it outlives the run that needed it.
 func (s sky) ask(method, path, contentType string, body io.Reader, result any) error {
 	request, err := http.NewRequest(method, s.base+path, body)

@@ -6,7 +6,7 @@
 ///
 /// **A code that does not fit is answered, not refused.** "Could not read that" leaves the person
 /// pointing a camera at a thing that is definitely in frame and definitely not working, with
-/// nothing to act on. A code from another app, a code from an amenbo newer than this build, and a
+/// nothing to act on. A code from another app, a code from an Amenbo newer than this build, and a
 /// key of the wrong size are three different problems with three different next steps, and the
 /// only place that difference is still visible is here.
 ///
@@ -24,16 +24,16 @@ import 'record_envelope.dart';
 /// Why a code that was read cannot pair this phone.
 ///
 /// Six, and each one has a next step the others do not: get the right code, update the app,
-/// update amenbo, ask the PC for a fresh one, and — for the two the code itself is wrong about —
+/// update Amenbo, ask the PC for a fresh one, and — for the two the code itself is wrong about —
 /// nothing this phone can do at all.
 enum CodeProblem {
   /// Not one of ours. Some other app's code, or a URL, or a shopping barcode.
   notAPairingCode,
 
-  /// Ours, from an amenbo that speaks a later contract than this build reads.
+  /// Ours, from an Amenbo that speaks a later contract than this build reads.
   tooNew,
 
-  /// Ours, from an amenbo that speaks an earlier one.
+  /// Ours, from an Amenbo that speaks an earlier one.
   tooOld,
 
   /// Ours, and this build's version, with one of the three things it carries not there.

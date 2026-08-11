@@ -2,7 +2,7 @@
 
 ## name
 
-amenbo Viewer
+Amenbo Viewer
 
 ## subtitle
 
@@ -10,17 +10,17 @@ Votre backlog, en poche
 
 ## short
 
-Lisez sur le téléphone le backlog amenbo de votre PC. Chiffré, lecture seule.
+Lisez sur le téléphone le backlog Amenbo de votre PC. Chiffré, lecture seule.
 
 ## keywords
 
-amenbo,backlog,tâches,décisions,journal,IA,agent,lecteur,hors ligne,chiffrement,cloudflare
+Amenbo,backlog,tâches,décisions,journal,IA,agent,lecteur,hors ligne,chiffrement,cloudflare
 
 ## description
 
-amenbo Viewer met dans votre poche le backlog que vous tenez sur votre PC. Il le lit ; il n'y écrit jamais.
+Amenbo Viewer met dans votre poche le backlog que vous tenez sur votre PC. Il le lit ; il n'y écrit jamais.
 
-Il faut qu'amenbo tourne sur un Mac, un Windows ou un Linux, avec le greffon viewer installé. Sans cette machine, cette application n'a rien à montrer : c'est l'autre moitié d'un outil, pas un outil à elle seule.
+Il faut qu'Amenbo tourne sur un Mac, un Windows ou un Linux, avec le greffon viewer installé. Sans cette machine, cette application n'a rien à montrer : c'est l'autre moitié d'un outil, pas un outil à elle seule.
 
 PAR OÙ ÇA ARRIVE
 
@@ -50,4 +50,4 @@ Pas de publicité. Pas de pistage. Pas de compte.
 
 La première version.
 
-Vous pouvez désormais lire votre backlog amenbo sur le téléphone : tâches, décisions et les commentaires des deux, avec la recherche et sans réseau. Appairez en lisant le code affiché par le PC, ou laissez un Mac et un iPhone le faire passer par votre propre iCloud.
+Vous pouvez désormais lire votre backlog Amenbo sur le téléphone : tâches, décisions et les commentaires des deux, avec la recherche et sans réseau. Appairez en lisant le code affiché par le PC, ou laissez un Mac et un iPhone le faire passer par votre propre iCloud.

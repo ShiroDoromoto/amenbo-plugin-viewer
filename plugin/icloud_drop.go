@@ -22,7 +22,7 @@ import (
 //	  records/<dataset>/<id>.json  {"k":"task/12","op":"put","r":{the row}}
 //
 // **One file per record**, which is the same unit the Cloudflare route places and the same one
-// amenbo's ledger names. iCloud syncs a file at a time, so an ordinary turn — a record or two
+// Amenbo's ledger names. iCloud syncs a file at a time, so an ordinary turn — a record or two
 // having moved — sends a file or two. Holding everything in one file instead would re-upload the
 // whole backlog every time a title is edited, and would leave the phone unable to tell which part
 // of it had changed.
@@ -144,7 +144,7 @@ func (d drop) pathFor(key string) (string, error) {
 }
 
 // isPlainName says whether a dataset name is one that can stand as a directory: letters, digits
-// and underscores, which is every table amenbo has.
+// and underscores, which is every table Amenbo has.
 func isPlainName(name string) bool {
 	if name == "" {
 		return false

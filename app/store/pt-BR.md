@@ -2,7 +2,7 @@
 
 ## name
 
-amenbo Viewer
+Amenbo Viewer
 
 ## subtitle
 
@@ -10,17 +10,17 @@ Seu backlog, no bolso
 
 ## short
 
-Leia no celular o backlog do amenbo do seu PC. Criptografado e só de leitura.
+Leia no celular o backlog do Amenbo do seu PC. Criptografado e só de leitura.
 
 ## keywords
 
-amenbo,backlog,tarefas,decisões,registro,IA,agente,visualizador,offline,criptografia,cloudflare
+Amenbo,backlog,tarefas,decisões,registro,IA,agente,visualizador,offline,criptografia,cloudflare
 
 ## description
 
-O amenbo Viewer coloca no seu bolso o backlog que você mantém no PC. Ele lê; nunca escreve de volta.
+O Amenbo Viewer coloca no seu bolso o backlog que você mantém no PC. Ele lê; nunca escreve de volta.
 
-É preciso ter o amenbo rodando num Mac, Windows ou Linux, com o plugin viewer instalado. Sem essa máquina, este aplicativo não tem o que mostrar: ele é a outra metade de uma ferramenta, não uma ferramenta sozinha.
+É preciso ter o Amenbo rodando num Mac, Windows ou Linux, com o plugin viewer instalado. Sem essa máquina, este aplicativo não tem o que mostrar: ele é a outra metade de uma ferramenta, não uma ferramenta sozinha.
 
 COMO CHEGA ATÉ AQUI
 
@@ -50,4 +50,4 @@ Sem anúncios. Sem rastreamento. Sem conta.
 
 A primeira versão.
 
-Agora dá para ler o backlog do amenbo no celular: tarefas, registros de decisões e os comentários de ambos, com busca e sem depender da rede. Pareie lendo o código que o PC mostra, ou deixe um Mac e um iPhone passarem tudo pelo seu próprio iCloud.
+Agora dá para ler o backlog do Amenbo no celular: tarefas, registros de decisões e os comentários de ambos, com busca e sem depender da rede. Pareie lendo o código que o PC mostra, ou deixe um Mac e um iPhone passarem tudo pelo seu próprio iCloud.

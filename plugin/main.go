@@ -1,15 +1,15 @@
-// Command viewer is amenbo's official viewer plugin: it carries an encrypted snapshot of the
-// project out to a place the user owns, so amenbo Viewer on their phone can read the backlog
+// Command viewer is Amenbo's official viewer plugin: it carries an encrypted snapshot of the
+// project out to a place the user owns, so Amenbo Viewer on their phone can read the backlog
 // while they are away from the PC.
 //
 // It has both faces a plugin can have.
 //
-//   - The observation face. amenbo fires the plugin with NO arguments and the event's JSON on
+//   - The observation face. Amenbo fires the plugin with NO arguments and the event's JSON on
 //     stdin. Nobody is waiting for it. What an event says here is that what the phone holds is
 //     now behind — the trigger for a send, never the send's audience.
 //   - The command face. A person or an AI invokes it on purpose
 //     (`amenbo plugin run viewer setup`) and waits for an answer. Arguments arrive on argv;
-//     stdout is the machine return value amenbo relays back verbatim; stderr is the human
+//     stdout is the machine return value Amenbo relays back verbatim; stderr is the human
 //     diagnostics; the exit code is the verdict.
 //
 // Two routes carry the same bytes, and which one a user gets is decided by what they have
@@ -38,19 +38,19 @@ import (
 	"strings"
 )
 
-// contractVersion is the payload contract this plugin reads. amenbo leads every document it
+// contractVersion is the payload contract this plugin reads. Amenbo leads every document it
 // writes with `v` and raises it only on a breaking change — new fields are added silently — so
 // a document announcing a different version is one this plugin must not guess at.
 const contractVersion = 1
 
-// pluginName is what amenbo knows this plugin as: its manifest's name, its installed directory,
+// pluginName is what Amenbo knows this plugin as: its manifest's name, its installed directory,
 // and the word a user types after `plugin`. One spelling, so what is written under it is found
 // again. It is `viewer` and not `amenbo-plugin-viewer`: the repository names the thing that is
 // built, the manifest names the thing that is installed.
 const pluginName = "viewer"
 
 // The settings this plugin keeps. **There is nothing for the user to fill in**: all three are
-// what `setup` generates and writes back. Two of them are declared secret, so amenbo hands those
+// what `setup` generates and writes back. Two of them are declared secret, so Amenbo hands those
 // over in the environment rather than in the `config` object on stdin — which is why those two
 // are spelled twice, once as the key `setup` writes them under and once as the variable they come
 // back in.
@@ -78,10 +78,10 @@ func logf(format string, a ...any) {
 	fmt.Fprintf(errOut, format+"\n", a...)
 }
 
-// input is the JSON document amenbo writes to the plugin's stdin. Both faces receive one, and
+// input is the JSON document Amenbo writes to the plugin's stdin. Both faces receive one, and
 // they overlap: `v` and `config` are always there, while the event fields are filled in only
 // when an event fired. Unknown keys are ignored — the contract grows by addition, so a plugin
-// that refused them would break on the next amenbo.
+// that refused them would break on the next Amenbo.
 type input struct {
 	// V is the contract version the document is written to.
 	V int `json:"v"`
@@ -91,7 +91,7 @@ type input struct {
 	// ID is the affected record's conversational number — the id a person knows it by.
 	ID int64 `json:"id"`
 	// Actor is who drove the write: "human" or "ai". This plugin reports neither — a snapshot
-	// carries the backlog, not who moved it — but the field is read so the shape amenbo writes
+	// carries the backlog, not who moved it — but the field is read so the shape Amenbo writes
 	// is visible here in full.
 	Actor string `json:"actor"`
 	// At is when the event fired, as "2026-07-22T09:00:00Z". Redelivery of one event carries
@@ -105,7 +105,7 @@ type input struct {
 	// say it.
 	New string `json:"new"`
 	// Config holds the plugin's own non-secret settings, as the user filled them in. Secrets
-	// never appear here: amenbo puts those in the environment instead.
+	// never appear here: Amenbo puts those in the environment instead.
 	Config map[string]any `json:"config"`
 }
 
@@ -116,16 +116,16 @@ func (in input) setting(key string) string {
 	return strings.TrimSpace(text)
 }
 
-// secret reads one of the settings amenbo declares secret. Those never reach the document on
+// secret reads one of the settings Amenbo declares secret. Those never reach the document on
 // stdin — they arrive in the environment instead, which is the whole reason for the second way
 // of reading a setting.
 func secret(name string) string {
 	return strings.TrimSpace(os.Getenv(name))
 }
 
-// readInput reads the document amenbo feeds on stdin.
+// readInput reads the document Amenbo feeds on stdin.
 //
-// amenbo always writes one and closes the pipe, so the read finishes promptly. A hand run from
+// Amenbo always writes one and closes the pipe, so the read finishes promptly. A hand run from
 // a terminal is fed nothing at all, and waiting for a person to type JSON would hang the plugin
 // on `viewer help` — so an interactive stdin is skipped rather than read. A document that will
 // not parse is reported and dropped: on the hook face nobody is waiting for it, and on the
@@ -156,7 +156,7 @@ func main() {
 // its return value, 1 for one that failed and has none, 2 for an invocation that was never a
 // run at all.
 func run(in input, args []string) int {
-	// No arguments is the observation face — amenbo fired us for an event and is not waiting.
+	// No arguments is the observation face — Amenbo fired us for an event and is not waiting.
 	// A word means someone invoked us on purpose.
 	if len(args) == 0 {
 		hook(in)
@@ -213,9 +213,9 @@ func push(in input, _ []string) error {
 }
 
 func usage() {
-	logf(`%s — amenbo's official plugin: read your backlog on your phone
+	logf(`%s — Amenbo's official plugin: read your backlog on your phone
 
-The plugin encrypts your backlog a record at a time and carries it to a place YOU own. amenbo
+The plugin encrypts your backlog a record at a time and carries it to a place YOU own. Amenbo
 Viewer on the phone reads it there. Nothing is hosted by anyone else, and nothing is written back.
 
 Two routes carry the same records:
@@ -225,7 +225,7 @@ Two routes carry the same records:
            the folder exist, and until then there is nothing to do here.
   anywhere your own Cloudflare Worker, over HTTPS. 'setup' stands it up in your account.
 
-Usage (through amenbo, from the project the plugin is enabled for):
+Usage (through Amenbo, from the project the plugin is enabled for):
   amenbo plugin run %s setup     stand up the Worker and its database in your own account
                                       --account <id>  when your token reaches more than one
   amenbo plugin run %s push      carry what has not reached the phone yet, by hand
@@ -242,7 +242,7 @@ the permissions already ticked, and you paste back the token it gives you. That 
 Worker and the database up and is not kept. What it leaves in your account is yours — uninstalling
 this plugin does not take it away.
 
-With no arguments the plugin is an observation hook: amenbo fires it when the project changed,
+With no arguments the plugin is an observation hook: Amenbo fires it when the project changed,
 which is what tells it the phone is now behind. It carries what moved on its own, so 'push' is
 for what was left behind — a send that failed while the network was down, or a phone that has
 fallen behind for a reason nobody can see.

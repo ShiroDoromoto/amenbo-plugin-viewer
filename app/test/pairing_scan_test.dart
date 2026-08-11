@@ -156,7 +156,7 @@ void main() {
     // Still scanning, and now saying what it read instead of stopping at "could not read that".
     expect(find.byType(PairingScanScreen), findsOneWidget);
     expect(find.text(words.pairInFrame), findsNothing);
-    expect(find.textContaining('not an amenbo pairing code'), findsOneWidget);
+    expect(find.textContaining('not an Amenbo pairing code'), findsOneWidget);
   });
 
   testWidgets('a second code is read after the first one did not fit', (

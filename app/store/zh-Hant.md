@@ -2,7 +2,7 @@
 
 ## name
 
-amenbo Viewer
+Amenbo Viewer
 
 ## subtitle
 
@@ -10,17 +10,17 @@ amenbo Viewer
 
 ## short
 
-在手機上讀電腦裡的 amenbo 待辦與決策紀錄。加密送達，唯讀，免帳號。
+在手機上讀電腦裡的 Amenbo 待辦與決策紀錄。加密送達，唯讀，免帳號。
 
 ## keywords
 
-amenbo,待辦,任務,決策紀錄,AI,代理,檢視器,離線,同步,加密,cloudflare,自架
+Amenbo,待辦,任務,決策紀錄,AI,代理,檢視器,離線,同步,加密,cloudflare,自架
 
 ## description
 
-amenbo Viewer 讓你在手機上讀電腦裡的 amenbo 待辦。它只讀，不回寫。
+Amenbo Viewer 讓你在手機上讀電腦裡的 Amenbo 待辦。它只讀，不回寫。
 
-前提是電腦（Mac、Windows 或 Linux）上跑著 amenbo，並啟用了 viewer 外掛。沒有那台電腦，這個 App 沒有可顯示的內容——它是一件工具的另一半，不是一件獨立的工具。
+前提是電腦（Mac、Windows 或 Linux）上跑著 Amenbo，並啟用了 viewer 外掛。沒有那台電腦，這個 App 沒有可顯示的內容——它是一件工具的另一半，不是一件獨立的工具。
 
 內容怎麼過來
 
@@ -50,4 +50,4 @@ amenbo Viewer 讓你在手機上讀電腦裡的 amenbo 待辦。它只讀，不�
 
 第一個版本。
 
-現在可以在手機上讀 amenbo 的待辦了：任務、決策紀錄，以及兩者的留言；可搜尋，離線也能讀。用相機掃描電腦螢幕上的碼來配對；Mac 與 iPhone 也可以走你自己的 iCloud。
+現在可以在手機上讀 Amenbo 的待辦了：任務、決策紀錄，以及兩者的留言；可搜尋，離線也能讀。用相機掃描電腦螢幕上的碼來配對；Mac 與 iPhone 也可以走你自己的 iCloud。

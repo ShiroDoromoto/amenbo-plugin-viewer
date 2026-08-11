@@ -2,7 +2,7 @@
 
 ## name
 
-amenbo Viewer
+Amenbo Viewer
 
 ## subtitle
 
@@ -10,17 +10,17 @@ Sổ việc của bạn, trong túi
 
 ## short
 
-Đọc trên điện thoại sổ việc amenbo nằm ở máy tính của bạn. Mã hoá, chỉ đọc.
+Đọc trên điện thoại sổ việc Amenbo nằm ở máy tính của bạn. Mã hoá, chỉ đọc.
 
 ## keywords
 
-amenbo,sổ việc,công việc,quyết định,ghi chép,AI,tác nhân,trình đọc,ngoại tuyến,mã hoá,cloudflare
+Amenbo,sổ việc,công việc,quyết định,ghi chép,AI,tác nhân,trình đọc,ngoại tuyến,mã hoá,cloudflare
 
 ## description
 
-amenbo Viewer mang sổ việc bạn giữ trên máy tính vào trong túi áo. Nó chỉ đọc; nó không bao giờ ghi ngược lại.
+Amenbo Viewer mang sổ việc bạn giữ trên máy tính vào trong túi áo. Nó chỉ đọc; nó không bao giờ ghi ngược lại.
 
-Bạn cần có amenbo đang chạy trên Mac, Windows hoặc Linux, với phần mở rộng viewer đã cài. Không có chiếc máy ấy thì ứng dụng này chẳng có gì để hiện — nó là một nửa của công cụ, không phải một công cụ tự đứng.
+Bạn cần có Amenbo đang chạy trên Mac, Windows hoặc Linux, với phần mở rộng viewer đã cài. Không có chiếc máy ấy thì ứng dụng này chẳng có gì để hiện — nó là một nửa của công cụ, không phải một công cụ tự đứng.
 
 NỘI DUNG ĐẾN BẰNG ĐƯỜNG NÀO
 
@@ -50,4 +50,4 @@ Không quảng cáo. Không theo dõi. Không tài khoản.
 
 Phiên bản đầu tiên.
 
-Giờ đã có thể đọc sổ việc amenbo trên điện thoại: công việc, sổ quyết định và bình luận của cả hai, tìm kiếm được và đọc được cả khi không có mạng. Ghép đôi bằng cách quét mã trên màn hình máy tính, hoặc để Mac và iPhone chuyển qua chính iCloud của bạn.
+Giờ đã có thể đọc sổ việc Amenbo trên điện thoại: công việc, sổ quyết định và bình luận của cả hai, tìm kiếm được và đọc được cả khi không có mạng. Ghép đôi bằng cách quét mã trên màn hình máy tính, hoặc để Mac và iPhone chuyển qua chính iCloud của bạn.

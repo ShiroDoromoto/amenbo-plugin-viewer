@@ -1,9 +1,9 @@
 # amenbo-plugin-viewer
 
-PC から離れているあいだも、スマートフォンから [**amenbo**](https://github.com/ShiroDoromoto/amenbo)
-のタスクの進み具合を見る。**amenbo Viewer** の実装。
+PC から離れているあいだも、スマートフォンから [**Amenbo**](https://github.com/ShiroDoromoto/amenbo)
+のタスクの進み具合を見る。**Amenbo Viewer** の実装。
 
-amenbo 本体は外部と通信しない。運営もデータをホスティングしない。**置き場は利用者が持つもの**で、
+Amenbo 本体は外部と通信しない。運営もデータをホスティングしない。**置き場は利用者が持つもの**で、
 そこへレコードを片方向に運ぶ。**運ぶのは動いたぶんだけ**で、スマートフォンは自分が読んだ点から先を取る。
 
 ## 何が入っているか
@@ -69,7 +69,7 @@ PC が送るのは動いた行だけになる。
 | | 名前 |
 |---|---|
 | リポジトリ | `amenbo-plugin-viewer` |
-| アプリ名（ストア表示） | **amenbo Viewer** |
+| アプリ名（ストア表示） | **Amenbo Viewer** |
 | バンドル ID / パッケージ名 | `work.amenbo.viewer` |
 
 ## 状態

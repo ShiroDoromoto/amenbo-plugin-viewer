@@ -18,7 +18,7 @@ import 'backlog_store.dart';
 
 /// The four states the front screen switches between, in the order it offers them.
 ///
-/// They are amenbo's own statuses and nothing derived from them. Whether a task's premises are
+/// They are Amenbo's own statuses and nothing derived from them. Whether a task's premises are
 /// met is a different question, answered per row — and one whose answer changes overnight without
 /// the task moving, which is why a list divided by it would not be the list the person reads on
 /// the PC.
@@ -29,7 +29,7 @@ enum TaskState {
   /// `in_progress` — what the AI has its hands on.
   inProgress,
 
-  /// amenbo's `blocked`: a stall nobody can move past.
+  /// Amenbo's `blocked`: a stall nobody can move past.
   blocked,
 
   /// Closed — `done` or `rejected`. All of it: the device holds the whole copy, so there is
@@ -210,7 +210,7 @@ class DecisionEdgeLine {
 
   final int targetId;
 
-  /// `builds_on`, `supersedes`, `amends` — amenbo's own word for the edge.
+  /// `builds_on`, `supersedes`, `amends` — Amenbo's own word for the edge.
   final String kind;
   final String title;
   final String status;
@@ -537,7 +537,7 @@ extension BacklogQueries on BacklogStore {
       )
       .toList(growable: false);
 
-  /// The projects the machine sent, in the order amenbo holds them.
+  /// The projects the machine sent, in the order Amenbo holds them.
   ///
   /// Archived ones are left out by default, because nothing in a project nobody adds to any more
   /// belongs in "what to do when I get back". Search asks with [includeArchived] set: remembering
@@ -703,7 +703,7 @@ TaskLine _taskLine(Row row) => TaskLine(
 
 /// A task a list may hold at all: its project is one the person still works in.
 ///
-/// Archived is amenbo's word for a project nobody adds to any more, so nothing in it belongs in
+/// Archived is Amenbo's word for a project nobody adds to any more, so nothing in it belongs in
 /// "what to do when I get back". Search still reaches it — remembering how something ended up is
 /// exactly what an archived project is kept for.
 ///
@@ -795,7 +795,7 @@ List<Object?> _orderArgs(TaskState state, DateTime today) =>
   );
 }
 
-/// amenbo writes days as `YYYY-MM-DD` and instants as ISO-8601 in UTC. Comparisons here are
+/// Amenbo writes days as `YYYY-MM-DD` and instants as ISO-8601 in UTC. Comparisons here are
 /// string comparisons on those, which is why both formats are produced in one place.
 String _day(DateTime when) {
   final local = when.toLocal();
@@ -804,7 +804,7 @@ String _day(DateTime when) {
       '${local.day.toString().padLeft(2, '0')}';
 }
 
-/// An instant in the shape amenbo writes them, so a day the phone works out — how far back the
+/// An instant in the shape Amenbo writes them, so a day the phone works out — how far back the
 /// finished bundle reaches — can be compared against stamps that came from the PC.
 String amenboStamp(DateTime when) =>
     '${when.toUtc().toIso8601String().split('.').first}Z';

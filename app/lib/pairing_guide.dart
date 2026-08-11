@@ -6,7 +6,7 @@
 /// error and not an empty list — it is the instructions, which is the only thing the app can
 /// usefully offer until a route exists.
 ///
-/// The setup happens on the PC, in amenbo itself; almost nothing here can start it. That is why
+/// The setup happens on the PC, in Amenbo itself; almost nothing here can start it. That is why
 /// the screen is mostly steps: **one button, on one card.** Reading the QR code is the whole of
 /// this phone's half of the Cloudflare route, and the iCloud route has no half at all — the phone
 /// held up its end by having been opened once. A second button would have to do nothing.

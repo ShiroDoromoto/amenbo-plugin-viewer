@@ -2,7 +2,7 @@
   "name": "amenbo-viewer-worker",
   "private": true,
   "type": "module",
-  "description": "The drop box amenbo Viewer reads from — deployed into the user's own Cloudflare account, never ours",
+  "description": "The drop box Amenbo Viewer reads from — deployed into the user's own Cloudflare account, never ours",
   "scripts": {
     "dev": "wrangler dev",
     "typegen": "wrangler types",

@@ -353,7 +353,7 @@ void main() {
       await tester.pumpWidget(screen());
 
       // The mark a row standing on its own carries says the state. The place beside it is for
-      // naming what to go and do, and amenbo's bare `blocked` names nothing — put there as well,
+      // naming what to go and do, and Amenbo's bare `blocked` names nothing — put there as well,
       // it only said the state twice.
       expect(find.byType(StatusMark), findsOneWidget);
       expect(find.byType(StallMark), findsNothing);

@@ -2,7 +2,7 @@
 
 ## name
 
-amenbo Viewer
+Amenbo Viewer
 
 ## subtitle
 
@@ -10,17 +10,17 @@ Backlog Anda, di saku
 
 ## short
 
-Baca backlog amenbo dari PC Anda di ponsel. Terenkripsi, hanya baca, tanpa akun.
+Baca backlog Amenbo dari PC Anda di ponsel. Terenkripsi, hanya baca, tanpa akun.
 
 ## keywords
 
-amenbo,backlog,tugas,keputusan,catatan,AI,agen,pembaca,luring,enkripsi,cloudflare
+Amenbo,backlog,tugas,keputusan,catatan,AI,agen,pembaca,luring,enkripsi,cloudflare
 
 ## description
 
-amenbo Viewer membawa backlog yang Anda simpan di PC ke dalam saku. Ia membacanya; ia tidak pernah menulis balik.
+Amenbo Viewer membawa backlog yang Anda simpan di PC ke dalam saku. Ia membacanya; ia tidak pernah menulis balik.
 
-Syaratnya amenbo berjalan di Mac, Windows, atau Linux, dengan plugin viewer terpasang. Tanpa komputer itu aplikasi ini tidak punya apa-apa untuk ditampilkan — ia separuh dari sebuah alat, bukan alat yang berdiri sendiri.
+Syaratnya Amenbo berjalan di Mac, Windows, atau Linux, dengan plugin viewer terpasang. Tanpa komputer itu aplikasi ini tidak punya apa-apa untuk ditampilkan — ia separuh dari sebuah alat, bukan alat yang berdiri sendiri.
 
 BAGAIMANA ISINYA SAMPAI
 
@@ -50,4 +50,4 @@ Tanpa iklan. Tanpa pelacakan. Tanpa akun.
 
 Versi pertama.
 
-Backlog amenbo kini bisa dibaca di ponsel: tugas, catatan keputusan, dan komentar pada keduanya — dapat dicari, dan tetap terbaca tanpa jaringan. Pasangkan dengan memindai kode di layar PC, atau biarkan Mac dan iPhone melewatkannya melalui iCloud Anda sendiri.
+Backlog Amenbo kini bisa dibaca di ponsel: tugas, catatan keputusan, dan komentar pada keduanya — dapat dicari, dan tetap terbaca tanpa jaringan. Pasangkan dengan memindai kode di layar PC, atau biarkan Mac dan iPhone melewatkannya melalui iCloud Anda sendiri.

@@ -83,7 +83,7 @@ void main() {
       expect(thrown.saidVersion, 2);
     });
 
-    test('an older one asks for amenbo to be updated', () {
+    test('an older one asks for Amenbo to be updated', () {
       final thrown = catchIt(
         () => readPairingCode(
           '{"v":0,"url":"https://viewer.example.workers.dev","t":"t","k":"$key"}',

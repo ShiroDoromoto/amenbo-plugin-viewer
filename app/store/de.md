@@ -2,7 +2,7 @@
 
 ## name
 
-amenbo Viewer
+Amenbo Viewer
 
 ## subtitle
 
@@ -10,17 +10,17 @@ Dein Backlog, unterwegs
 
 ## short
 
-Lies das amenbo-Backlog von deinem PC am Telefon. Verschlüsselt, nur lesend.
+Lies das Amenbo-Backlog von deinem PC am Telefon. Verschlüsselt, nur lesend.
 
 ## keywords
 
-amenbo,Backlog,Aufgaben,Entscheidungen,KI,Agent,Betrachter,offline,Verschlüsselung,cloudflare
+Amenbo,Backlog,Aufgaben,Entscheidungen,KI,Agent,Betrachter,offline,Verschlüsselung,cloudflare
 
 ## description
 
-amenbo Viewer bringt das Backlog, das auf deinem PC liegt, in deine Tasche. Es liest; es schreibt nie zurück.
+Amenbo Viewer bringt das Backlog, das auf deinem PC liegt, in deine Tasche. Es liest; es schreibt nie zurück.
 
-Dafür muss amenbo auf einem Mac, unter Windows oder unter Linux laufen, mit installiertem viewer-Plugin. Ohne diesen Rechner hat die App nichts zu zeigen: Sie ist die andere Hälfte eines Werkzeugs, kein Werkzeug für sich.
+Dafür muss Amenbo auf einem Mac, unter Windows oder unter Linux laufen, mit installiertem viewer-Plugin. Ohne diesen Rechner hat die App nichts zu zeigen: Sie ist die andere Hälfte eines Werkzeugs, kein Werkzeug für sich.
 
 WIE ES ANKOMMT
 
@@ -50,4 +50,4 @@ Keine Werbung. Kein Tracking. Kein Konto.
 
 Die erste Fassung.
 
-Das amenbo-Backlog lässt sich jetzt am Telefon lesen: Aufgaben, Entscheidungsprotokolle und die Kommentare an beiden, durchsuchbar und auch ohne Netz. Zum Koppeln den Code vom PC-Bildschirm scannen — oder Mac und iPhone über deine eigene iCloud reden lassen.
+Das Amenbo-Backlog lässt sich jetzt am Telefon lesen: Aufgaben, Entscheidungsprotokolle und die Kommentare an beiden, durchsuchbar und auch ohne Netz. Zum Koppeln den Code vom PC-Bildschirm scannen — oder Mac und iPhone über deine eigene iCloud reden lassen.

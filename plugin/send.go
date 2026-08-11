@@ -26,7 +26,7 @@ import (
 // mac and an iPhone can talk.
 
 // specVersion is the version of the shared contract these records are written to. It is not
-// amenbo's format version: this one moves when the four parts change what they say to each
+// Amenbo's format version: this one moves when the four parts change what they say to each
 // other, and the phone refuses a version it does not read rather than guessing.
 const specVersion = 1
 
@@ -34,7 +34,7 @@ const specVersion = 1
 // most, and a page is 500.
 const idsPerRead = 500
 
-// sendTimeout bounds one call to the store. A hook nobody is waiting on must still end: amenbo
+// sendTimeout bounds one call to the store. A hook nobody is waiting on must still end: Amenbo
 // fires the plugin per write, so one call left hanging on a network that is not answering would
 // be joined by the next write's, and the next.
 const sendTimeout = 30 * time.Second
@@ -43,7 +43,7 @@ const sendTimeout = 30 * time.Second
 // It is a sentinel because the two faces answer it differently: the hook stays quiet (a user who
 // has not set anything up is not failing at anything), and `push` says so (someone asked for a
 // send out loud).
-var errNoRoute = errors.New("there is nowhere to put anything yet — run setup for the Cloudflare route, or open amenbo Viewer once on an iPhone for the mac's iCloud folder to appear")
+var errNoRoute = errors.New("there is nowhere to put anything yet — run setup for the Cloudflare route, or open Amenbo Viewer once on an iPhone for the mac's iCloud folder to appear")
 
 // What can happen to a record on its way out: it now holds something, or it is gone. These are
 // the contract's words, and both routes write them — the Worker into a row, the drop into a file.
@@ -76,16 +76,16 @@ type placement struct {
 
 // recordKey is what a row is filed under: its dataset and its id, as one string. The store is
 // told nothing about what either half means — to it this is a key and no more, which is what
-// keeps amenbo's schema out of a place the user merely rents.
+// keeps Amenbo's schema out of a place the user merely rents.
 func recordKey(dataset string, id int64) string {
 	return dataset + "/" + strconv.FormatInt(id, 10)
 }
 
-// neverCarried names what does not leave this machine whatever amenbo hands over.
+// neverCarried names what does not leave this machine whatever Amenbo hands over.
 //
 // A plugin's secrets are the Cloudflare token and the encryption key themselves. Carrying them
 // would put the key inside the thing it encrypts, in a place the user merely rents — so this
-// plugin refuses them on its own account, rather than resting on amenbo keeping them back.
+// plugin refuses them on its own account, rather than resting on Amenbo keeping them back.
 var neverCarried = map[string]bool{"plugin_secret": true}
 
 // carryRows turns the rows of one dataset into records to place. A row with no id is dropped
@@ -175,7 +175,7 @@ type readBack func(dataset string, ids []int64) ([]json.RawMessage, error)
 // cursor and will carry the delete on the next turn.
 //
 // **A dataset the road cannot answer for is left behind, not fatal.** The ledger names every
-// dataset amenbo holds and the read-back road carries fewer, so a stretch touching one of the
+// dataset Amenbo holds and the read-back road carries fewer, so a stretch touching one of the
 // others would otherwise stop every send after it — the phone would fall behind for good over a
 // row it was never going to receive.
 func changedRecords(changes []change, rows readBack) ([]outgoing, error) {

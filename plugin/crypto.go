@@ -58,7 +58,7 @@ type sealer struct {
 // settings store and an environment variable, and refusing one of the two spellings would fail a
 // key that is correct.
 //
-// **No error here quotes the key, or any part of it.** These errors land in amenbo's execution
+// **No error here quotes the key, or any part of it.** These errors land in Amenbo's execution
 // log, and a log that echoes the key hands over the one secret this design has.
 func newSealer(encodedKey string) (*sealer, error) {
 	encodedKey = strings.TrimSpace(encodedKey)

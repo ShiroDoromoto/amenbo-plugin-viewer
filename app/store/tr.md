@@ -2,7 +2,7 @@
 
 ## name
 
-amenbo Viewer
+Amenbo Viewer
 
 ## subtitle
 
@@ -10,17 +10,17 @@ Backlog'un cebinde
 
 ## short
 
-Bilgisayarındaki amenbo backlog'unu telefonda oku. Şifreli ve salt okunur.
+Bilgisayarındaki Amenbo backlog'unu telefonda oku. Şifreli ve salt okunur.
 
 ## keywords
 
-amenbo,backlog,işler,kararlar,kayıt,yapay zeka,ajan,okuyucu,çevrimdışı,şifreleme,cloudflare
+Amenbo,backlog,işler,kararlar,kayıt,yapay zeka,ajan,okuyucu,çevrimdışı,şifreleme,cloudflare
 
 ## description
 
-amenbo Viewer, bilgisayarında tuttuğun backlog'u cebine koyar. Onu okur; ona asla yazmaz.
+Amenbo Viewer, bilgisayarında tuttuğun backlog'u cebine koyar. Onu okur; ona asla yazmaz.
 
-Bunun için Mac, Windows ya da Linux'ta çalışan bir amenbo ve kurulu viewer eklentisi gerekir. O makine olmadan bu uygulamanın gösterecek bir şeyi yoktur: o, bir aracın diğer yarısıdır, kendi başına bir araç değil.
+Bunun için Mac, Windows ya da Linux'ta çalışan bir Amenbo ve kurulu viewer eklentisi gerekir. O makine olmadan bu uygulamanın gösterecek bir şeyi yoktur: o, bir aracın diğer yarısıdır, kendi başına bir araç değil.
 
 NASIL GELİYOR
 
@@ -50,4 +50,4 @@ Reklam yok. Takip yok. Hesap yok.
 
 İlk sürüm.
 
-Artık amenbo backlog'u telefonda okunuyor: işler, karar kayıtları ve ikisinin de yorumları; aranabilir ve ağ olmadan da okunur. Bilgisayarın gösterdiği kodu okutarak eşle, ya da Mac ile iPhone kullanıyorsan her şeyi kendi iCloud'undan geçir.
+Artık Amenbo backlog'u telefonda okunuyor: işler, karar kayıtları ve ikisinin de yorumları; aranabilir ve ağ olmadan da okunur. Bilgisayarın gösterdiği kodu okutarak eşle, ya da Mac ile iPhone kullanıyorsan her şeyi kendi iCloud'undan geçir.

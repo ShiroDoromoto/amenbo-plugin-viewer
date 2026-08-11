@@ -2,7 +2,7 @@
 
 ## name
 
-amenbo Viewer
+Amenbo Viewer
 
 ## subtitle
 
@@ -10,17 +10,17 @@ Je backlog, onderweg
 
 ## short
 
-Lees op je telefoon de amenbo-backlog van je pc. Versleuteld, alleen lezen.
+Lees op je telefoon de Amenbo-backlog van je pc. Versleuteld, alleen lezen.
 
 ## keywords
 
-amenbo,backlog,taken,besluiten,register,AI,agent,lezer,offline,versleuteling,cloudflare
+Amenbo,backlog,taken,besluiten,register,AI,agent,lezer,offline,versleuteling,cloudflare
 
 ## description
 
-amenbo Viewer stopt de backlog die op je pc staat in je zak. Hij leest hem; hij schrijft er nooit in.
+Amenbo Viewer stopt de backlog die op je pc staat in je zak. Hij leest hem; hij schrijft er nooit in.
 
-Je hebt amenbo nodig op een Mac, Windows of Linux, met de viewer-plug-in erbij. Zonder die machine heeft deze app niets te tonen: het is de andere helft van een gereedschap, geen gereedschap op zichzelf.
+Je hebt Amenbo nodig op een Mac, Windows of Linux, met de viewer-plug-in erbij. Zonder die machine heeft deze app niets te tonen: het is de andere helft van een gereedschap, geen gereedschap op zichzelf.
 
 HOE HET AANKOMT
 
@@ -50,4 +50,4 @@ Geen advertenties. Geen tracking. Geen account.
 
 De eerste versie.
 
-De amenbo-backlog is nu op de telefoon te lezen: taken, besluitenregisters en de opmerkingen bij allebei, doorzoekbaar en ook zonder netwerk. Koppel door de code op je pc-scherm te scannen, of laat een Mac en een iPhone alles via je eigen iCloud doorgeven.
+De Amenbo-backlog is nu op de telefoon te lezen: taken, besluitenregisters en de opmerkingen bij allebei, doorzoekbaar en ook zonder netwerk. Koppel door de code op je pc-scherm te scannen, of laat een Mac en een iPhone alles via je eigen iCloud doorgeven.

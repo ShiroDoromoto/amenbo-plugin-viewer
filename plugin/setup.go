@@ -250,7 +250,7 @@ func pastedToken() (string, error) {
 	}
 	defer terminal.Close()
 
-	// **What to do goes to the terminal, not to stderr.** amenbo holds a plugin's stderr until
+	// **What to do goes to the terminal, not to stderr.** Amenbo holds a plugin's stderr until
 	// the run is over and prints it then, which is right for a record of what happened and wrong
 	// for the one thing here that is asked before anything can carry on: a person waiting at a
 	// prompt with the link still unprinted has nothing to paste.
@@ -294,7 +294,7 @@ func tokenLink() string {
 	asked := url.Values{}
 	asked.Set("to", "/:account/api-tokens")
 	asked.Set("permissionGroupKeys", string(permissions))
-	asked.Set("name", "amenbo")
+	asked.Set("name", "Amenbo")
 	return "https://dash.cloudflare.com/?" + asked.Encode()
 }
 
@@ -312,22 +312,22 @@ func generated() string {
 	return base64.RawURLEncoding.EncodeToString(raw)
 }
 
-// settle writes one setting back through amenbo, with the value on stdin rather than on the
+// settle writes one setting back through Amenbo, with the value on stdin rather than on the
 // command line — which is what keeps the two secrets out of the shell's history and out of the
 // machine's process listing.
 //
-// **No --actor is passed**, for the same reason the sync calls pass none: amenbo puts the
+// **No --actor is passed**, for the same reason the sync calls pass none: Amenbo puts the
 // plugin's own reach in the environment when it fires it, and that reach is the facet.
 //
 // It is a variable so a test can watch what a run writes back without a store standing behind it
-// — the one thing a test of this must not do is reach an amenbo that somebody's work is in.
+// — the one thing a test of this must not do is reach an Amenbo that somebody's work is in.
 var settle = func(key, value string) error {
 	command := exec.Command(amenboProgram, "plugin", "config", "set", pluginName, key, "-")
 	command.Stdin = strings.NewReader(value)
 	var diagnostics bytes.Buffer
 	command.Stderr = &diagnostics
 	if err := command.Run(); err != nil {
-		return fmt.Errorf("amenbo would not keep the %s setting: %w: %s", key, err, strings.TrimSpace(diagnostics.String()))
+		return fmt.Errorf("Amenbo would not keep the %s setting: %w: %s", key, err, strings.TrimSpace(diagnostics.String()))
 	}
 	return nil
 }

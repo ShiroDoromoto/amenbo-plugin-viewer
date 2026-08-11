@@ -1,11 +1,11 @@
 /// The numbers the whole app is drawn with — colours, spacing, corners, text sizes.
 ///
-/// They are not decided here. They are a copy of the set amenbo itself is drawn with, so that two
+/// They are not decided here. They are a copy of the set Amenbo itself is drawn with, so that two
 /// tools reading the same backlog do not look like two products. The copy is deliberate and it has
-/// a cost: when amenbo's own set moves, nothing here follows on its own.
+/// a cost: when Amenbo's own set moves, nothing here follows on its own.
 ///
 /// Only four things are copied — colour, spacing, corner, text size. How a screen is put together
-/// is not: amenbo is read on a wide desk, this is read one-handed for half a minute, and the same
+/// is not: Amenbo is read on a wide desk, this is read one-handed for half a minute, and the same
 /// arrangement does not serve both.
 ///
 /// **Nothing outside this file writes a number into a widget.** A padding written at the point of
@@ -15,9 +15,9 @@ library;
 
 import 'package:flutter/material.dart';
 
-/// Space between things. amenbo's ladder, rung for rung.
+/// Space between things. Amenbo's ladder, rung for rung.
 ///
-/// [hair] is below the ladder on purpose: amenbo has the same sub-rung, used the same way — the
+/// [hair] is below the ladder on purpose: Amenbo has the same sub-rung, used the same way — the
 /// optical nudge that lines a glyph up with the text beside it. It is named here so that even that
 /// one is somewhere it can be found.
 abstract final class Space {
@@ -42,7 +42,7 @@ abstract final class Space {
   static const emptyScreenTop = s7 * 2;
 }
 
-/// Widths that decide a layout rather than the space inside one. amenbo keeps its own in the same
+/// Widths that decide a layout rather than the space inside one. Amenbo keeps its own in the same
 /// sheet, for the same reason: they are the numbers a screen would otherwise hide.
 abstract final class Layout {
   /// Where one pane becomes two.
@@ -96,7 +96,7 @@ abstract final class OverCamera {
   static const scrim = Color(0x99000000);
 }
 
-/// Line widths. amenbo draws every rule and border at [rule]; [thick] is the one heavier stroke it
+/// Line widths. Amenbo draws every rule and border at [rule]; [thick] is the one heavier stroke it
 /// keeps for a line that has to be seen against a photograph rather than against a surface.
 abstract final class Stroke {
   static const rule = 1.0;
@@ -156,13 +156,13 @@ abstract final class Lettering {
   static const lg = 17.0;
   static const xl = 20.0;
 
-  /// amenbo asks for 550 and 680. A system typeface is what draws this app (no face is shipped
+  /// Amenbo asks for 550 and 680. A system typeface is what draws this app (no face is shipped
   /// with it), and those land between the weights one offers, so each takes the nearer step.
   static const normal = FontWeight.w400;
   static const medium = FontWeight.w500;
   static const bold = FontWeight.w700;
 
-  /// amenbo's leading, which it sets on running text. Headings and marks are one line each here
+  /// Amenbo's leading, which it sets on running text. Headings and marks are one line each here
   /// and take a tighter one — on a phone row that air is taken from the row below.
   static const leading = 1.5;
   static const leadingTight = 1.25;
@@ -174,7 +174,7 @@ abstract final class Lettering {
 
 /// One brightness worth of colour.
 ///
-/// The names are amenbo's. Which Material role each one lands on is decided once, in the theme.
+/// The names are Amenbo's. Which Material role each one lands on is decided once, in the theme.
 class Palette {
   const Palette({
     required this.bg,
@@ -220,7 +220,7 @@ class Palette {
   final Color textMuted;
   final Color textFaint;
 
-  /// The one accent. amenbo has no second one, so neither does this.
+  /// The one accent. Amenbo has no second one, so neither does this.
   final Color accent;
   final Color onAccent;
   final Color accentWeak;

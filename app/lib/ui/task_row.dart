@@ -37,7 +37,7 @@ String labelWithCount(Words words, String name, Counted count) =>
 /// this is the only place the person finds out — a start day still ahead included, which is a
 /// stall nobody has to do anything about and therefore the easiest one to leave out.
 ///
-/// **amenbo's own `blocked` is not one of them.** It is the state rather than a premise, and every
+/// **Amenbo's own `blocked` is not one of them.** It is the state rather than a premise, and every
 /// row already says the state: the switch it is read under, the mark beside it wherever a row
 /// stands on its own, and the sentence it is read aloud as. A line here as well only said it
 /// twice, and in English said the same word twice.

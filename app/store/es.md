@@ -2,7 +2,7 @@
 
 ## name
 
-amenbo Viewer
+Amenbo Viewer
 
 ## subtitle
 
@@ -10,17 +10,17 @@ Tu backlog, en el bolsillo
 
 ## short
 
-Lee en el móvil el backlog de amenbo de tu PC. Cifrado y de solo lectura.
+Lee en el móvil el backlog de Amenbo de tu PC. Cifrado y de solo lectura.
 
 ## keywords
 
-amenbo,backlog,tareas,decisiones,registro,IA,agente,visor,sin conexión,cifrado,cloudflare
+Amenbo,backlog,tareas,decisiones,registro,IA,agente,visor,sin conexión,cifrado,cloudflare
 
 ## description
 
-amenbo Viewer te deja leer en el móvil el backlog que guardas en tu PC. Lo lee; nunca escribe en él.
+Amenbo Viewer te deja leer en el móvil el backlog que guardas en tu PC. Lo lee; nunca escribe en él.
 
-Hace falta amenbo funcionando en un Mac, un Windows o un Linux, con el complemento viewer instalado. Sin ese ordenador esta aplicación no tiene nada que mostrar: es la otra mitad de una herramienta, no una herramienta por su cuenta.
+Hace falta Amenbo funcionando en un Mac, un Windows o un Linux, con el complemento viewer instalado. Sin ese ordenador esta aplicación no tiene nada que mostrar: es la otra mitad de una herramienta, no una herramienta por su cuenta.
 
 CÓMO LLEGA
 
@@ -50,4 +50,4 @@ Sin anuncios. Sin rastreo. Sin cuenta.
 
 La primera versión.
 
-Ya puedes leer tu backlog de amenbo en el móvil: tareas, registros de decisión y los comentarios de ambos, con búsqueda y sin conexión. Empareja escaneando el código que muestra tu PC, o deja que un Mac y un iPhone lo pasen por tu propio iCloud.
+Ya puedes leer tu backlog de Amenbo en el móvil: tareas, registros de decisión y los comentarios de ambos, con búsqueda y sin conexión. Empareja escaneando el código que muestra tu PC, o deja que un Mac y un iPhone lo pasen por tu propio iCloud.

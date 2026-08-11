@@ -23,18 +23,18 @@ test: manifest
 	go vet ./...
 	go test ./...
 
-# The manifest is checked against the same rules amenbo enforces at the install door, so a
+# The manifest is checked against the same rules Amenbo enforces at the install door, so a
 # manifest that would be refused there is refused here first. It needs no store and no binding,
-# but it does need amenbo on the PATH — a machine without it skips the check rather than failing
+# but it does need Amenbo on the PATH — a machine without it skips the check rather than failing
 # the build over a tool that is not this repository's to require.
 manifest:
-	@if command -v amenbo >/dev/null 2>&1; then \
+	@if command -v Amenbo >/dev/null 2>&1; then \
 		amenbo --actor ai plugin validate dev/manifest.json; \
 	else \
-		echo "manifest: amenbo is not on the PATH — skipping the catalog check"; \
+		echo "manifest: Amenbo is not on the PATH — skipping the catalog check"; \
 	fi
 
-# Hand-install into an amenbo base dir — the author's own loop, before there is a release to
+# Hand-install into an Amenbo base dir — the author's own loop, before there is a release to
 # install from:
 #
 #   make install AMENBO_BASE="$$AMENBO_HOME"
@@ -44,7 +44,7 @@ manifest:
 # of that, so point it at a throwaway base, never at the one holding work you care about.
 install: build
 ifndef AMENBO_BASE
-	$(error set AMENBO_BASE to the amenbo base dir to install into)
+	$(error set AMENBO_BASE to the Amenbo base dir to install into)
 endif
 	mkdir -p "$(AMENBO_BASE)/plugins/$(BIN)"
 	cp $(BIN) "$(AMENBO_BASE)/plugins/$(BIN)/$(BIN)"
@@ -52,7 +52,7 @@ endif
 	@echo "installed into $(AMENBO_BASE)/plugins/$(BIN) — switch it on for a project:"
 	@echo "  amenbo plugin enable $(BIN)"
 
-# Fire one event at the installed plugin, with no amenbo to fire it:
+# Fire one event at the installed plugin, with no Amenbo to fire it:
 #
 #   make fire AMENBO_BASE=/tmp/base
 #   make fire AMENBO_BASE=/tmp/base EVENT=task.done ID=42 STORE_VERSION=7
@@ -62,16 +62,16 @@ endif
 # **The event is the only thing stood in for.** The observation face takes a JSON document on
 # stdin and nothing else, so that boundary is the whole of what has to be emulated — everything
 # behind it (the sync calls, the routes, the state) is the real thing, and a stand-in for any of
-# it would be a second copy of a contract amenbo already owns.
+# it would be a second copy of a contract Amenbo already owns.
 #
-# **Everything is pointed inside the base**: the store that is read, the environment amenbo would
+# **Everything is pointed inside the base**: the store that is read, the environment Amenbo would
 # fill in, and the home whose iCloud folder is written into. Left pointing outside, this loop
 # would place the author's own backlog in the author's own container. Turn the mac route on by
 # standing that folder up:
 #
 #   mkdir -p "$$AMENBO_BASE/machine/Library/Mobile Documents/iCloud~work~amenbo~viewer/Documents"
 #
-# Secrets arrive the way amenbo hands them over, in the environment, so they are neither written
+# Secrets arrive the way Amenbo hands them over, in the environment, so they are neither written
 # here nor typed on a command line: AMENBO_CONFIG_ENCRYPTION_KEY and AMENBO_CONFIG_AUTH_TOKEN
 # come from the shell, and throwaway values are what belongs in them.
 EVENT ?= store.changed
@@ -80,7 +80,7 @@ ID ?= 1
 STORE_VERSION ?=
 WORKER_URL ?=
 PAYLOAD ?=
-# Which project the plugin may read, as its number. amenbo puts this in the environment when it
+# Which project the plugin may read, as its number. Amenbo puts this in the environment when it
 # fires a plugin, and the sync calls draw their reach from it. A throwaway base has one project,
 # and it is the first.
 PROJECT ?= 1

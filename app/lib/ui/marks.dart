@@ -16,7 +16,7 @@ import 'theme.dart';
 import 'time.dart';
 import 'tokens.dart';
 
-/// amenbo's `high` / `medium` / `low`, or none at all.
+/// Amenbo's `high` / `medium` / `low`, or none at all.
 class PriorityMark extends StatelessWidget {
   const PriorityMark(this.priority, {super.key});
 
@@ -88,7 +88,7 @@ String priorityWords(Words words, String priority) => switch (priority) {
   _ => priority,
 };
 
-/// amenbo's status, for the places that show it outright — a detail, or a search result whose
+/// Amenbo's status, for the places that show it outright — a detail, or a search result whose
 /// row is not being read under the state it is in.
 class StatusMark extends StatelessWidget {
   const StatusMark(this.status, {super.key});
@@ -324,7 +324,7 @@ class SpokenAsOne extends StatelessWidget {
   );
 }
 
-/// A day as amenbo writes one, so a `due_on` or a `start_on` can be compared against today
+/// A day as Amenbo writes one, so a `due_on` or a `start_on` can be compared against today
 /// without either side being parsed into an instant.
 String isoDay(DateTime when) {
   final local = when.toLocal();

@@ -1,5 +1,5 @@
 /**
- * amenbo Viewer's drop box.
+ * Amenbo Viewer's drop box.
  *
  * This Worker is deployed into the **user's own** Cloudflare account — the plugin stands it up
  * there and then hands over ownership. Nothing about it is hosted by anyone else, which is why
@@ -56,7 +56,7 @@ export interface Env extends Cloudflare.Env {
 }
 
 /**
- * The version of the shared contract this Worker speaks. It is not amenbo's format version: this
+ * The version of the shared contract this Worker speaks. It is not Amenbo's format version: this
  * one moves when the four parts change what they say to each other, and it travels on everything
  * this Worker sends so a phone can refuse a version it does not read rather than guess.
  */

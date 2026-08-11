@@ -1,8 +1,8 @@
 /// How a task or a decision is named, and the bridge back to the PC.
 ///
 /// The app cannot write anything, so a thought had while reading has nowhere to go inside it. The
-/// number is the way out: copied here, pasted into amenbo there. That is why the ref is rendered
-/// whole — namespaced, the way amenbo shows it — rather than as a bare number that means nothing
+/// number is the way out: copied here, pasted into Amenbo there. That is why the ref is rendered
+/// whole — namespaced, the way Amenbo shows it — rather than as a bare number that means nothing
 /// once it leaves the screen.
 library;
 
@@ -14,7 +14,7 @@ import '../l10n/words.dart';
 import 'theme.dart';
 import 'tokens.dart';
 
-/// The namespace amenbo puts on everything it shows. A bare number belongs to any tracker;
+/// The namespace Amenbo puts on everything it shows. A bare number belongs to any tracker;
 /// this is what makes it belong to one.
 const _namespace = 'AMB-';
 

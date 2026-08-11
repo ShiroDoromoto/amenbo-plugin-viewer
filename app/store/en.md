@@ -2,7 +2,7 @@
 
 ## name
 
-amenbo Viewer
+Amenbo Viewer
 
 ## subtitle
 
@@ -10,17 +10,17 @@ Your backlog, off your desk
 
 ## short
 
-Read your PC's amenbo backlog on your phone. Encrypted, read-only, no account.
+Read your PC's Amenbo backlog on your phone. Encrypted, read-only, no account.
 
 ## keywords
 
-amenbo,backlog,task,todo,agent,coding agent,decision,record,viewer,offline,self-hosted,cloudflare
+Amenbo,backlog,task,todo,agent,coding agent,decision,record,viewer,offline,self-hosted,cloudflare
 
 ## description
 
-amenbo Viewer puts the backlog you keep on your PC in your pocket. It reads it; it never writes to it.
+Amenbo Viewer puts the backlog you keep on your PC in your pocket. It reads it; it never writes to it.
 
-You need amenbo running on a Mac, Windows or Linux machine, with the viewer plugin installed. Without that machine this app has nothing to show — it is the other half of a tool, not a tool of its own.
+You need Amenbo running on a Mac, Windows or Linux machine, with the viewer plugin installed. Without that machine this app has nothing to show — it is the other half of a tool, not a tool of its own.
 
 HOW IT GETS THERE
 
@@ -50,4 +50,4 @@ No ads. No tracking. No account.
 
 The first release.
 
-Read your amenbo backlog on your phone: tasks, decision records and their comments, searchable and readable offline. Pair with your PC by scanning the code it shows, or let a Mac and an iPhone pass it through your own iCloud.
+Read your Amenbo backlog on your phone: tasks, decision records and their comments, searchable and readable offline. Pair with your PC by scanning the code it shows, or let a Mac and an iPhone pass it through your own iCloud.

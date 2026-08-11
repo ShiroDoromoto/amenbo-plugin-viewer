@@ -1,6 +1,6 @@
 /// The phone's copy of the backlog, in SQLite.
 ///
-/// What arrives is amenbo's own table rows, one encrypted record per row, keyed `table/id`.
+/// What arrives is Amenbo's own table rows, one encrypted record per row, keyed `table/id`.
 /// They are kept here twice, on purpose:
 ///
 /// * [_records] holds each row verbatim, as JSON — the contract's shape, and the only place the
@@ -10,7 +10,7 @@
 /// * the tables beside it hold only the small columns the screens sort and filter on, so a query
 ///   for twenty rows reads twenty short rows and no bodies at all.
 ///
-/// Nothing here writes back to amenbo. The rows are a mirror; the source of truth is the PC.
+/// Nothing here writes back to Amenbo. The rows are a mirror; the source of truth is the PC.
 library;
 
 import 'dart:convert';
@@ -45,7 +45,7 @@ class BacklogChange {
         : BacklogChange.put(dataset, id, row);
   }
 
-  /// The amenbo table the row came from — `task`, `task_comment`, `decision`, …
+  /// The Amenbo table the row came from — `task`, `task_comment`, `decision`, …
   final String dataset;
   final int id;
   final Map<String, Object?>? row;
@@ -64,7 +64,7 @@ class MetaKey {
   /// The last `seq` taken from the place. The next fetch asks for what came after it.
   static const seq = 'seq';
 
-  /// amenbo's own `version`, as it was when the last record was written.
+  /// Amenbo's own `version`, as it was when the last record was written.
   static const version = 'version';
 
   /// The contract version the records were written under.
@@ -496,7 +496,7 @@ class BacklogStore {
 
   static int _flag(Object? value) => value == 1 || value == true ? 1 : 0;
 
-  /// amenbo's priorities do not sort by name, and a task with none belongs at the bottom rather
+  /// Amenbo's priorities do not sort by name, and a task with none belongs at the bottom rather
   /// than wherever `null` lands.
   static int _priorityRank(String? priority) => switch (priority) {
     'high' => 0,

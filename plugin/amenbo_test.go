@@ -12,7 +12,7 @@ func TestARefusalIsReadAsAmenboWroteIt(t *testing.T) {
 	code, message, refused := refusedWith([]byte(`{"error":{"code":"sync_gap","message":"that cursor is outside the stretch it still speaks for"}}`))
 
 	if !refused {
-		t.Fatal("amenbo's own account of a failure was not recognised as one")
+		t.Fatal("Amenbo's own account of a failure was not recognised as one")
 	}
 	if code != "sync_gap" {
 		t.Errorf("code = %q", code)
@@ -27,13 +27,13 @@ func TestARefusalIsReadAsAmenboWroteIt(t *testing.T) {
 func TestWhatIsNotARefusalIsNotReadAsOne(t *testing.T) {
 	for name, wrote := range map[string]string{
 		"nothing at all":          "",
-		"a sentence":              "amenbo: command not found",
+		"a sentence":              "Amenbo: command not found",
 		"a document with no code": `{"error":{"message":"something"}}`,
 		"another document":        `{"project_id":1,"version":7}`,
 	} {
 		t.Run(name, func(t *testing.T) {
 			if _, _, refused := refusedWith([]byte(wrote)); refused {
-				t.Errorf("%q was taken for amenbo refusing", wrote)
+				t.Errorf("%q was taken for Amenbo refusing", wrote)
 			}
 		})
 	}

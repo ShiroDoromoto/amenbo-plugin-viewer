@@ -364,7 +364,7 @@ class _DecisionDetailScreenState extends State<DecisionDetailScreen> {
   }
 }
 
-/// amenbo's own words for one decision standing on another.
+/// Amenbo's own words for one decision standing on another.
 ///
 /// The edge is drawn from this decision outwards, so every one of these reads as something this
 /// decision did to an older one.

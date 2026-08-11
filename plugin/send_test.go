@@ -72,7 +72,7 @@ func TestCollapseSettlesOnOneOrder(t *testing.T) {
 
 // A plugin's secrets are the token and the encryption key themselves. Carrying them would put
 // the key inside the thing it encrypts, in a place the user merely rents — so they are left
-// behind here rather than on amenbo's promise to keep them back.
+// behind here rather than on Amenbo's promise to keep them back.
 func TestASecretIsNeverCarried(t *testing.T) {
 	read, dropped := collapse([]change{
 		{Dataset: "plugin_secret", RecordID: 1, Op: "insert"},
@@ -102,7 +102,7 @@ func TestASecretIsNeverCarried(t *testing.T) {
 	}
 }
 
-// The ledger names every dataset amenbo holds and the read-back road carries fewer, so a stretch
+// The ledger names every dataset Amenbo holds and the read-back road carries fewer, so a stretch
 // touching one of the others must not stop the send: the phone would fall behind for good over a
 // row it was never going to receive.
 func TestADatasetThatDoesNotTravelIsLeftBehindRatherThanFatal(t *testing.T) {

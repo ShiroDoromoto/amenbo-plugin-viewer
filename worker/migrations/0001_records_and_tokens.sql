@@ -2,7 +2,7 @@
 -- and where the store as a whole stands.
 --
 -- **Nothing here knows what a record is.** The key is a string the PC chose and the ciphertext is
--- bytes it sealed; give this schema amenbo's shape instead and every change to amenbo becomes a
+-- bytes it sealed; give this schema Amenbo's shape instead and every change to Amenbo becomes a
 -- migration in every user's own account, with nobody able to roll them forward.
 
 -- One row per record. The key is the PC's; `seq` is this store's own order, and it is what a

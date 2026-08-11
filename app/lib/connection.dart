@@ -41,7 +41,7 @@ class LastTaken {
   /// When the last round of the intake finished, or null if none ever has.
   final DateTime? at;
 
-  /// amenbo's own version, as it stood in the last record written.
+  /// Amenbo's own version, as it stood in the last record written.
   final int? version;
 
   /// How far down the order this device has read.

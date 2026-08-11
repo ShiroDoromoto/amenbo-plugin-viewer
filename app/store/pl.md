@@ -2,7 +2,7 @@
 
 ## name
 
-amenbo Viewer
+Amenbo Viewer
 
 ## subtitle
 
@@ -10,17 +10,17 @@ Twój backlog w kieszeni
 
 ## short
 
-Czytaj na telefonie backlog amenbo z komputera. Szyfrowany, tylko do odczytu.
+Czytaj na telefonie backlog Amenbo z komputera. Szyfrowany, tylko do odczytu.
 
 ## keywords
 
-amenbo,backlog,zadania,decyzje,zapisy,SI,agent,czytnik,offline,szyfrowanie,cloudflare
+Amenbo,backlog,zadania,decyzje,zapisy,SI,agent,czytnik,offline,szyfrowanie,cloudflare
 
 ## description
 
-amenbo Viewer wkłada ci do kieszeni backlog, który trzymasz na komputerze. Czyta go i nigdy do niego nie pisze.
+Amenbo Viewer wkłada ci do kieszeni backlog, który trzymasz na komputerze. Czyta go i nigdy do niego nie pisze.
 
-Potrzebny jest działający amenbo na Macu, Windowsie albo Linuksie, z wtyczką viewer. Bez tej maszyny ta aplikacja nie ma czego pokazać: to druga połowa narzędzia, a nie narzędzie samo w sobie.
+Potrzebny jest działający Amenbo na Macu, Windowsie albo Linuksie, z wtyczką viewer. Bez tej maszyny ta aplikacja nie ma czego pokazać: to druga połowa narzędzia, a nie narzędzie samo w sobie.
 
 JAK TO DOCIERA
 
@@ -50,4 +50,4 @@ Bez reklam. Bez śledzenia. Bez konta.
 
 Pierwsze wydanie.
 
-Backlog amenbo można teraz czytać na telefonie: zadania, zapisy decyzji i komentarze do jednych i drugich, z wyszukiwaniem i bez sieci. Sparuj, skanując kod pokazany przez komputer, albo pozwól, by Mac i iPhone przepuściły wszystko przez twój własny iCloud.
+Backlog Amenbo można teraz czytać na telefonie: zadania, zapisy decyzji i komentarze do jednych i drugich, z wyszukiwaniem i bez sieci. Sparuj, skanując kod pokazany przez komputer, albo pozwól, by Mac i iPhone przepuściły wszystko przez twój własny iCloud.

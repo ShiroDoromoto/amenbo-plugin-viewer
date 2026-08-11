@@ -2,7 +2,7 @@
 
 ## name
 
-amenbo Viewer
+Amenbo Viewer
 
 ## subtitle
 
@@ -10,17 +10,17 @@ amenbo Viewer
 
 ## short
 
-在手机上读电脑里的 amenbo 待办与决策记录。加密送达，只读，无需账号。
+在手机上读电脑里的 Amenbo 待办与决策记录。加密送达，只读，无需账号。
 
 ## keywords
 
-amenbo,待办,任务,决策记录,AI,智能体,查看器,离线,同步,加密,cloudflare,自托管
+Amenbo,待办,任务,决策记录,AI,智能体,查看器,离线,同步,加密,cloudflare,自托管
 
 ## description
 
-amenbo Viewer 让你在手机上读电脑里的 amenbo 待办。它只读，不回写。
+Amenbo Viewer 让你在手机上读电脑里的 Amenbo 待办。它只读，不回写。
 
-前提是电脑（Mac、Windows 或 Linux）上装着 amenbo，并启用了 viewer 插件。没有那台电脑，这个应用没有可显示的内容——它是一件工具的另一半，不是一件独立的工具。
+前提是电脑（Mac、Windows 或 Linux）上装着 Amenbo，并启用了 viewer 插件。没有那台电脑，这个应用没有可显示的内容——它是一件工具的另一半，不是一件独立的工具。
 
 内容怎么过来
 
@@ -50,4 +50,4 @@ amenbo Viewer 让你在手机上读电脑里的 amenbo 待办。它只读，不�
 
 第一个版本。
 
-现在可以在手机上读 amenbo 的待办了：任务、决策记录，以及两者的评论；可搜索，离线也能读。用相机扫描电脑屏幕上的码来配对；Mac 与 iPhone 也可以走你自己的 iCloud。
+现在可以在手机上读 Amenbo 的待办了：任务、决策记录，以及两者的评论；可搜索，离线也能读。用相机扫描电脑屏幕上的码来配对；Mac 与 iPhone 也可以走你自己的 iCloud。

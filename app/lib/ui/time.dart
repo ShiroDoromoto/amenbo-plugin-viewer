@@ -79,7 +79,7 @@ String absoluteTime(TimeFace face, DateTime when) {
   );
 }
 
-/// A day on its own (`due_on`, `start_on`), which amenbo writes as `YYYY-MM-DD`.
+/// A day on its own (`due_on`, `start_on`), which Amenbo writes as `YYYY-MM-DD`.
 String dayLabel(TimeFace face, String isoDay, {required DateTime now}) {
   final parsed = DateTime.tryParse(isoDay);
   if (parsed == null) return isoDay;

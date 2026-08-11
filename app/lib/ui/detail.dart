@@ -32,7 +32,7 @@ class DetailFrame extends StatefulWidget {
     this.missing,
   });
 
-  /// How amenbo names the record. Always on the screen: it is what the person types on the PC.
+  /// How Amenbo names the record. Always on the screen: it is what the person types on the PC.
   final String ref;
 
   /// The head the body opens with — [DetailHead], or nothing where the phone does not hold the

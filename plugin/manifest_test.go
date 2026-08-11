@@ -54,7 +54,7 @@ func setting(t *testing.T, key string) field {
 	return field{}
 }
 
-// The name decides what amenbo runs, what directory it is laid down in, and the word a user
+// The name decides what Amenbo runs, what directory it is laid down in, and the word a user
 // types. One spelling on both sides, or what is written under it is not found again.
 func TestTheManifestAndTheCodeAgreeOnTheName(t *testing.T) {
 	if name := read(t).Name; name != pluginName {
@@ -130,7 +130,7 @@ func TestTheSecretsReachTheCodeUnderTheNamesTheirKeysBecome(t *testing.T) {
 	}
 }
 
-// The plugin runs wherever amenbo does. The iCloud route is mac-only, but the Cloudflare one is
+// The plugin runs wherever Amenbo does. The iCloud route is mac-only, but the Cloudflare one is
 // not, so dropping an OS here would strip a user of the route that was theirs.
 func TestItRunsOnEveryOSAmenboDoes(t *testing.T) {
 	declared := strings.Join(read(t).OS, " ")
@@ -143,7 +143,7 @@ func TestItRunsOnEveryOSAmenboDoes(t *testing.T) {
 }
 
 // Any write leaves the phone behind, so there is no event that can be left out as uninteresting.
-// A subscription narrower than what amenbo fires would be a window the viewer silently misses.
+// A subscription narrower than what Amenbo fires would be a window the viewer silently misses.
 //
 // `store.changed` is the one that cannot be dropped for being redundant: it fires on every write,
 // and the other eleven name things that happen to a record rather than the record being edited —

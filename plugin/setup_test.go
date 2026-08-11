@@ -185,7 +185,7 @@ type keptSetting struct {
 	key, value string
 }
 
-// watched replaces the write-back with one that only remembers, so no test can reach an amenbo
+// watched replaces the write-back with one that only remembers, so no test can reach an Amenbo
 // store, and points the plugin at a stand-in account with nothing configured yet.
 func watched(t *testing.T, account *pretendCloudflare) *[]keptSetting {
 	t.Helper()

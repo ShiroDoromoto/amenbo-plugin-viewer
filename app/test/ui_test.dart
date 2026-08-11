@@ -32,7 +32,7 @@ void main() {
         final theme = viewerTheme(brightness);
         final colours = paletteFor(brightness);
         expect(theme.colorScheme.brightness, brightness);
-        // amenbo's own colours, not ones Material derived for us: the two tools read the same
+        // Amenbo's own colours, not ones Material derived for us: the two tools read the same
         // backlog, and someone who uses both must not meet two products.
         expect(theme.colorScheme.primary, colours.accent);
         expect(theme.colorScheme.surface, colours.bg);
@@ -478,7 +478,7 @@ void main() {
                 comments: 3,
               ),
               today: now,
-              projectName: 'amenbo',
+              projectName: 'Amenbo',
               onOpen: () {},
             ),
           ),
@@ -491,7 +491,7 @@ void main() {
       final reason = tester.widget<Text>(
         find.textContaining('is not finished'),
       );
-      final project = tester.widget<Text>(find.text('amenbo'));
+      final project = tester.widget<Text>(find.text('Amenbo'));
       expect(reason.style!.fontSize!, greaterThan(project.style!.fontSize!));
       expect(reason.style!.color, isNot(project.style!.color));
     });
@@ -573,7 +573,7 @@ void main() {
             child: DetailHead(
               title: 'wire the store up',
               marks: const [],
-              project: 'amenbo',
+              project: 'Amenbo',
               onProject: () {},
             ),
           ),

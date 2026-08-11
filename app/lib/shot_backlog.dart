@@ -1,6 +1,6 @@
 /// The backlog the store screenshots are taken of.
 ///
-/// Rows in amenbo's own shape, written by hand, in English — the one set of screenshots the stores
+/// Rows in Amenbo's own shape, written by hand, in English — the one set of screenshots the stores
 /// get, and the reason nothing is burned on top of them is that no language is written into the
 /// picture. They are dated from the moment they are seeded rather than from literals, so a shot
 /// taken a year from now still reads "18 minutes ago" instead of quietly aging into a stale one.
@@ -291,7 +291,7 @@ List<BacklogChange> sampleBacklog(DateTime now) {
       _comment(
         id: 898,
         taskId: 309,
-        text: 'Leading with "the PC has to be running amenbo".',
+        text: 'Leading with "the PC has to be running Amenbo".',
         authorKind: 'human',
         createdAt: at(const Duration(hours: 1)),
       ),

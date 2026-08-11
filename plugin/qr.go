@@ -252,7 +252,7 @@ var openInTheViewer = func(path string) error {
 // drawInTheTerminal writes the code out in half-blocks: one column per module, one row per two,
 // which is what keeps a code that is 45 modules across inside 80 columns.
 //
-// It goes to the terminal itself rather than to stderr, because amenbo holds a plugin's stderr
+// It goes to the terminal itself rather than to stderr, because Amenbo holds a plugin's stderr
 // until the run is over — and a code nobody can see while the run is waiting on them is no code
 // at all.
 func drawInTheTerminal(code *qrcode.Code) error {

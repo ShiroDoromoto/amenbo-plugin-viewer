@@ -1,4 +1,4 @@
-// What CI actually proves at this stage: the app boots, on its own, with no amenbo and no
+// What CI actually proves at this stage: the app boots, on its own, with no Amenbo and no
 // plugin anywhere near it. That independence is the requirement these tests exist to keep —
 // the moment a test needs a snapshot from somewhere, the app has stopped being verifiable on
 // its own and the store release is coupled to two others.
@@ -48,7 +48,7 @@ Widget guide({
   supportedLocales: Words.supportedLocales,
   theme: ThemeData(platform: platform),
   home: PairingGuideScreen(
-    appName: 'amenbo Viewer',
+    appName: 'Amenbo Viewer',
     onPaired: onPaired ?? (_) {},
     readACode: readACode ?? (_) async => null,
   ),
@@ -139,7 +139,7 @@ void main() {
       MaterialApp(
         localizationsDelegates: Words.localizationsDelegates,
         supportedLocales: Words.supportedLocales,
-        home: PairingGuideScreen(appName: 'amenbo Viewer', onPaired: (_) {}),
+        home: PairingGuideScreen(appName: 'Amenbo Viewer', onPaired: (_) {}),
       ),
     );
 

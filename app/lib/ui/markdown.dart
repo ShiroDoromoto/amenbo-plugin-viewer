@@ -1,6 +1,6 @@
 /// The Markdown a backlog is actually written in, and nothing else.
 ///
-/// amenbo's notes, comments and decision bodies are Markdown, so a detail that printed them raw
+/// Amenbo's notes, comments and decision bodies are Markdown, so a detail that printed them raw
 /// would show `##` and `|` down the middle of the one screen where the text matters most. What it
 /// needs rendering is a small, known set: headings, lists, tables, quotes, code and the four
 /// inline marks. That set is written out here rather than taken off the shelf, for two reasons the
@@ -13,7 +13,7 @@
 ///   structure, not as pixels.
 ///
 /// Anything outside the set is left as the characters it is written with — raw HTML included,
-/// which is what amenbo itself does with it. Text that renders as itself is never wrong; text a
+/// which is what Amenbo itself does with it. Text that renders as itself is never wrong; text a
 /// half-understood parser rearranged is.
 library;
 

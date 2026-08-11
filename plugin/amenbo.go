@@ -10,24 +10,24 @@ import (
 	"strings"
 )
 
-// What this plugin carries comes out of amenbo's sync face, and it is reached by running the CLI
-// rather than by opening the store file. The store's shape is amenbo's to change; these four
+// What this plugin carries comes out of Amenbo's sync face, and it is reached by running the CLI
+// rather than by opening the store file. The store's shape is Amenbo's to change; these four
 // calls are the contract it publishes, and a plugin that read the tables underneath would be
 // broken by a migration nobody thought concerned it.
 //
-// **No --actor is passed.** amenbo puts the plugin's own reach in the environment when it fires
+// **No --actor is passed.** Amenbo puts the plugin's own reach in the environment when it fires
 // it, and that reach *is* the facet. Claiming to be the person, or their AI, would be untrue and
 // would also narrow the window to a single project.
-const amenboProgram = "amenbo"
+const amenboProgram = "Amenbo"
 
-// errSyncGap is amenbo saying the cursor has fallen out of the stretch the ledger still speaks
+// errSyncGap is Amenbo saying the cursor has fallen out of the stretch the ledger still speaks
 // for. It is not a failure to report — it is the signal to stop reading changes and place the
 // whole window again.
 var errSyncGap = errors.New("the cursor has fallen outside the ledger")
 
-// refused is amenbo turning a call down: the document it writes on stderr when a call fails and
+// refused is Amenbo turning a call down: the document it writes on stderr when a call fails and
 // --json was asked for, carried as an error so a caller can branch on the code rather than on
-// the sentence. The sentence is amenbo's and is passed on as written — it is for whoever has to
+// the sentence. The sentence is Amenbo's and is passed on as written — it is for whoever has to
 // fix the thing.
 type refused struct {
 	call    string
@@ -39,16 +39,16 @@ func (r refused) Error() string {
 	return fmt.Sprintf("amenbo sync %s: %s (%s)", r.call, r.message, r.code)
 }
 
-// codeNotCarried is amenbo saying the road cannot answer for that name. The ledger names every
+// codeNotCarried is Amenbo saying the road cannot answer for that name. The ledger names every
 // dataset it holds, and the read-back road carries a narrower set, so a change can name one that
 // cannot be read — which is a dataset to leave behind, not a send to abandon.
 const codeNotCarried = "sync_error"
 
-// window is what a sync answer carries: rows by dataset, each left in the JSON amenbo wrote it
+// window is what a sync answer carries: rows by dataset, each left in the JSON Amenbo wrote it
 // as.
 //
 // **The rows are never decoded past their id.** What a task or a comment holds is the phone's
-// business, and a plugin that parsed it would need a change every time amenbo grows a column —
+// business, and a plugin that parsed it would need a change every time Amenbo grows a column —
 // while the phone, which does need to know, would be reading a copy this plugin had re-encoded.
 type window struct {
 	Header struct {
@@ -73,7 +73,7 @@ const opDelete = "delete"
 //
 // stdout is the answer and stderr is everything else, so only the first is read on the way
 // through — the snapshot, for one, comes with a note on stderr about the attachment bytes it
-// left behind. **A refusal goes the other way**: amenbo writes it to stderr, and it is a
+// left behind. **A refusal goes the other way**: Amenbo writes it to stderr, and it is a
 // document rather than a sentence, which is what lets the gap be recognised as itself instead of
 // being reported as a failed call.
 func amenboSync(args ...string) ([]byte, error) {
@@ -93,7 +93,7 @@ func amenboSync(args ...string) ([]byte, error) {
 	return nil, fmt.Errorf("amenbo sync %s: %w: %s", strings.Join(args, " "), err, strings.TrimSpace(diagnostics.String()))
 }
 
-// refusedWith reads amenbo's own account of why a call failed. Anything else — a binary that is
+// refusedWith reads Amenbo's own account of why a call failed. Anything else — a binary that is
 // not there, a crash, a sentence written for a person — is not one, and is reported as it came.
 func refusedWith(diagnostics []byte) (code, message string, isRefusal bool) {
 	var said struct {
@@ -131,7 +131,7 @@ func storeVersion() (int64, error) {
 // changesSince reads every change after the cursor, following the pages to the end, and hands
 // back the cursor to come back with.
 //
-// A page is bounded and says when it cut one short, so the loop is amenbo's to end. The cursor
+// A page is bounded and says when it cut one short, so the loop is Amenbo's to end. The cursor
 // standing still while more pages are claimed would be an endless one, so it is stopped here
 // rather than spun on.
 func changesSince(cursor int64) ([]change, int64, error) {

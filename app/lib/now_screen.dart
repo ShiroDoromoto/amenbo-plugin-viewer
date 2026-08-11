@@ -2,7 +2,7 @@
 ///
 /// This is the screen the app is opened for, and what it is asked is nearly always one of four
 /// questions: what is being worked on, what is stuck, what is next, what got finished. So the
-/// screen is divided the way the backlog itself is — by amenbo's own status — and the person moves
+/// screen is divided the way the backlog itself is — by Amenbo's own status — and the person moves
 /// between the four rather than scrolling past them. The same four they read on the PC, in the
 /// same words, so there is nothing to learn twice.
 ///
@@ -40,7 +40,7 @@ import 'ui/touch.dart';
 
 /// What the switch calls each state.
 ///
-/// amenbo's own words, and the same ones a row wears — a switch named one thing holding rows
+/// Amenbo's own words, and the same ones a row wears — a switch named one thing holding rows
 /// marked another would be two names for one fact. The closed one is said as "done" because that
 /// is what nearly all of it is; a rejected row says so on itself.
 String stateHeading(Words words, TaskState state) => switch (state) {

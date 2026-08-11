@@ -1,7 +1,7 @@
 {
   "name": "viewer",
   "desc": "Read your backlog on your phone, from a place you own",
-  "author": "amenbo",
+  "author": "Amenbo",
   "repo": "ShiroDoromoto/amenbo-plugin-viewer",
   "os": ["macos", "windows", "linux"],
   "category": "integration",

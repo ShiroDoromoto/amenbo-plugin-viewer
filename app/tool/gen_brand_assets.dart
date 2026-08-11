@@ -1,8 +1,8 @@
-// Draws amenbo's mark into every icon and launch image the two phones ask for.
+// Draws Amenbo's mark into every icon and launch image the two phones ask for.
 //
 //   dart run tool/gen_brand_assets.dart
 //
-// The mark is amenbo's own — a water strider whose legs are drawn as circuit traces — and it is
+// The mark is Amenbo's own — a water strider whose legs are drawn as circuit traces — and it is
 // copied here as coordinates for the same reason the design tokens are: this repository has to
 // build with nothing else beside it. If the mark moves over there, the numbers below are what
 // gets moved here, and everything the phones show is redrawn from them.

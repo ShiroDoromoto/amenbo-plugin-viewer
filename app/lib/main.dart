@@ -1,10 +1,10 @@
-/// amenbo Viewer — the backlog, on the phone, while you are away from the PC.
+/// Amenbo Viewer — the backlog, on the phone, while you are away from the PC.
 ///
 /// The app reads an encrypted snapshot out of a place its owner holds — a folder in their iCloud
 /// Drive, or their own Cloudflare Worker — decrypts it here, and shows it. It never writes back.
 ///
 /// **The app has to be complete on its own.** Store review takes as long as it takes, so there
-/// will be users running this build against an amenbo and a plugin that know nothing about it.
+/// will be users running this build against an Amenbo and a plugin that know nothing about it.
 /// Nothing here may depend on either one being present, and no state that follows from their
 /// absence is an error: an app nobody has paired yet is working correctly.
 ///
@@ -64,7 +64,7 @@ class AmenboViewerApp extends StatelessWidget {
 
   /// The name the stores show, in every language — it reads the same in each, so it is the one
   /// piece of text on these screens that is not on a sheet.
-  static const title = 'amenbo Viewer';
+  static const title = 'Amenbo Viewer';
 
   @override
   Widget build(BuildContext context) {

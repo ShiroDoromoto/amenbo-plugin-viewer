@@ -91,7 +91,7 @@ void main() {
       child: ViewerHome(
         store: store,
         settings: settings ?? SettingsController(UnkeptSettings()),
-        appName: 'amenbo Viewer',
+        appName: 'Amenbo Viewer',
         clock: () => today,
         hasICloud: hasICloud,
         rounds: rounds ?? nothingToTake,

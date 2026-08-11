@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-// fired builds the document amenbo writes when an event fires, with the settings a test wants
+// fired builds the document Amenbo writes when an event fires, with the settings a test wants
 // standing on it.
 func fired(event string, settings map[string]any) input {
 	return input{V: contractVersion, Event: event, ID: 42, Actor: "ai", Config: settings}

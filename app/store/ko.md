@@ -2,7 +2,7 @@
 
 ## name
 
-amenbo Viewer
+Amenbo Viewer
 
 ## subtitle
 
@@ -10,17 +10,17 @@ PC의 백로그를 손안에
 
 ## short
 
-PC에 있는 amenbo 백로그를 휴대폰에서 읽습니다. 암호화된 채로 도착하고, 되쓰지 않습니다.
+PC에 있는 Amenbo 백로그를 휴대폰에서 읽습니다. 암호화된 채로 도착하고, 되쓰지 않습니다.
 
 ## keywords
 
-amenbo,백로그,작업,결정 기록,AI,에이전트,뷰어,오프라인,동기화,암호화,cloudflare
+Amenbo,백로그,작업,결정 기록,AI,에이전트,뷰어,오프라인,동기화,암호화,cloudflare
 
 ## description
 
-amenbo Viewer는 PC에 두고 쓰는 amenbo 백로그를 휴대폰에서 읽는 앱입니다. 읽기만 하고, 되쓰지 않습니다.
+Amenbo Viewer는 PC에 두고 쓰는 Amenbo 백로그를 휴대폰에서 읽는 앱입니다. 읽기만 하고, 되쓰지 않습니다.
 
-Mac·Windows·Linux 중 하나에서 amenbo가 돌아가고 있어야 하며, viewer 플러그인이 켜져 있어야 합니다. 그 PC가 없으면 이 앱에는 보여 줄 것이 없습니다. 도구의 반쪽이지, 혼자 완결되는 도구가 아닙니다.
+Mac·Windows·Linux 중 하나에서 Amenbo가 돌아가고 있어야 하며, viewer 플러그인이 켜져 있어야 합니다. 그 PC가 없으면 이 앱에는 보여 줄 것이 없습니다. 도구의 반쪽이지, 혼자 완결되는 도구가 아닙니다.
 
 어떻게 도착하나
 
@@ -50,4 +50,4 @@ Mac·Windows·Linux 중 하나에서 amenbo가 돌아가고 있어야 하며, vi
 
 첫 번째 버전입니다.
 
-amenbo 백로그를 휴대폰에서 읽을 수 있습니다. 작업과 결정 기록, 그리고 양쪽의 댓글까지. 검색되고, 오프라인에서도 읽힙니다. PC 화면의 코드를 카메라로 읽어 연결하거나, Mac과 iPhone이라면 사용자의 iCloud를 지나오게 하면 됩니다.
+Amenbo 백로그를 휴대폰에서 읽을 수 있습니다. 작업과 결정 기록, 그리고 양쪽의 댓글까지. 검색되고, 오프라인에서도 읽힙니다. PC 화면의 코드를 카메라로 읽어 연결하거나, Mac과 iPhone이라면 사용자의 iCloud를 지나오게 하면 됩니다.

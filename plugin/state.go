@@ -10,7 +10,7 @@ import (
 // What the plugin remembers between runs: the version it last placed, and the cursor it has read
 // up to. Two integers, and neither means anything without the other.
 //
-// It lives in the plugin's own directory rather than in amenbo's settings. Settings are what the
+// It lives in the plugin's own directory rather than in Amenbo's settings. Settings are what the
 // user fills in, and this is bookkeeping nobody types — putting it there would show them a
 // number they cannot answer and must not edit.
 //
@@ -37,7 +37,7 @@ type state struct {
 const stateVersion = 1
 
 // pluginDir is the directory the plugin was laid down in — its binary's own, which is where
-// amenbo installs it and where an uninstall takes everything away again. It is a variable so a
+// Amenbo installs it and where an uninstall takes everything away again. It is a variable so a
 // test can write somewhere it is allowed to.
 var pluginDir = func() (string, error) {
 	program, err := os.Executable()

@@ -204,7 +204,7 @@ void main() {
   Widget viewer() => ViewerHome(
     store: store,
     settings: SettingsController(UnkeptSettings()),
-    appName: 'amenbo Viewer',
+    appName: 'Amenbo Viewer',
     clock: () => _today,
     rounds: (pairing) =>
         (watching) async => const IntakeReport(
@@ -226,7 +226,7 @@ void main() {
           ) async {
             await draw(
               tester,
-              PairingGuideScreen(appName: 'amenbo Viewer', onPaired: (_) {}),
+              PairingGuideScreen(appName: 'Amenbo Viewer', onPaired: (_) {}),
               locale: locale,
               text: text,
             );
@@ -341,7 +341,7 @@ void main() {
               SettingsScreen(
                 settings: SettingsController(UnkeptSettings()),
                 connection: _Facts(_paired),
-                appName: 'amenbo Viewer',
+                appName: 'Amenbo Viewer',
               ),
               locale: locale,
               text: text,
@@ -367,7 +367,7 @@ void main() {
           testWidgets('what this build is', (tester) async {
             await draw(
               tester,
-              const AboutScreen(appName: 'amenbo Viewer'),
+              const AboutScreen(appName: 'Amenbo Viewer'),
               locale: locale,
               text: text,
             );

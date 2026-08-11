@@ -35,7 +35,7 @@ func capture(t *testing.T, invoke func()) (stdout, stderr string) {
 }
 
 // fed writes text into a real file and hands back the open handle, standing in for the pipe
-// amenbo feeds a plugin on stdin.
+// Amenbo feeds a plugin on stdin.
 func fed(t *testing.T, text string) *os.File {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "stdin")
@@ -101,7 +101,7 @@ func TestHelpSucceedsAndStaysOffStdout(t *testing.T) {
 		if stdout != "" {
 			t.Errorf("%s: usage belongs on stderr, got %q on stdout", word, stdout)
 		}
-		if !strings.Contains(stderr, "amenbo Viewer") && !strings.Contains(stderr, "phone") {
+		if !strings.Contains(stderr, "Amenbo Viewer") && !strings.Contains(stderr, "phone") {
 			t.Errorf("%s: %q does not read like the usage", word, stderr)
 		}
 	}
@@ -129,8 +129,8 @@ func TestReadInputTakesTheDocumentAmenboWrites(t *testing.T) {
 	}
 }
 
-// A field amenbo adds later arrives here rather than being refused: the contract grows by
-// addition, so a plugin that rejected unknown keys would break on the next amenbo.
+// A field Amenbo adds later arrives here rather than being refused: the contract grows by
+// addition, so a plugin that rejected unknown keys would break on the next Amenbo.
 func TestReadInputIgnoresKeysItDoesNotKnow(t *testing.T) {
 	in := readInput(fed(t, `{"v":1,"event":"task.done","something_new":{"deep":true}}`))
 

@@ -85,7 +85,7 @@ class DropStanding {
 
   final int specVersion;
 
-  /// amenbo's own version, as it stood when the files beside it were placed.
+  /// Amenbo's own version, as it stood when the files beside it were placed.
   final int? version;
 }
 

@@ -51,11 +51,11 @@
   },
 
   "priorityHigh": "High",
-  "@priorityHigh": { "description": "amenbo's high priority, on a row." },
+  "@priorityHigh": { "description": "Amenbo's high priority, on a row." },
   "priorityMedium": "Med",
-  "@priorityMedium": { "description": "amenbo's medium priority, on a row. Shortened because it sits on a line with everything else." },
+  "@priorityMedium": { "description": "Amenbo's medium priority, on a row. Shortened because it sits on a line with everything else." },
   "priorityLow": "Low",
-  "@priorityLow": { "description": "amenbo's low priority, on a row." },
+  "@priorityLow": { "description": "Amenbo's low priority, on a row." },
   "rowPriority": "{name} priority",
   "@rowPriority": {
     "description": "How a priority is read out as part of a row.",
@@ -63,15 +63,15 @@
   },
 
   "statusTodo": "To do",
-  "@statusTodo": { "description": "amenbo's todo, in the word the person reads on the PC — the switch on the front screen and the mark on a row are the same four states, so they are said the same way." },
+  "@statusTodo": { "description": "Amenbo's todo, in the word the person reads on the PC — the switch on the front screen and the mark on a row are the same four states, so they are said the same way." },
   "statusInProgress": "In progress",
-  "@statusInProgress": { "description": "amenbo's in_progress." },
+  "@statusInProgress": { "description": "Amenbo's in_progress." },
   "statusDone": "Done",
-  "@statusDone": { "description": "amenbo's done." },
+  "@statusDone": { "description": "Amenbo's done." },
   "statusRejected": "Rejected",
-  "@statusRejected": { "description": "amenbo's rejected — decided against, as opposed to carried out." },
+  "@statusRejected": { "description": "Amenbo's rejected — decided against, as opposed to carried out." },
   "statusBlocked": "Blocked",
-  "@statusBlocked": { "description": "amenbo's blocked — a physical stall nobody can move past." },
+  "@statusBlocked": { "description": "Amenbo's blocked — a physical stall nobody can move past." },
 
   "decisionProposed": "Proposed",
   "@decisionProposed": { "description": "A decision nobody has ruled on. The one the person owes an answer to." },
@@ -193,7 +193,7 @@
   "@share": { "description": "Hands the three lines out to the OS." },
   "chipLabel": "{dimension}={value}",
   "@chipLabel": {
-    "description": "A category value on a detail, written the way amenbo writes one.",
+    "description": "A category value on a detail, written the way Amenbo writes one.",
     "placeholders": { "dimension": { "type": "String" }, "value": { "type": "String" } }
   },
 
@@ -274,7 +274,7 @@
   "@nothingArrivedYetDetail": { "description": "Why an empty phone is not a broken one." },
   "lastTakenVersion": "version {version}",
   "@lastTakenVersion": {
-    "description": "amenbo's own version, as it stood in the last record written.",
+    "description": "Amenbo's own version, as it stood in the last record written.",
     "placeholders": { "version": { "type": "int" } }
   },
   "lastTakenRecord": "record {seq}",
@@ -313,7 +313,7 @@
     "description": "This build's version, as the stores show it.",
     "placeholders": { "version": { "type": "String" } }
   },
-  "contractLine": "Reads version {version} of the amenbo snapshot contract. A place writing any other version needs a different version of this app.",
+  "contractLine": "Reads version {version} of the Amenbo snapshot contract. A place writing any other version needs a different version of this app.",
   "@contractLine": {
     "description": "Said in full rather than as a number: the contract version is the one thing a place and a phone can disagree about while both are working correctly.",
     "placeholders": { "version": { "type": "int" } }
@@ -355,15 +355,15 @@
 
   "guideHeading": "No backlog is reaching this phone yet.",
   "@guideHeading": { "description": "The first screen. Not being paired is a normal state, not a failure." },
-  "guideBothRoutes": "Set up either route on the PC that runs amenbo, and your tasks turn up here.",
+  "guideBothRoutes": "Set up either route on the PC that runs Amenbo, and your tasks turn up here.",
   "@guideBothRoutes": { "description": "On a phone that can take either route." },
-  "guideOneRoute": "Set this up on the PC that runs amenbo, and your tasks turn up here.",
+  "guideOneRoute": "Set this up on the PC that runs Amenbo, and your tasks turn up here.",
   "@guideOneRoute": { "description": "On a phone with only one route open to it." },
   "guideICloudWho": "A Mac and an iPhone, both signed in to the same iCloud.",
   "@guideICloudWho": { "description": "Who the iCloud route is for. The two routes are picked by what the person already owns, not ranked." },
   "guideICloudCost": "Nothing to sign up for.",
   "@guideICloudCost": { "description": "What the iCloud route asks of the person. Most of why somebody would choose it." },
-  "guideICloudStepOne": "In amenbo on your Mac, turn on the iCloud route.",
+  "guideICloudStepOne": "In Amenbo on your Mac, turn on the iCloud route.",
   "@guideICloudStepOne": { "description": "The iCloud route's first step." },
   "guideICloudStepTwo": "Nothing to do on this phone. Opening the app is what made the place to write to.",
   "@guideICloudStepTwo": { "description": "The iCloud route's second step. The route has no button, because this phone has nothing to press." },
@@ -371,7 +371,7 @@
   "@guideCloudflareWho": { "description": "Who the Cloudflare route is for." },
   "guideCloudflareCost": "A Cloudflare account, free of charge.",
   "@guideCloudflareCost": { "description": "What the Cloudflare route asks of the person." },
-  "guideCloudflareStepOne": "In amenbo on your PC, set up the Worker. It does the work; you press and paste.",
+  "guideCloudflareStepOne": "In Amenbo on your PC, set up the Worker. It does the work; you press and paste.",
   "@guideCloudflareStepOne": { "description": "The Cloudflare route's first step." },
   "guideCloudflareStepTwo": "Scan the QR code it shows you with this app.",
   "@guideCloudflareStepTwo": { "description": "The Cloudflare route's second step." },
@@ -401,19 +401,19 @@
     "description": "The code was right and the phone would not keep it. Better than going on scanning a code already read correctly. The reason comes from the phone's own keychain and is not translated.",
     "placeholders": { "error": { "type": "String" } }
   },
-  "codeNotOurs": "That is not an amenbo pairing code. The one you want is the code amenbo put on your PC screen.",
+  "codeNotOurs": "That is not an Amenbo pairing code. The one you want is the code Amenbo put on your PC screen.",
   "@codeNotOurs": { "description": "Over the camera. What was read is some other code entirely, so the next step is to point the phone at the right one." },
-  "codeTooNew": "That code was made by a newer amenbo than this app reads (it speaks version {said}, this app reads {read}). Update the app, then show the code again.",
+  "codeTooNew": "That code was made by a newer Amenbo than this app reads (it speaks version {said}, this app reads {read}). Update the app, then show the code again.",
   "@codeTooNew": {
     "description": "Over the camera. Both numbers are said here, unlike on the first sync: the person is standing between two machines and the answer is which of them to update.",
     "placeholders": { "said": { "type": "int" }, "read": { "type": "int" } }
   },
-  "codeTooOld": "That code was made by an older amenbo than this app reads (it speaks version {said}, this app reads {read}). Update amenbo on the PC and show a fresh code.",
+  "codeTooOld": "That code was made by an older Amenbo than this app reads (it speaks version {said}, this app reads {read}). Update Amenbo on the PC and show a fresh code.",
   "@codeTooOld": {
     "description": "Over the camera. The other side of the same mismatch, and the other machine to update.",
     "placeholders": { "said": { "type": "int" }, "read": { "type": "int" } }
   },
-  "codeIncomplete": "That code is an amenbo pairing code with something missing from it. Show a fresh one from the PC.",
+  "codeIncomplete": "That code is an Amenbo pairing code with something missing from it. Show a fresh one from the PC.",
   "@codeIncomplete": { "description": "Over the camera. Ours, this version, and one of the three things a pairing is did not travel." },
   "codeNotHttps": "That code reads from {url}, and this app will only send its token over https.",
   "@codeNotHttps": {
