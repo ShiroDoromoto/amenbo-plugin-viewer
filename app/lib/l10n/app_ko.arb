@@ -136,6 +136,11 @@
   "licences": "라이선스",
   "appVersion": "버전 {version}",
   "contractLine": "Amenbo 스냅샷 계약 {version}판을 읽습니다. 다른 판으로 쓰는 곳에는 다른 버전의 앱이 필요합니다.",
+  "originAppStore": "App Store에서 설치했습니다.",
+  "originTestFlight": "TestFlight에서 설치했습니다. 시험 삼아 나눠 준 판입니다.",
+  "originPlay": "Google Play에서 설치했습니다. 스토어에 올라온 것인지 시험용 트랙의 것인지는 여기서 구분할 수 없습니다.",
+  "originHandInstalled": "직접 설치했습니다. 개발 중인 판입니다.",
+  "originUnknown": "이 사본이 어디에서 왔는지 알 수 없습니다.",
 
   "firstSyncTitle": "백로그를 가져오는 중",
   "firstSyncOpening": "PC에서 읽는 중",

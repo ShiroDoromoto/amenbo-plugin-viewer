@@ -318,6 +318,16 @@
     "description": "Said in full rather than as a number: the contract version is the one thing a place and a phone can disagree about while both are working correctly.",
     "placeholders": { "version": { "type": "int" } }
   },
+  "originAppStore": "Installed from the App Store.",
+  "@originAppStore": { "description": "On the screen saying what this build is: the copy on this phone came from the store, told from the name of the receipt iOS put in the bundle." },
+  "originTestFlight": "Installed from TestFlight — a build handed out for testing.",
+  "@originTestFlight": { "description": "The same line for a copy that came from TestFlight — a sandbox receipt, which is a build handed out to be tried rather than sold." },
+  "originPlay": "Installed from Google Play. Whether that was the listing or a testing track cannot be told apart from here.",
+  "@originPlay": { "description": "The same line on Android, where Play is as far as the answer goes: the store listing and a testing track both record Play as the installer, so the two are not separated." },
+  "originHandInstalled": "Installed by hand. This is a development build.",
+  "@originHandInstalled": { "description": "The same line for a build with no receipt and no installing store — put on the phone by whoever built it." },
+  "originUnknown": "Where this copy came from is not known.",
+  "@originUnknown": { "description": "The same line where the phone did not say. Saying so beats naming an origin the app does not have." },
 
   "firstSyncTitle": "Getting your backlog",
   "@firstSyncTitle": { "description": "The one wait in this app long enough to be worth a screen." },

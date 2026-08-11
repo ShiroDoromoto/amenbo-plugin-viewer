@@ -14,6 +14,7 @@
 		7884E8682EC3CC0700C636F2 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */; };
 		7AC10FD02EC4000100AMEN01 /* ICloudContainerBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AC10FCF2EC4000100AMEN00 /* ICloudContainerBridge.swift */; };
 		7AC10FD22EC4000100AMEN03 /* FileProtectionBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AC10FD12EC4000100AMEN02 /* FileProtectionBridge.swift */; };
+		7AC10FD52EC4000100AMEN06 /* BuildOriginBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AC10FD42EC4000100AMEN05 /* BuildOriginBridge.swift */; };
 		78A318202AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage in Frameworks */ = {isa = PBXBuildFile; productRef = 78A3181F2AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage */; };
 		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
@@ -54,6 +55,7 @@
 		7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		7AC10FCF2EC4000100AMEN00 /* ICloudContainerBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ICloudContainerBridge.swift; sourceTree = "<group>"; };
 		7AC10FD12EC4000100AMEN02 /* FileProtectionBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileProtectionBridge.swift; sourceTree = "<group>"; };
+		7AC10FD42EC4000100AMEN05 /* BuildOriginBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuildOriginBridge.swift; sourceTree = "<group>"; };
 		78E0A7A72DC9AD7400C4905E /* FlutterGeneratedPluginSwiftPackage */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = FlutterGeneratedPluginSwiftPackage; path = Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage; sourceTree = "<group>"; };
 		7AFA3C8E1D35360C0083082E /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Release.xcconfig; path = Flutter/Release.xcconfig; sourceTree = "<group>"; };
 		9740EEB21CF90195004384FC /* Debug.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = Debug.xcconfig; path = Flutter/Debug.xcconfig; sourceTree = "<group>"; };
@@ -131,6 +133,7 @@
 				7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */,
 				7AC10FCF2EC4000100AMEN00 /* ICloudContainerBridge.swift */,
 				7AC10FD12EC4000100AMEN02 /* FileProtectionBridge.swift */,
+				7AC10FD42EC4000100AMEN05 /* BuildOriginBridge.swift */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
 			);
 			path = Runner;
@@ -294,6 +297,7 @@
 				7884E8682EC3CC0700C636F2 /* SceneDelegate.swift in Sources */,
 				7AC10FD02EC4000100AMEN01 /* ICloudContainerBridge.swift in Sources */,
 				7AC10FD22EC4000100AMEN03 /* FileProtectionBridge.swift in Sources */,
+				7AC10FD52EC4000100AMEN06 /* BuildOriginBridge.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -136,6 +136,11 @@
   "licences": "Licenças",
   "appVersion": "Versão {version}",
   "contractLine": "Lê a versão {version} do contrato de snapshot do Amenbo. Um lugar que escreva outra versão pede outra versão deste app.",
+  "originAppStore": "Instalado pela App Store.",
+  "originTestFlight": "Instalado pelo TestFlight — uma versão distribuída para testes.",
+  "originPlay": "Instalado pela Google Play. Daqui não dá para saber se veio da página da loja ou de uma faixa de testes.",
+  "originHandInstalled": "Instalado à mão. Esta é uma versão de desenvolvimento.",
+  "originUnknown": "Não se sabe de onde veio esta cópia.",
 
   "firstSyncTitle": "Buscando seu backlog",
   "firstSyncOpening": "Lendo do seu PC",

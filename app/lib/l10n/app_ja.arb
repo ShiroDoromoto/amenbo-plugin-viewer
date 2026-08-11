@@ -136,6 +136,11 @@
   "licences": "ライセンス",
   "appVersion": "バージョン {version}",
   "contractLine": "Amenbo のスナップショット契約のバージョン {version} を読みます。ほかのバージョンで書かれた置き場には、別のバージョンのアプリが要ります。",
+  "originAppStore": "App Store から入りました。",
+  "originTestFlight": "TestFlight から入りました。配って試すための版です。",
+  "originPlay": "Google Play から入りました。掲載されているものか、試すためのトラックのものかは、ここからは分かりません。",
+  "originHandInstalled": "手元で入れたものです。開発中の版です。",
+  "originUnknown": "どこから入ったものかは分かりません。",
 
   "firstSyncTitle": "バックログを取り込んでいます",
   "firstSyncOpening": "PC から読んでいます",

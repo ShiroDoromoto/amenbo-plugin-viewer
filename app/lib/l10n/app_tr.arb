@@ -136,6 +136,11 @@
   "licences": "Lisanslar",
   "appVersion": "Sürüm {version}",
   "contractLine": "Amenbo anlık görüntü sözleşmesinin {version}. sürümünü okur. Başka bir sürümle yazan bir yer, bu uygulamanın başka bir sürümünü ister.",
+  "originAppStore": "App Store’dan yüklendi.",
+  "originTestFlight": "TestFlight’tan yüklendi — denemek için dağıtılan bir sürüm.",
+  "originPlay": "Google Play’den yüklendi. Mağaza sayfasından mı yoksa bir test kanalından mı geldiği buradan ayırt edilemiyor.",
+  "originHandInstalled": "Elle yüklendi. Bu bir geliştirme sürümü.",
+  "originUnknown": "Bu kopyanın nereden geldiği bilinmiyor.",
 
   "firstSyncTitle": "İş listen alınıyor",
   "firstSyncOpening": "Bilgisayarından okunuyor",

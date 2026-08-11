@@ -136,6 +136,11 @@
   "licences": "สัญญาอนุญาต",
   "appVersion": "รุ่น {version}",
   "contractLine": "อ่านข้อตกลงสแนปช็อตของ Amenbo รุ่นที่ {version} ที่เก็บซึ่งเขียนด้วยรุ่นอื่นต้องใช้แอปนี้อีกรุ่นหนึ่ง",
+  "originAppStore": "ติดตั้งจาก App Store",
+  "originTestFlight": "ติดตั้งจาก TestFlight — รุ่นที่แจกไว้ให้ทดลองใช้",
+  "originPlay": "ติดตั้งจาก Google Play จากตรงนี้แยกไม่ได้ว่ามาจากหน้าร้านหรือจากแทร็กทดสอบ",
+  "originHandInstalled": "ติดตั้งเอง เป็นรุ่นระหว่างพัฒนา",
+  "originUnknown": "ไม่ทราบว่าสำเนานี้มาจากที่ใด",
 
   "firstSyncTitle": "กำลังเอารายการงานของคุณมา",
   "firstSyncOpening": "กำลังอ่านจากคอมพิวเตอร์ของคุณ",

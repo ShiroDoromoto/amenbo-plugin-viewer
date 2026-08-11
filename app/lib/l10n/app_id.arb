@@ -136,6 +136,11 @@
   "licences": "Lisensi",
   "appVersion": "Versi {version}",
   "contractLine": "Membaca kontrak snapshot Amenbo versi {version}. Tempat yang menulis versi lain butuh versi lain dari aplikasi ini.",
+  "originAppStore": "Dipasang dari App Store.",
+  "originTestFlight": "Dipasang dari TestFlight — versi yang dibagikan untuk diuji.",
+  "originPlay": "Dipasang dari Google Play. Dari sini tidak bisa dibedakan apakah dari halaman toko atau dari jalur uji coba.",
+  "originHandInstalled": "Dipasang sendiri. Ini versi pengembangan.",
+  "originUnknown": "Asal salinan ini tidak diketahui.",
 
   "firstSyncTitle": "Mengambil daftar kerjamu",
   "firstSyncOpening": "Membaca dari PC-mu",

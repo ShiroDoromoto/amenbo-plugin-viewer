@@ -16,5 +16,7 @@ import UIKit
       with: engineBridge.pluginRegistry.registrar(forPlugin: ICloudContainerBridge.channelName)!)
     FileProtectionBridge.register(
       with: engineBridge.pluginRegistry.registrar(forPlugin: FileProtectionBridge.channelName)!)
+    BuildOriginBridge.register(
+      with: engineBridge.pluginRegistry.registrar(forPlugin: BuildOriginBridge.channelName)!)
   }
 }

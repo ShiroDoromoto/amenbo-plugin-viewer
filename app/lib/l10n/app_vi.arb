@@ -136,6 +136,11 @@
   "licences": "Giấy phép",
   "appVersion": "Phiên bản {version}",
   "contractLine": "Đọc phiên bản {version} của giao kèo ảnh chụp Amenbo. Nơi ghi bằng phiên bản khác cần một phiên bản khác của ứng dụng này.",
+  "originAppStore": "Được cài từ App Store.",
+  "originTestFlight": "Được cài từ TestFlight — bản phát ra để dùng thử.",
+  "originPlay": "Được cài từ Google Play. Từ đây không phân biệt được là từ trang cửa hàng hay từ một kênh thử nghiệm.",
+  "originHandInstalled": "Được cài bằng tay. Đây là bản đang phát triển.",
+  "originUnknown": "Không rõ bản sao này đến từ đâu.",
 
   "firstSyncTitle": "Đang lấy danh sách việc của bạn",
   "firstSyncOpening": "Đang đọc từ máy tính của bạn",

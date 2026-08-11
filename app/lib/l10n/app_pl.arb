@@ -136,6 +136,11 @@
   "licences": "Licencje",
   "appVersion": "Wersja {version}",
   "contractLine": "Czyta wersję {version} kontraktu migawek Amenbo. Miejsce piszące inną wersję wymaga innej wersji tej aplikacji.",
+  "originAppStore": "Zainstalowano z App Store.",
+  "originTestFlight": "Zainstalowano z TestFlight — to wersja rozdawana do testów.",
+  "originPlay": "Zainstalowano z Google Play. Stąd nie da się odróżnić, czy pochodzi ze sklepu, czy z kanału testowego.",
+  "originHandInstalled": "Zainstalowano ręcznie. To wersja rozwojowa.",
+  "originUnknown": "Nie wiadomo, skąd pochodzi ta kopia.",
 
   "firstSyncTitle": "Pobieramy twój backlog",
   "firstSyncOpening": "Czytamy z twojego komputera",

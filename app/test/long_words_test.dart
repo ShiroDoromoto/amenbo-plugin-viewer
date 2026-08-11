@@ -22,6 +22,7 @@
 // the floor under them.
 
 import 'package:amenbo_viewer/about_screen.dart';
+import 'package:amenbo_viewer/build_origin.dart';
 import 'package:amenbo_viewer/cloudflare_intake.dart';
 import 'package:amenbo_viewer/connection.dart';
 import 'package:amenbo_viewer/connection_screen.dart';
@@ -364,14 +365,23 @@ void main() {
             );
           });
 
-          testWidgets('what this build is', (tester) async {
-            await draw(
+          // Once per origin: each is a sentence of its own, and the longest of them is the one
+          // that has to say Play cannot separate the listing from a testing track.
+          for (final origin in BuildOrigin.values) {
+            testWidgets('what this build is, from ${origin.name}', (
               tester,
-              const AboutScreen(appName: 'Amenbo Viewer'),
-              locale: locale,
-              text: text,
-            );
-          });
+            ) async {
+              await draw(
+                tester,
+                AboutScreen(
+                  appName: 'Amenbo Viewer',
+                  readOrigin: () async => origin,
+                ),
+                locale: locale,
+                text: text,
+              );
+            });
+          }
 
           for (final standing in Standing.values) {
             if (standing == Standing.quiet) continue;

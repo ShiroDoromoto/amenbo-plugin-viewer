@@ -136,6 +136,11 @@
   "licences": "许可",
   "appVersion": "版本 {version}",
   "contractLine": "读取 Amenbo 快照契约的第 {version} 版。写着其他版本的存放处，需要另一个版本的应用。",
+  "originAppStore": "从 App Store 安装。",
+  "originTestFlight": "从 TestFlight 安装——发出来试用的版本。",
+  "originPlay": "从 Google Play 安装。是商店页面还是测试轨道，这里分不出来。",
+  "originHandInstalled": "手动安装。这是开发中的版本。",
+  "originUnknown": "不知道这份副本从哪里来。",
 
   "firstSyncTitle": "正在取回你的待办",
   "firstSyncOpening": "正在从电脑读取",
