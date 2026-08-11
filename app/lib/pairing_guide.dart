@@ -113,28 +113,38 @@ class PairingGuideScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(title: Text(appName)),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(
-          Space.pageGutter,
-          Space.s4,
-          Space.pageGutter,
-          Space.s7,
-        ),
-        children: [
-          Text(words.guideHeading, style: theme.textTheme.headlineSmall),
-          const SizedBox(height: Space.s4),
-          Text(
-            routes.length > 1 ? words.guideBothRoutes : words.guideOneRoute,
-            style: theme.textTheme.bodyLarge,
+      // The first thing anybody sees is a page of prose, and on a tablet it is the whole glass
+      // wide unless it is stopped — a line that long is one the eye loses its place in coming
+      // back. So it stops where every other page of prose in this app stops, and sits in the
+      // middle of what it was given.
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: Layout.readable),
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(
+              Space.pageGutter,
+              Space.s4,
+              Space.pageGutter,
+              Space.s7,
+            ),
+            children: [
+              Text(words.guideHeading, style: theme.textTheme.headlineSmall),
+              const SizedBox(height: Space.s4),
+              Text(
+                routes.length > 1 ? words.guideBothRoutes : words.guideOneRoute,
+                style: theme.textTheme.bodyLarge,
+              ),
+              const SizedBox(height: Space.s6),
+              for (final route in routes) ...[
+                _RouteCard(route: route, onAction: () => _pair(context)),
+                const SizedBox(height: Space.s5),
+              ],
+              const SizedBox(height: Space.s3),
+              const _Assurance(),
+            ],
           ),
-          const SizedBox(height: Space.s6),
-          for (final route in routes) ...[
-            _RouteCard(route: route, onAction: () => _pair(context)),
-            const SizedBox(height: Space.s5),
-          ],
-          const SizedBox(height: Space.s3),
-          const _Assurance(),
-        ],
+        ),
       ),
     );
   }

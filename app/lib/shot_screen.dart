@@ -37,7 +37,6 @@ import 'pairing_guide.dart';
 import 'settings.dart';
 import 'shot_backlog.dart';
 import 'store/backlog_store.dart';
-import 'task_detail.dart';
 import 'ui/theme.dart';
 
 /// The screens the stores get, in the order they are taken.
@@ -136,7 +135,7 @@ Future<void> _standStill(Shot shot, File marker) async {
 /// It is `main.dart`'s assembly with two things stood in for: the pairing this phone would have
 /// been given, and the round that would go and use it. Neither one can be had on a simulator, and
 /// neither one is in the picture.
-class _ShotApp extends StatefulWidget {
+class _ShotApp extends StatelessWidget {
   const _ShotApp({
     super.key,
     required this.shot,
@@ -147,37 +146,6 @@ class _ShotApp extends StatefulWidget {
   final Shot shot;
   final BacklogStore store;
   final SettingsController settings;
-
-  @override
-  State<_ShotApp> createState() => _ShotAppState();
-}
-
-class _ShotAppState extends State<_ShotApp> {
-  final _navigator = GlobalKey<NavigatorState>();
-
-  @override
-  void initState() {
-    super.initState();
-    // The detail is a pushed route in the app, and it is photographed as one — so it is pushed
-    // here too, rather than drawn as if it were a screen the app opens on. The way back is part
-    // of what the picture shows.
-    if (widget.shot == Shot.detail) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _navigator.currentState?.push(
-          MaterialPageRoute<void>(
-            builder: (_) => TaskDetailScreen(
-              store: widget.store,
-              taskId: shotTaskId,
-              onOpenTask: (_) {},
-              onOpenDecision: (_) {},
-              onProject: (_) {},
-              onValue: (_) {},
-            ),
-          ),
-        );
-      });
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -195,26 +163,30 @@ class _ShotAppState extends State<_ShotApp> {
       locale: const Locale('en'),
       theme: viewerTheme(Brightness.light),
       darkTheme: viewerTheme(Brightness.dark),
-      themeMode: widget.settings.value.appearance.themeMode,
-      navigatorKey: _navigator,
-      home: switch (widget.shot) {
+      themeMode: settings.value.appearance.themeMode,
+      home: switch (shot) {
         Shot.guide => PairingGuideScreen(
           appName: AmenboViewerApp.title,
           onPaired: (_) {},
         ),
-        Shot.front || Shot.detail => _shell(0),
+        Shot.front => _shell(0),
+        // Opened through the shell rather than pushed from here, so the picture shows whichever
+        // of the two shapes the glass actually has: pushed over the list on a phone, standing
+        // beside it on a tablet.
+        Shot.detail => _shell(0, task: shotTaskId),
         Shot.search => _shell(2),
       },
     );
   }
 
-  /// The three tabs, opened on one of them.
-  Widget _shell(int tab) => HomeShell(
-    store: widget.store,
-    settings: widget.settings,
-    connection: PhoneConnection(store: widget.store),
+  /// The three tabs, opened on one of them — and, for the detail, with a task open.
+  Widget _shell(int tab, {int? task}) => HomeShell(
+    store: store,
+    settings: settings,
+    connection: PhoneConnection(store: store),
     appName: AmenboViewerApp.title,
     initialTab: tab,
+    initialTask: task,
     // A route this phone has, so the front screen draws the way to ask for a fresh picture. It
     // does not go anywhere: what is being photographed is the screen, not a fetch.
     take: () async {},

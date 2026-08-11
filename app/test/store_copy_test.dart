@@ -2,8 +2,9 @@
 // what the store accepts — and the first place that noticing happens is the upload, on the day of
 // the release. These are the counts from store/README.md, kept where the rest of the gate is.
 //
-// The one picture that is drawn rather than photographed is measured here for the same reason:
-// Play states its shape exactly, and a graphic that misses it is refused at the console.
+// The pictures are measured here for the same reason: each store states its slots exactly, a
+// picture that misses one is refused at the console, and App Store Connect will not open a
+// listing at all without the 13-inch iPad set.
 
 import 'dart:io';
 
@@ -32,6 +33,15 @@ const _languages = <String>[
   'nl',
   'uk',
 ];
+
+/// What each store has a slot for, in pixels. A picture that misses the slot is refused at the
+/// upload, which is a day late — App Store Connect will not even open a listing without the
+/// 13-inch iPad set.
+const _slots = <String, (int, int)>{
+  'ios': (1320, 2868),
+  'ipad': (2064, 2752),
+  'android': (1080, 1920),
+};
 
 /// What each store will take, in characters. The release note is the App Store's 4000 and Play's
 /// 500, which means it is 500.
@@ -70,19 +80,35 @@ void main() {
       reason: 'draw it with `make feature-graphic`',
     );
 
-    // A PNG opens with its signature and then IHDR: width, height, bit depth, colour type.
-    final head = file.readAsBytesSync().take(26).toList();
-    int be32(int at) =>
-        (head[at] << 24) |
-        (head[at + 1] << 16) |
-        (head[at + 2] << 8) |
-        head[at + 3];
-
-    expect(head.take(8), equals(const [137, 80, 78, 71, 13, 10, 26, 10]));
-    expect(be32(16), 1024);
-    expect(be32(20), 500);
+    final head = _ihdr(file);
+    expect(head.width, 1024);
+    expect(head.height, 500);
     // Colour type 2 is red, green and blue with nothing else: Play refuses an alpha channel here.
-    expect(head[25], 2);
+    expect(head.colourType, 2);
+  });
+
+  group('the screenshots are the sizes the stores have slots for', () {
+    for (final entry in _slots.entries) {
+      test(entry.key, () {
+        final directory = Directory('store/screenshots/${entry.key}');
+        expect(
+          directory.existsSync(),
+          isTrue,
+          reason: 'take them with `make shots-${entry.key}`',
+        );
+        final shots = directory.listSync().whereType<File>().toList()
+          ..sort((a, b) => a.path.compareTo(b.path));
+        expect(shots, hasLength(4));
+        for (final shot in shots) {
+          final head = _ihdr(shot);
+          expect(
+            [head.width, head.height],
+            equals([entry.value.$1, entry.value.$2]),
+            reason: '${shot.path} is ${head.width}x${head.height}',
+          );
+        }
+      });
+    }
   });
 
   for (final language in _languages) {
@@ -143,4 +169,18 @@ Map<String, String> _read(File file) {
   }
   close();
   return fields;
+}
+
+/// A PNG's width, height and colour type, read out of the IHDR chunk its signature is followed by.
+({int width, int height, int colourType}) _ihdr(File file) {
+  final open = file.openSync();
+  final head = open.readSync(26);
+  open.closeSync();
+  int be32(int at) =>
+      (head[at] << 24) |
+      (head[at + 1] << 16) |
+      (head[at + 2] << 8) |
+      head[at + 3];
+  expect(head.take(8), equals(const [137, 80, 78, 71, 13, 10, 26, 10]));
+  return (width: be32(16), height: be32(20), colourType: head[25]);
 }

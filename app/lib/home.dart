@@ -309,6 +309,7 @@ class HomeShell extends StatefulWidget {
     this.onErased,
     this.clock = DateTime.now,
     this.initialTab = 0,
+    this.initialTask,
   });
 
   final BacklogStore store;
@@ -320,6 +321,14 @@ class HomeShell extends StatefulWidget {
   /// Which of the three ways out the shell opens on. The front screen, for anybody arriving at the
   /// app — the other two are for something that opens the shell already knowing where it is going.
   final int initialTab;
+
+  /// A task opened as soon as the shell has a width to judge by — beside the list on a tablet,
+  /// pushed on a phone, exactly as pressing the row would.
+  ///
+  /// It is here for the pictures the stores get: the detail is the same screen on both sides of
+  /// the rule and a wholly different shape, so a set of pictures taken with it pushed would show
+  /// a tablet an app it does not have. Nobody arriving at the app opens on a task.
+  final int? initialTask;
 
   /// Ticks when rows landed from somewhere other than the front screen's own pull.
   final Arrivals? arrivals;
@@ -350,6 +359,18 @@ class _HomeShellState extends State<HomeShell> {
   int? _besideTaskId;
 
   bool get _wide => MediaQuery.sizeOf(context).width >= Layout.twoPane;
+
+  @override
+  void initState() {
+    super.initState();
+    final opening = widget.initialTask;
+    if (opening == null) return;
+    // After the first frame, because which of the two ways it opens is a question about the width,
+    // and there is no width to ask about until the shell has been laid out once.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _open(opening);
+    });
+  }
 
   /// Opens a task from one of the tabs: beside the list where there is room, on top of it where
   /// there is not.

@@ -2,14 +2,20 @@
 # Take the pictures the two stores put next to the app.
 #
 #   tool/store-shots.sh ios
+#   tool/store-shots.sh ipad
 #   tool/store-shots.sh android
 #
-# Both arms end the same way: PNGs under store/screenshots/, at the size the store on that side
-# asks for, of the app itself. Nothing is written on top of them and no frame is drawn around
+# All three arms end the same way: PNGs under store/screenshots/, at the size the store on that
+# side asks for, of the app itself. Nothing is written on top of them and no frame is drawn around
 # them, which is why one set in English is the whole set — a picture with no words burned into it
 # does not have to be taken again for each language.
 #
-# Neither arm touches a real phone, and the Android one refuses to: it takes an emulator serial or
+# The iPad arm is the iOS one at another size, and it is not a spare: App Store Connect will not
+# take a listing without 13-inch iPad pictures. It is also the only place the wide shape of this
+# app is looked at — past a width the tabs move to a rail down the side and what is opened stands
+# beside the list it was opened from, so a tablet gets screens a phone never draws.
+#
+# No arm touches a real phone, and the Android one refuses to: it takes an emulator serial or
 # starts an emulator, and a phone on the cable is passed over rather than used. Two reasons, and
 # either one is enough. The sizes the stores ask for are not the sizes of the phones here. And this
 # installs over the app and empties its copy of the backlog, which is not something to do to
@@ -30,7 +36,10 @@ OUT=store/screenshots
 ADB=${ADB:-$HOME/Library/Android/sdk/platform-tools/adb}
 # 6.9 inches: 1320x2868, which is the size App Store Connect asks for. The iPhone on the cable
 # here is a 12 mini, and 1125x2436 is not a slot either store still has.
-SIM=${SIM:-iPhone 17 Pro Max}
+SIM_IOS=${SIM_IOS:-iPhone 17 Pro Max}
+# 13 inches: 2064x2752, the other size App Store Connect requires — a listing with only phone
+# pictures is refused. Any 13-inch iPad draws it; the Pro is the one that is always installed.
+SIM_IPAD=${SIM_IPAD:-iPad Pro 13-inch (M5)}
 # 1080x1920 — 9:16, which is the shape Play states for a phone. A taller emulator would draw a
 # nicer picture and is a coin flip at the upload. Make it once, from an image that matches the
 # machine (an x86 image will not start on an Apple Silicon Mac, and neither will an x86 emulator):
@@ -45,7 +54,7 @@ SHOTS='front detail search guide'
 PATIENCE=${PATIENCE:-150}
 
 usage() {
-  echo "usage: tool/store-shots.sh <android|ios>" >&2
+  echo "usage: tool/store-shots.sh <android|ios|ipad>" >&2
   exit 2
 }
 
@@ -81,9 +90,9 @@ take() {
     fi
     sleep 0.25
   done
-  "shoot_$PLATFORM" "$OUT/$PLATFORM/$n-$want.png"
+  "shoot_$PLATFORM" "$OUT/$SET/$n-$want.png"
   "clear_$PLATFORM"
-  echo "wrote $OUT/$PLATFORM/$n-$want.png"
+  echo "wrote $OUT/$SET/$n-$want.png"
 }
 
 shoot_ios() { xcrun simctl io "$SIM" screenshot --type png "$1" >/dev/null; }
@@ -93,10 +102,21 @@ shoot_android() { emu exec-out screencap -p > "$1"; }
 clear_android() { emu shell run-as "$BUNDLE" rm cache/shot-ready.txt; }
 
 case "$1" in
-ios)
+ios | ipad)
   PLATFORM=ios
-  mkdir -p "$OUT/ios"
+  SET=$1
+  if [ "$SET" = ipad ]; then SIM=$SIM_IPAD; else SIM=$SIM_IOS; fi
+  mkdir -p "$OUT/$SET"
+  # English, because the one set of pictures is the English one — and on an iPad the system
+  # writes the date beside the clock, which is the only place a language other than the app's own
+  # would end up burned into a picture that is meant to serve all nineteen.
   xcrun simctl boot "$SIM" 2>/dev/null || true
+  xcrun simctl bootstatus "$SIM"
+  xcrun simctl spawn "$SIM" defaults write "Apple Global Domain" AppleLanguages -array en-US
+  xcrun simctl spawn "$SIM" defaults write "Apple Global Domain" AppleLocale -string en_US
+  # The system reads those once, at start.
+  xcrun simctl shutdown "$SIM"
+  xcrun simctl boot "$SIM"
   xcrun simctl bootstatus "$SIM"
   # A store listing is not the place to show whatever the clock and the battery happened to be.
   xcrun simctl status_bar "$SIM" override \
@@ -111,7 +131,8 @@ ios)
   ;;
 android)
   PLATFORM=android
-  mkdir -p "$OUT/android"
+  SET=android
+  mkdir -p "$OUT/$SET"
   [ -x "$ADB" ] || { echo "no adb at $ADB (set ADB=...)" >&2; exit 1; }
   SERIAL=$(booted_emulator)
   if [ -z "$SERIAL" ]; then
