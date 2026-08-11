@@ -8,7 +8,7 @@
 
 FLUTTER := flutter
 
-.PHONY: build test analyze apk ipa screen-android screen-ios shots-ios shots-android \
+.PHONY: build test analyze apk ipa screen-android screen-ios shots-ios shots-ipad shots-android \
 	feature-graphic clean
 
 build: analyze
@@ -44,6 +44,9 @@ screen-ios:
 # the two above are.
 shots-ios:
 	tool/store-shots.sh ios
+
+shots-ipad:
+	tool/store-shots.sh ipad
 
 shots-android:
 	tool/store-shots.sh android
