@@ -26,6 +26,7 @@ import 'store/backlog_queries.dart';
 import 'store/backlog_store.dart';
 import 'ui/decision_row.dart';
 import 'ui/empty.dart';
+import 'ui/measure.dart';
 import 'ui/tokens.dart';
 import 'ui/touch.dart';
 
@@ -134,9 +135,14 @@ class _DecisionsScreenState extends State<DecisionsScreen> {
               )
             : null,
       ),
-      body: RefreshIndicator(
-        onRefresh: _pull,
-        child: _decisions.isEmpty ? _nothing(words) : _rows(today),
+      // Rows, not prose: a row is read down its left edge, so this stops narrower than a page of
+      // text does. It is the one list that is a tab on its own — the other two are drawn beside a
+      // detail, which is what holds them in.
+      body: Measured.rows(
+        child: RefreshIndicator(
+          onRefresh: _pull,
+          child: _decisions.isEmpty ? _nothing(words) : _rows(today),
+        ),
       ),
     );
   }

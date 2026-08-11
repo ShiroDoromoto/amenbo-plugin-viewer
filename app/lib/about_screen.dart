@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'build_origin.dart';
 import 'cloudflare_intake.dart';
 import 'l10n/words.dart';
+import 'ui/measure.dart';
 import 'ui/tokens.dart';
 
 /// This build's version, as the stores show it.
@@ -62,44 +63,46 @@ class _AboutScreenState extends State<AboutScreen> {
 
     return Scaffold(
       appBar: AppBar(title: Text(words.aboutTitle)),
-      body: ListView(
-        padding: const EdgeInsets.only(bottom: Space.s7),
-        children: [
-          ListTile(
-            title: Text(widget.appName),
-            subtitle: Text(words.appVersion(appVersion)),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              Space.gutter,
-              Space.s3,
-              Space.gutter,
-              Space.s5,
+      body: Measured.prose(
+        child: ListView(
+          padding: const EdgeInsets.only(bottom: Space.s7),
+          children: [
+            ListTile(
+              title: Text(widget.appName),
+              subtitle: Text(words.appVersion(appVersion)),
             ),
-            child: DefaultTextStyle.merge(
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                Space.gutter,
+                Space.s3,
+                Space.gutter,
+                Space.s5,
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                spacing: Space.s3,
-                children: [
-                  if (origin != null) Text(buildOriginWords(words, origin)),
-                  Text(words.contractLine(contractVersion)),
-                ],
+              child: DefaultTextStyle.merge(
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  spacing: Space.s3,
+                  children: [
+                    if (origin != null) Text(buildOriginWords(words, origin)),
+                    Text(words.contractLine(contractVersion)),
+                  ],
+                ),
               ),
             ),
-          ),
-          const Divider(height: Stroke.rule),
-          ListTile(
-            title: Text(words.licences),
-            onTap: () => showLicensePage(
-              context: context,
-              applicationName: widget.appName,
-              applicationVersion: appVersion,
+            const Divider(height: Stroke.rule),
+            ListTile(
+              title: Text(words.licences),
+              onTap: () => showLicensePage(
+                context: context,
+                applicationName: widget.appName,
+                applicationVersion: appVersion,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

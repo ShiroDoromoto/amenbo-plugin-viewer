@@ -9,6 +9,7 @@ import 'package:amenbo_viewer/store/backlog_queries.dart';
 import 'package:amenbo_viewer/store/backlog_store.dart';
 import 'package:amenbo_viewer/ui/detail.dart';
 import 'package:amenbo_viewer/ui/marks.dart';
+import 'package:amenbo_viewer/ui/measure.dart';
 import 'package:amenbo_viewer/ui/task_row.dart';
 import 'package:amenbo_viewer/ui/refs.dart';
 import 'package:amenbo_viewer/ui/theme.dart';
@@ -385,6 +386,67 @@ void main() {
         expect(find.text('nothing open'), findsOneWidget);
       },
     );
+
+    testWidgets('a page stops where reading does, and sits in the middle', (
+      tester,
+    ) async {
+      const page = Key('page');
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(1200, 800);
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        _sized(
+          const Size(1200, 800),
+          const Measured.prose(child: SizedBox.expand(key: page)),
+        ),
+      );
+
+      expect(tester.getSize(find.byKey(page)).width, Layout.readable);
+      // Centred rather than left against the edge: a page pinned to one side of a tablet is read
+      // with the head turned.
+      expect(
+        tester.getTopLeft(find.byKey(page)).dx,
+        (1200 - Layout.readable) / 2,
+      );
+    });
+
+    testWidgets('a page of rows stops sooner than a page of prose', (
+      tester,
+    ) async {
+      const page = Key('page');
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(1200, 800);
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        _sized(
+          const Size(1200, 800),
+          const Measured.rows(child: SizedBox.expand(key: page)),
+        ),
+      );
+
+      // A row is read down its left edge, so the far end of a long line is not where the eye goes.
+      expect(tester.getSize(find.byKey(page)).width, Layout.listPaneMax);
+    });
+
+    testWidgets('glass narrower than the measure is left alone', (
+      tester,
+    ) async {
+      const page = Key('page');
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(360, 800);
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        _sized(
+          const Size(360, 800),
+          const Measured.prose(child: SizedBox.expand(key: page)),
+        ),
+      );
+
+      expect(tester.getSize(find.byKey(page)).width, 360);
+    });
   });
 
   testWidgets('the app itself is drawn with this theme', (tester) async {

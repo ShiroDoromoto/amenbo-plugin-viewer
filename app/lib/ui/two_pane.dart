@@ -7,6 +7,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import 'measure.dart';
 import 'tokens.dart';
 
 class TwoPane extends StatelessWidget {
@@ -42,14 +43,11 @@ class TwoPane extends StatelessWidget {
           SizedBox(width: _listWidth(constraints.maxWidth), child: list),
           const VerticalDivider(width: Stroke.rule),
           // And the side that takes the rest stops growing where a line of prose stops being
-          // readable, sitting in the middle of what it was given.
+          // readable, sitting in the middle of what it was given — the same measure a page of
+          // prose keeps wherever it is drawn.
           Expanded(
-            child: Align(
-              alignment: Alignment.topCenter,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: Layout.readable),
-                child: detail ?? placeholder ?? const SizedBox.shrink(),
-              ),
+            child: Measured.prose(
+              child: detail ?? placeholder ?? const SizedBox.shrink(),
             ),
           ),
         ],

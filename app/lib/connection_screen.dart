@@ -17,6 +17,7 @@ import 'connection.dart';
 import 'l10n/words.dart';
 import 'pairing_scan.dart';
 import 'pairing_store.dart';
+import 'ui/measure.dart';
 import 'ui/time.dart';
 import 'ui/tokens.dart';
 
@@ -126,60 +127,64 @@ class _Details extends StatelessWidget {
     final words = Words.of(context);
     final taken = connection.lastTaken;
 
-    return ListView(
-      padding: const EdgeInsets.only(bottom: Space.s7),
-      children: [
-        if (connection.label case final named?)
-          _Fact(
-            label: words.thisPhone,
-            value: named,
-            detail: words.thisPhoneDetail,
-          ),
-        _Fact(
-          label: words.factRoute,
-          value: connectionRouteWords(words, connection.route),
-          detail: connection.host,
-        ),
-        if (connection.iCloudAvailable case final available?)
-          _Fact(
-            label: words.factICloud,
-            value: available ? words.iCloudSignedIn : words.iCloudNotAvailable,
-            detail: available ? null : words.iCloudNotAvailableDetail,
-          ),
-        if (taken.isEmpty)
-          _Fact(
-            label: words.factLastTaken,
-            value: words.nothingArrivedYet,
-            detail: words.nothingArrivedYetDetail,
-          )
-        else
-          TimeOnHold(
-            when: taken.at!,
-            child: _Fact(
-              label: words.factLastTaken,
-              value: relativeTime(TimeFace.of(context), taken.at!, now: now),
-              detail: [
-                if (taken.version case final version?)
-                  words.lastTakenVersion(version),
-                words.lastTakenRecord(taken.seq),
-                if (taken.specVersion case final specVersion?)
-                  words.lastTakenContract(specVersion),
-              ].join(' · '),
+    return Measured.prose(
+      child: ListView(
+        padding: const EdgeInsets.only(bottom: Space.s7),
+        children: [
+          if (connection.label case final named?)
+            _Fact(
+              label: words.thisPhone,
+              value: named,
+              detail: words.thisPhoneDetail,
             ),
+          _Fact(
+            label: words.factRoute,
+            value: connectionRouteWords(words, connection.route),
+            detail: connection.host,
           ),
-        const Divider(),
-        if (connection.canPairAgain)
+          if (connection.iCloudAvailable case final available?)
+            _Fact(
+              label: words.factICloud,
+              value: available
+                  ? words.iCloudSignedIn
+                  : words.iCloudNotAvailable,
+              detail: available ? null : words.iCloudNotAvailableDetail,
+            ),
+          if (taken.isEmpty)
+            _Fact(
+              label: words.factLastTaken,
+              value: words.nothingArrivedYet,
+              detail: words.nothingArrivedYetDetail,
+            )
+          else
+            TimeOnHold(
+              when: taken.at!,
+              child: _Fact(
+                label: words.factLastTaken,
+                value: relativeTime(TimeFace.of(context), taken.at!, now: now),
+                detail: [
+                  if (taken.version case final version?)
+                    words.lastTakenVersion(version),
+                  words.lastTakenRecord(taken.seq),
+                  if (taken.specVersion case final specVersion?)
+                    words.lastTakenContract(specVersion),
+                ].join(' · '),
+              ),
+            ),
+          const Divider(),
+          if (connection.canPairAgain)
+            ListTile(
+              title: Text(words.pairAgainTitle),
+              subtitle: Text(words.pairAgainDetail),
+              onTap: onPairAgain,
+            ),
           ListTile(
-            title: Text(words.pairAgainTitle),
-            subtitle: Text(words.pairAgainDetail),
-            onTap: onPairAgain,
+            title: Text(words.erase, style: TextStyle(color: scheme.error)),
+            subtitle: Text(words.eraseDetail),
+            onTap: onErase,
           ),
-        ListTile(
-          title: Text(words.erase, style: TextStyle(color: scheme.error)),
-          subtitle: Text(words.eraseDetail),
-          onTap: onErase,
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

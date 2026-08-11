@@ -17,6 +17,7 @@ import 'connection.dart';
 import 'connection_screen.dart';
 import 'l10n/words.dart';
 import 'settings.dart';
+import 'ui/measure.dart';
 import 'ui/tokens.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -51,58 +52,60 @@ class SettingsScreen extends StatelessWidget {
         listenable: settings,
         builder: (context, _) {
           final chosen = settings.value;
-          return ListView(
-            padding: const EdgeInsets.only(bottom: Space.s7),
-            children: [
-              _Heading(words.refreshHeading),
-              RadioGroup<Refresh>(
-                groupValue: chosen.refresh,
-                onChanged: (picked) {
-                  if (picked != null) settings.setRefresh(picked);
-                },
-                child: Column(
-                  children: [
-                    for (final one in Refresh.values)
-                      RadioListTile<Refresh>(
-                        value: one,
-                        title: Text(refreshWords(words, one)),
-                      ),
-                  ],
-                ),
-              ),
-              _Note(words.refreshNote),
-              _Heading(words.appearanceHeading),
-              RadioGroup<Appearance>(
-                groupValue: chosen.appearance,
-                onChanged: (picked) {
-                  if (picked != null) settings.setAppearance(picked);
-                },
-                child: Column(
-                  children: [
-                    for (final one in Appearance.values)
-                      RadioListTile<Appearance>(
-                        value: one,
-                        title: Text(appearanceWords(words, one)),
-                      ),
-                  ],
-                ),
-              ),
-              const Divider(),
-              ListTile(
-                title: Text(words.connectionTitle),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => _openConnection(context),
-              ),
-              ListTile(
-                title: Text(words.aboutTitle),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => AboutScreen(appName: appName),
+          return Measured.prose(
+            child: ListView(
+              padding: const EdgeInsets.only(bottom: Space.s7),
+              children: [
+                _Heading(words.refreshHeading),
+                RadioGroup<Refresh>(
+                  groupValue: chosen.refresh,
+                  onChanged: (picked) {
+                    if (picked != null) settings.setRefresh(picked);
+                  },
+                  child: Column(
+                    children: [
+                      for (final one in Refresh.values)
+                        RadioListTile<Refresh>(
+                          value: one,
+                          title: Text(refreshWords(words, one)),
+                        ),
+                    ],
                   ),
                 ),
-              ),
-            ],
+                _Note(words.refreshNote),
+                _Heading(words.appearanceHeading),
+                RadioGroup<Appearance>(
+                  groupValue: chosen.appearance,
+                  onChanged: (picked) {
+                    if (picked != null) settings.setAppearance(picked);
+                  },
+                  child: Column(
+                    children: [
+                      for (final one in Appearance.values)
+                        RadioListTile<Appearance>(
+                          value: one,
+                          title: Text(appearanceWords(words, one)),
+                        ),
+                    ],
+                  ),
+                ),
+                const Divider(),
+                ListTile(
+                  title: Text(words.connectionTitle),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => _openConnection(context),
+                ),
+                ListTile(
+                  title: Text(words.aboutTitle),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => AboutScreen(appName: appName),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           );
         },
       ),

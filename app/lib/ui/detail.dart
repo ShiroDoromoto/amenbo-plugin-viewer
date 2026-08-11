@@ -16,6 +16,7 @@ library;
 import 'package:flutter/material.dart';
 
 import '../l10n/words.dart';
+import 'measure.dart';
 import 'refs.dart';
 import 'theme.dart';
 import 'tokens.dart';
@@ -131,20 +132,25 @@ class _DetailFrameState extends State<DetailFrame> {
             ),
         ],
       ),
+      // A record is a page of prose, so it stops where prose stops. Pushed on a tablet it would
+      // otherwise take the whole glass, which is the one place a detail is drawn without the list
+      // beside it holding it in.
       body: head == null
           ? Center(child: Text(widget.missing ?? ''))
-          : ListView(
-              controller: _scroll,
-              padding: const EdgeInsets.fromLTRB(
-                Space.gutter,
-                _above,
-                Space.gutter,
-                Space.s7,
+          : Measured.prose(
+              child: ListView(
+                controller: _scroll,
+                padding: const EdgeInsets.fromLTRB(
+                  Space.gutter,
+                  _above,
+                  Space.gutter,
+                  Space.s7,
+                ),
+                children: [
+                  KeyedSubtree(key: _head, child: head),
+                  ...widget.children,
+                ],
               ),
-              children: [
-                KeyedSubtree(key: _head, child: head),
-                ...widget.children,
-              ],
             ),
     );
   }

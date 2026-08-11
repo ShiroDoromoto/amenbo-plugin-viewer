@@ -23,6 +23,7 @@ import 'package:flutter/material.dart';
 
 import 'cloudflare_intake.dart';
 import 'l10n/words.dart';
+import 'ui/measure.dart';
 import 'ui/tokens.dart';
 import 'ui/touch.dart';
 
@@ -121,59 +122,61 @@ class _FirstSyncScreenState extends State<FirstSyncScreen> {
 
     return Scaffold(
       appBar: AppBar(title: Text(words.firstSyncTitle)),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(
-          Space.pageGutter,
-          Space.s7,
-          Space.pageGutter,
-          Space.s7,
-        ),
-        children: [
-          Text(
-            _records == 0
-                ? words.firstSyncOpening
-                : words.firstSyncTaken(_records),
-            style: theme.textTheme.headlineSmall,
+      body: Measured.prose(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(
+            Space.pageGutter,
+            Space.s7,
+            Space.pageGutter,
+            Space.s7,
           ),
-          const SizedBox(height: Space.s6),
-          // Determinate once there is a position worth pointing at, and indeterminate while there
-          // is not — a bar sitting at zero would read as stuck rather than as still going. A round
-          // that stopped holds still at where it got to.
-          LinearProgressIndicator(
-            value: _running && (_through ?? 0) == 0 ? null : (_through ?? 0),
-          ),
-          const SizedBox(height: Space.s6),
-          // Promising that it carries on is only true while carrying on is still what happens
-          // next. Under a refusal it is the sentence that keeps somebody sitting here.
-          if (stopped == null || worthAnotherRound(stopped.failure))
+          children: [
             Text(
-              words.firstSyncCarriesOn,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
+              _records == 0
+                  ? words.firstSyncOpening
+                  : words.firstSyncTaken(_records),
+              style: theme.textTheme.headlineSmall,
             ),
-          if (stopped != null) ...[
-            const SizedBox(height: Space.s7),
-            Text(
-              whatStopped(words, stopped.failure),
-              style: theme.textTheme.bodyLarge?.copyWith(
-                color: theme.colorScheme.error,
-              ),
+            const SizedBox(height: Space.s6),
+            // Determinate once there is a position worth pointing at, and indeterminate while there
+            // is not — a bar sitting at zero would read as stuck rather than as still going. A round
+            // that stopped holds still at where it got to.
+            LinearProgressIndicator(
+              value: _running && (_through ?? 0) == 0 ? null : (_through ?? 0),
             ),
-            const SizedBox(height: Space.s3),
-            Text(
-              _wayOut(words, stopped.failure),
-              style: theme.textTheme.bodyMedium,
-            ),
-            if (worthAnotherRound(stopped.failure)) ...[
-              const SizedBox(height: Space.s6),
-              FilledButton(
-                onPressed: _running ? null : _take,
-                child: Text(words.tryAgain),
+            const SizedBox(height: Space.s6),
+            // Promising that it carries on is only true while carrying on is still what happens
+            // next. Under a refusal it is the sentence that keeps somebody sitting here.
+            if (stopped == null || worthAnotherRound(stopped.failure))
+              Text(
+                words.firstSyncCarriesOn,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
               ),
+            if (stopped != null) ...[
+              const SizedBox(height: Space.s7),
+              Text(
+                whatStopped(words, stopped.failure),
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: theme.colorScheme.error,
+                ),
+              ),
+              const SizedBox(height: Space.s3),
+              Text(
+                _wayOut(words, stopped.failure),
+                style: theme.textTheme.bodyMedium,
+              ),
+              if (worthAnotherRound(stopped.failure)) ...[
+                const SizedBox(height: Space.s6),
+                FilledButton(
+                  onPressed: _running ? null : _take,
+                  child: Text(words.tryAgain),
+                ),
+              ],
             ],
           ],
-        ],
+        ),
       ),
     );
   }
