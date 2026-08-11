@@ -37,9 +37,10 @@ type phone struct {
 	IssuedAt string `json:"issued_at"`
 }
 
-// rememberThePhone adds the label to the local record, or moves its date if that name was paired
-// before — re-pairing one phone replaces its token at the store, so a second row here would name
-// a token that no longer exists.
+// rememberThePhone adds the label to the local record, or moves its date if that name is already
+// written down. The store refuses a name it holds, so what gets here twice is a name this record
+// kept and the store did not — a store stood up again, or a row written when the pairing itself
+// failed — and a second row for it would name a phone nobody could cut off by name.
 //
 // **A record that cannot be written is a failed pairing**, even though the token is already
 // issued: a phone that can read and cannot be named is one nobody can cut off.

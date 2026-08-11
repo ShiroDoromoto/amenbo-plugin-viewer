@@ -49,12 +49,15 @@ function sending(path: "/records" | "/reset", version: number, records: unknown[
 }
 
 /**
- * Reads the way a phone does. The pairing is done here rather than in each test because every
- * read needs one and none of them are about it — issuing under a label that is there replaces it,
- * so asking twice costs nothing.
+ * Reads the way a phone does. The pairing is done here rather than in each test because every read
+ * needs one and none of them are about it — and only when that phone is not paired already, since
+ * issuing under a label that is there is refused.
  */
 async function reading(path: string): Promise<Response> {
-	await pair("iPhone", "the-phone's-own-token");
+	const paired = await env.RECORDS.prepare("SELECT 1 FROM tokens WHERE label = ?").bind("iPhone").first();
+	if (!paired) {
+		await pair("iPhone", "the-phone's-own-token");
+	}
 	return carrying("the-phone's-own-token", path);
 }
 
@@ -211,14 +214,28 @@ describe("pairing a phone", () => {
 		expect(results[0].hash).toBe(await hashOf("the-phone's-own-token"));
 	});
 
-	// Re-pairing the same phone replaces what it had. Leaving both live would mean a phone that
-	// was handed on still reads, and nobody would know to revoke a token they thought was gone.
-	it("replaces what a label already had", async () => {
+	// Issuing over a name that is there would cut off whatever phone holds it, silently — a
+	// mistyped name is all that takes. So the name has to be freed first, and the phone that has
+	// it goes on reading until someone says otherwise.
+	it("refuses a label that is already there, and leaves that phone reading", async () => {
 		await pair("iPhone", "the-old-token");
 
-		await pair("iPhone", "the-new-token");
+		const response = await pair("iPhone", "the-new-token");
 
-		expect((await carrying("the-old-token", "/meta")).status).toBe(401);
+		expect(response.status).toBe(409);
+		expect((await carrying("the-old-token", "/meta")).status).toBe(200);
+		expect((await carrying("the-new-token", "/meta")).status).toBe(401);
+	});
+
+	// Cutting one off is what frees its name, which is what makes re-pairing the same phone two
+	// moves rather than an impossibility.
+	it("takes the label again once that phone has been cut off", async () => {
+		await pair("iPhone", "the-old-token");
+		await signed("/tokens/iPhone", { method: "DELETE" });
+
+		const response = await pair("iPhone", "the-new-token");
+
+		expect(response.status).toBe(200);
 		expect((await carrying("the-new-token", "/meta")).status).toBe(200);
 	});
 

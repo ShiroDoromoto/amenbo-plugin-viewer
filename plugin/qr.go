@@ -116,6 +116,10 @@ func qr(in input, args []string) error {
 }
 
 // issue tells the store one more phone may read, by the hash of the token it will offer.
+//
+// **A name that is taken is refused there**, and what comes back here is the move that frees it:
+// the store will not issue over a phone that is reading, so re-pairing one is cutting it off and
+// pairing again. Passing the store's own sentence on would say what happened and not what to do.
 func (s store) issue(label, hash string) (string, error) {
 	body, err := json.Marshal(map[string]string{"label": label, "hash": hash})
 	if err != nil {
@@ -139,6 +143,10 @@ func (s store) issue(label, hash string) (string, error) {
 		Error    string `json:"error"`
 	}
 	decoded := json.NewDecoder(answer.Body).Decode(&said)
+	if answer.StatusCode == http.StatusConflict {
+		return "", fmt.Errorf("a phone is already paired as %q — cut it off with `%s revoke %s`, then pair it again",
+			label, pluginName, label)
+	}
 	if answer.StatusCode < 200 || answer.StatusCode > 299 {
 		if decoded == nil && said.Error != "" {
 			return "", fmt.Errorf("/tokens answered %d: %s", answer.StatusCode, said.Error)
@@ -308,9 +316,9 @@ func blocksFor(code *qrcode.Code) string {
 // askForALabel gets the phone's name from the person running this, when they did not say it on
 // the command line.
 //
-// **A name is asked for rather than made up.** Issuing under a name that is already there
-// replaces that phone's token, so a default would silently unpair the phone somebody paired
-// yesterday — and the name is what they will have to recognise when they cut one off.
+// **A name is asked for rather than made up.** The store refuses a name that is already there, so
+// a default would pair the first phone and turn away every one after it — and the name is what
+// they will have to recognise when they cut one off.
 func askForALabel() (string, error) {
 	terminal, err := os.OpenFile(terminalPath, os.O_RDWR, 0)
 	if err != nil {

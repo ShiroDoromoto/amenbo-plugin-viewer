@@ -236,18 +236,25 @@ async function issue(env, request) {
   if (typeof hash !== "string" || !HASH.test(hash)) {
     return problem(400, "the hash has to be a SHA-256 as 64 hex characters");
   }
+  const named = label.trim();
   const issued_at = (/* @__PURE__ */ new Date()).toISOString();
   try {
-    await env.RECORDS.prepare(
-      "INSERT INTO tokens (label, hash, issued_at) VALUES (?, ?, ?) ON CONFLICT (label) DO UPDATE SET hash = excluded.hash, issued_at = excluded.issued_at"
-    ).bind(label.trim(), hash.toLowerCase(), issued_at).run();
+    const landed = await env.RECORDS.prepare(
+      "INSERT INTO tokens (label, hash, issued_at) VALUES (?, ?, ?) ON CONFLICT (label) DO NOTHING"
+    ).bind(named, hash.toLowerCase(), issued_at).run();
+    if (!landed.meta.changes) {
+      return problem(
+        409,
+        `a phone is already paired as ${JSON.stringify(named)} \u2014 cut that one off first, and pair again under the name once it is free`
+      );
+    }
   } catch (thrown) {
     if (!outOfRoom(thrown)) {
       throw thrown;
     }
     return full();
   }
-  return Response.json({ label: label.trim(), issued_at });
+  return Response.json({ label: named, issued_at });
 }
 __name(issue, "issue");
 async function revoke(env, label) {

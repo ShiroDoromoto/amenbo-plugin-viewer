@@ -87,7 +87,7 @@
       },
       {
         "cmd": "qr",
-        "does": "Pairs one phone: issues its own read token, registers the hash, shows endpoint/token/key/name as a QR the camera reads — never over the network. --label names it; --terminal draws it here"
+        "does": "Pairs one phone: issues a read token, registers its hash, puts endpoint/token/key/name on a QR the camera reads, off the network. --label names it (one in use is refused); --terminal draws it here"
       }
     ]
   }

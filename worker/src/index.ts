@@ -477,9 +477,11 @@ const HASH = /^[0-9a-f]{64}$/i;
  * **The token itself never arrives.** The PC generates it, shows it on a QR, and sends only its
  * hash, so the value exists on the PC and on the phone that photographed it and nowhere else.
  *
- * Issuing under a label that is already there replaces it, which is what re-pairing the same
- * phone means: the previous token stops working the moment the new one is issued, rather than
- * both being live until someone remembers to revoke.
+ * **A label that is already there is refused.** The label is what cutting a phone off names, so
+ * issuing over one would stop the phone holding it — and a name mistyped for another phone's
+ * would stop one nobody meant to touch, saying nothing until somebody picks it up. Re-pairing
+ * the same phone is therefore two moves: cut it off, then pair it again. It ends in the same
+ * place, having been asked for.
  */
 async function issue(env: Env, request: Request): Promise<Response> {
 	let asked: unknown;
@@ -496,14 +498,23 @@ async function issue(env: Env, request: Request): Promise<Response> {
 		return problem(400, "the hash has to be a SHA-256 as 64 hex characters");
 	}
 
+	const named = label.trim();
 	const issued_at = new Date().toISOString();
 	try {
-		await env.RECORDS.prepare(
-			"INSERT INTO tokens (label, hash, issued_at) VALUES (?, ?, ?)" +
-				" ON CONFLICT (label) DO UPDATE SET hash = excluded.hash, issued_at = excluded.issued_at",
+		// Nothing happens on a name that is taken, and the row count is what says so — reading the
+		// table first and inserting after would leave a window for two sends to both find it free.
+		const landed = await env.RECORDS.prepare(
+			"INSERT INTO tokens (label, hash, issued_at) VALUES (?, ?, ?) ON CONFLICT (label) DO NOTHING",
 		)
-			.bind(label.trim(), hash.toLowerCase(), issued_at)
+			.bind(named, hash.toLowerCase(), issued_at)
 			.run();
+		if (!landed.meta.changes) {
+			return problem(
+				409,
+				`a phone is already paired as ${JSON.stringify(named)}` +
+					" — cut that one off first, and pair again under the name once it is free",
+			);
+		}
 	} catch (thrown) {
 		if (!outOfRoom(thrown)) {
 			throw thrown;
@@ -511,7 +522,7 @@ async function issue(env: Env, request: Request): Promise<Response> {
 		return full();
 	}
 
-	return Response.json({ label: label.trim(), issued_at });
+	return Response.json({ label: named, issued_at });
 }
 
 /**

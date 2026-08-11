@@ -20,11 +20,12 @@ import (
 var throwawayKey = base64.RawURLEncoding.EncodeToString(make([]byte, keySize))
 
 // pretendStore is the far end of the pairing call: it takes the hash of a read token and says
-// when it took it.
+// when it took it — and, like the real one, turns away a name it is already holding.
 type pretendStore struct {
 	offered  string
 	label    string
 	hash     string
+	holds    map[string]bool
 	refuse   bool
 	issuedAt string
 }
@@ -45,6 +46,15 @@ func pairingAgainst(t *testing.T, store *pretendStore) (in input, carried *pairi
 			json.NewEncoder(w).Encode(map[string]string{"error": "the database is not there"})
 			return
 		}
+		if store.holds[asked.Label] {
+			w.WriteHeader(http.StatusConflict)
+			json.NewEncoder(w).Encode(map[string]string{"error": "a phone is already paired as " + asked.Label})
+			return
+		}
+		if store.holds == nil {
+			store.holds = map[string]bool{}
+		}
+		store.holds[asked.Label] = true
 		store.issuedAt = "2026-08-09T09:00:00.000Z"
 		json.NewEncoder(w).Encode(map[string]string{"label": asked.Label, "issued_at": store.issuedAt})
 	})
@@ -143,17 +153,29 @@ func TestEachPairingDrawsItsOwnToken(t *testing.T) {
 	}
 }
 
-// Pairing the same phone again replaces its token at the store, so the record here has to move
-// rather than gain a second row naming a token that no longer opens anything.
-func TestPairingAPhoneAgainMovesItsRowRatherThanAddingOne(t *testing.T) {
+// A name that is taken is refused at the store, so the phone reading under it goes on reading.
+// What the person is told has to carry the way out, since the store's own sentence says what
+// happened and not what to do about it.
+func TestPairingUnderANameThatIsTakenIsRefusedAndSaysHowToFreeIt(t *testing.T) {
 	store := &pretendStore{}
-	in, _ := pairingAgainst(t, store)
+	in, shown := pairingAgainst(t, store)
 
 	capture(t, func() { run(in, []string{"qr", "--label", "iPhone"}) })
-	capture(t, func() { run(in, []string{"qr", "--label", "iPhone"}) })
+	first := shown.T
+	var code int
+	_, stderr := capture(t, func() { code = run(in, []string{"qr", "--label", "iPhone"}) })
 
-	if paired := pairedPhones(t); len(paired) != 1 {
-		t.Errorf("re-pairing one phone left two rows: %+v", paired)
+	if code != 1 {
+		t.Fatalf("exit %d — the second pairing was not refused", code)
+	}
+	if shown.T != first {
+		t.Error("a code was shown for a token the store never took")
+	}
+	if !strings.Contains(stderr, "revoke iPhone") {
+		t.Errorf("the refusal does not say how to free the name: %q", stderr)
+	}
+	if paired := pairedPhones(t); len(paired) != 1 || paired[0].Label != "iPhone" {
+		t.Errorf("the phone that was reading did not stay written down as it was: %+v", paired)
 	}
 }
 
