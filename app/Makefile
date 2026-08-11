@@ -8,7 +8,8 @@
 
 FLUTTER := flutter
 
-.PHONY: build test analyze apk ipa screen-android screen-ios shots-ios shots-android clean
+.PHONY: build test analyze apk ipa screen-android screen-ios shots-ios shots-android \
+	feature-graphic clean
 
 build: analyze
 
@@ -46,6 +47,11 @@ shots-ios:
 
 shots-android:
 	tool/store-shots.sh android
+
+# The wide picture Play asks for on top of those. It draws rather than photographs, so it needs
+# neither a device nor a simulator — but it does need an engine, which is why it runs as a test.
+feature-graphic:
+	$(FLUTTER) test tool/gen_feature_graphic.dart
 
 clean:
 	$(FLUTTER) clean

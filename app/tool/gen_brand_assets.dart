@@ -2,84 +2,20 @@
 //
 //   dart run tool/gen_brand_assets.dart
 //
-// The mark is Amenbo's own — a water strider whose legs are drawn as circuit traces — and it is
-// copied here as coordinates for the same reason the design tokens are: this repository has to
-// build with nothing else beside it. If the mark moves over there, the numbers below are what
-// gets moved here, and everything the phones show is redrawn from them.
+// The mark's coordinates are `brand_mark.dart`'s; everything below turns them into files.
 //
-// Nothing is read from disk and no package is pulled in. The shapes are circles and round-capped
-// segments, which are three lines of arithmetic each, so the whole mark is a distance function
-// this file evaluates per pixel — that is also what gives the edges their smoothing, and what
-// keeps the joints of a leg from showing a seam where two segments overlap.
+// Nothing is read from disk and no package is pulled in — not even Flutter, since none of these
+// carry a letter. The shapes are circles and round-capped segments, which are three lines of
+// arithmetic each, so the whole mark is a distance function this file evaluates per pixel — that
+// is also what gives the edges their smoothing, and what keeps the joints of a leg from showing a
+// seam where two segments overlap.
 
 import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-// ── The mark, in its own 1024×1024 square ──────────────────────────────────────────────────
-
-const _design = 1024.0;
-
-const _tile =
-    0xF3F2EE; // A matte off-white; a pure white face reads as a glossy pebble.
-const _trace = 0x1B93C2;
-const _head = 0xFF7E5F;
-
-/// The tile's corner, as the icon of the desktop application cuts it.
-const _tileCorner = 232.0;
-
-/// The legs: fore and hind pairs run out at 45 degrees, the middle pair straight out.
-const _legs = <List<List<double>>>[
-  [
-    [482, 410],
-    [382, 410],
-    [172, 200],
-  ],
-  [
-    [542, 410],
-    [642, 410],
-    [852, 200],
-  ],
-  [
-    [482, 558],
-    [110, 558],
-  ],
-  [
-    [542, 558],
-    [914, 558],
-  ],
-  [
-    [482, 706],
-    [382, 706],
-    [172, 916],
-  ],
-  [
-    [542, 706],
-    [642, 706],
-    [852, 916],
-  ],
-];
-const _legWidth = 50.0;
-
-/// The nodes at the leg tips.
-const _nodes = <List<double>>[
-  [172, 200],
-  [852, 200],
-  [110, 558],
-  [914, 558],
-  [172, 916],
-  [852, 916],
-];
-const _nodeRadius = 24.0;
-
-/// The body, and the head above it.
-const _body = <List<double>>[
-  [512, 383],
-  [512, 733],
-];
-const _bodyWidth = 64.0;
-const _headCentre = <double>[512, 317];
-const _headRadius = 58.0;
+import 'brand_mark.dart';
+import 'png.dart';
 
 // ── What each platform is handed ───────────────────────────────────────────────────────────
 
@@ -140,34 +76,45 @@ void main(List<String> args) {
     written.add(path);
   }
 
+  void writePng(String path, _Bitmap image, {required bool opaque}) => write(
+    path,
+    encodePng(
+      width: image.size,
+      height: image.size,
+      rgba: image.rgba,
+      opaque: opaque,
+    ),
+  );
+
   const icons = 'ios/Runner/Assets.xcassets/AppIcon.appiconset';
   for (final entry in _iosIcons.entries) {
-    write(
+    writePng(
       '$icons/${entry.key}',
-      _png(_tileIcon(entry.value, rounded: false), opaque: true),
+      _tileIcon(entry.value, rounded: false),
+      opaque: true,
     );
   }
 
   const launch = 'ios/Runner/Assets.xcassets/LaunchImage.imageset';
   for (final entry in _iosLaunchImages.entries) {
-    write(
+    writePng(
       '$launch/${entry.key}',
-      _png(_markOnly(entry.value, 0.98), opaque: false),
+      _markOnly(entry.value, 0.98),
+      opaque: false,
     );
   }
 
   for (final entry in _androidDensities.entries) {
     final res = 'android/app/src/main/res/mipmap-${entry.key}';
-    write(
+    writePng(
       '$res/ic_launcher.png',
-      _png(_tileIcon((48 * entry.value).round(), rounded: true), opaque: false),
+      _tileIcon((48 * entry.value).round(), rounded: true),
+      opaque: false,
     );
-    write(
+    writePng(
       '$res/ic_launcher_foreground.png',
-      _png(
-        _markOnly((108 * entry.value).round(), _adaptiveSafeFraction),
-        opaque: false,
-      ),
+      _markOnly((108 * entry.value).round(), _adaptiveSafeFraction),
+      opaque: false,
     );
   }
 
@@ -180,12 +127,12 @@ void main(List<String> args) {
 
 /// The mark on its tile, filling the square the way the desktop icon does.
 _Bitmap _tileIcon(int size, {required bool rounded}) {
-  final scale = size / _design;
+  final scale = size / markDesign;
   final image = _Bitmap(size);
-  final radius = rounded ? _tileCorner * scale : 0.0;
+  final radius = rounded ? markTileCorner * scale : 0.0;
   image.paint([
     _roundRect(0, 0, size.toDouble(), size.toDouble(), radius),
-  ], _tile);
+  ], markTile);
   _paintMark(image, scale, 0, 0);
   return image;
 }
@@ -193,7 +140,7 @@ _Bitmap _tileIcon(int size, {required bool rounded}) {
 /// The mark alone, centred on the square and taking [fraction] of it. The ground it stands on is
 /// the screen's, so nothing is drawn behind it.
 _Bitmap _markOnly(int size, double fraction) {
-  final bounds = _markBounds();
+  final bounds = markBounds();
   final scale = fraction * size / math.max(bounds.width, bounds.height);
   final image = _Bitmap(size);
   _paintMark(
@@ -212,7 +159,7 @@ void _paintMark(_Bitmap image, double scale, double dx, double dy) {
   double y(double v) => v * scale + dy;
 
   final traces = <_Sdf>[];
-  for (final leg in _legs) {
+  for (final leg in markLegs) {
     for (var i = 0; i + 1 < leg.length; i++) {
       traces.add(
         _capsule(
@@ -220,60 +167,28 @@ void _paintMark(_Bitmap image, double scale, double dx, double dy) {
           y(leg[i][1]),
           x(leg[i + 1][0]),
           y(leg[i + 1][1]),
-          _legWidth / 2 * scale,
+          markLegWidth / 2 * scale,
         ),
       );
     }
   }
-  for (final node in _nodes) {
-    traces.add(_circle(x(node[0]), y(node[1]), _nodeRadius * scale));
+  for (final node in markNodes) {
+    traces.add(_circle(x(node[0]), y(node[1]), markNodeRadius * scale));
   }
   traces.add(
     _capsule(
-      x(_body[0][0]),
-      y(_body[0][1]),
-      x(_body[1][0]),
-      y(_body[1][1]),
-      _bodyWidth / 2 * scale,
+      x(markBody[0][0]),
+      y(markBody[0][1]),
+      x(markBody[1][0]),
+      y(markBody[1][1]),
+      markBodyWidth / 2 * scale,
     ),
   );
 
-  image.paint(traces, _trace);
+  image.paint(traces, markTrace);
   image.paint([
-    _circle(x(_headCentre[0]), y(_headCentre[1]), _headRadius * scale),
-  ], _head);
-}
-
-/// What the mark occupies of its square, with the stroke widths counted in.
-({double width, double height, double centreX, double centreY}) _markBounds() {
-  var left = double.infinity, top = double.infinity;
-  var right = -double.infinity, bottom = -double.infinity;
-  void include(double cx, double cy, double r) {
-    left = math.min(left, cx - r);
-    top = math.min(top, cy - r);
-    right = math.max(right, cx + r);
-    bottom = math.max(bottom, cy + r);
-  }
-
-  for (final leg in _legs) {
-    for (final point in leg) {
-      include(point[0], point[1], _legWidth / 2);
-    }
-  }
-  for (final node in _nodes) {
-    include(node[0], node[1], _nodeRadius);
-  }
-  for (final point in _body) {
-    include(point[0], point[1], _bodyWidth / 2);
-  }
-  include(_headCentre[0], _headCentre[1], _headRadius);
-
-  return (
-    width: right - left,
-    height: bottom - top,
-    centreX: (left + right) / 2,
-    centreY: (top + bottom) / 2,
-  );
+    _circle(x(markHeadCentre[0]), y(markHeadCentre[1]), markHeadRadius * scale),
+  ], markHead);
 }
 
 // ── A distance function per shape, and a canvas that turns distance into coverage ──────────
@@ -343,77 +258,20 @@ class _Bitmap {
     }
   }
 
-  /// The rows as PNG wants them: eight bits a channel, no longer multiplied by coverage.
-  Uint8List rows({required bool opaque}) {
-    final channels = opaque ? 3 : 4;
-    final out = Uint8List(size * (1 + size * channels));
-    var at = 0;
-    for (var py = 0; py < size; py++) {
-      out[at++] =
-          0; // No per-row filter: these are flat colours, which deflate on their own.
-      for (var px = 0; px < size; px++) {
-        final i = (py * size + px) * 4;
-        final a = _pixels[i + 3];
-        final undo = a == 0 ? 0.0 : 1 / a;
-        out[at++] = _byte(_pixels[i] * undo);
-        out[at++] = _byte(_pixels[i + 1] * undo);
-        out[at++] = _byte(_pixels[i + 2] * undo);
-        if (!opaque) out[at++] = _byte(a);
-      }
+  /// The pixels as the encoder wants them: eight bits a channel, no longer multiplied by
+  /// coverage.
+  Uint8List get rgba {
+    final out = Uint8List(size * size * 4);
+    for (var i = 0; i < out.length; i += 4) {
+      final a = _pixels[i + 3];
+      final undo = a == 0 ? 0.0 : 1 / a;
+      out[i] = _byte(_pixels[i] * undo);
+      out[i + 1] = _byte(_pixels[i + 1] * undo);
+      out[i + 2] = _byte(_pixels[i + 2] * undo);
+      out[i + 3] = _byte(a);
     }
     return out;
   }
 
   static int _byte(double v) => (v * 255).round().clamp(0, 255);
-}
-
-// ── PNG ────────────────────────────────────────────────────────────────────────────────────
-
-Uint8List _png(_Bitmap image, {required bool opaque}) {
-  final header = BytesBuilder()
-    ..add(_be32(image.size))
-    ..add(_be32(image.size))
-    ..add([8, opaque ? 2 : 6, 0, 0, 0]);
-
-  final zipped = Uint8List.fromList(
-    ZLibCodec(level: 9).encode(image.rows(opaque: opaque)),
-  );
-  return (BytesBuilder()
-        ..add(const [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])
-        ..add(_chunk('IHDR', header.takeBytes()))
-        ..add(_chunk('IDAT', zipped))
-        ..add(_chunk('IEND', Uint8List(0))))
-      .takeBytes();
-}
-
-Uint8List _chunk(String kind, Uint8List body) {
-  final tagged = Uint8List.fromList([...kind.codeUnits, ...body]);
-  return Uint8List.fromList([
-    ..._be32(body.length),
-    ...tagged,
-    ..._be32(_crc32(tagged)),
-  ]);
-}
-
-List<int> _be32(int v) => [
-  (v >> 24) & 0xFF,
-  (v >> 16) & 0xFF,
-  (v >> 8) & 0xFF,
-  v & 0xFF,
-];
-
-final _crcTable = List<int>.generate(256, (n) {
-  var c = n;
-  for (var k = 0; k < 8; k++) {
-    c = (c & 1) != 0 ? 0xEDB88320 ^ (c >> 1) : c >> 1;
-  }
-  return c;
-});
-
-int _crc32(List<int> bytes) {
-  var c = 0xFFFFFFFF;
-  for (final byte in bytes) {
-    c = _crcTable[(c ^ byte) & 0xFF] ^ (c >> 8);
-  }
-  return c ^ 0xFFFFFFFF;
 }

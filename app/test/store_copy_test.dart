@@ -1,6 +1,9 @@
 // The store copy is text nobody compiles, so nothing else would notice a field that grew past
 // what the store accepts — and the first place that noticing happens is the upload, on the day of
 // the release. These are the counts from store/README.md, kept where the rest of the gate is.
+//
+// The one picture that is drawn rather than photographed is measured here for the same reason:
+// Play states its shape exactly, and a graphic that misses it is refused at the console.
 
 import 'dart:io';
 
@@ -58,6 +61,29 @@ void main() {
       expect(files, equals([for (final l in _languages) '$l.md']..sort()));
     },
   );
+
+  test('the wide picture is the shape Play takes', () {
+    final file = File('store/graphics/feature-graphic-1024x500.png');
+    expect(
+      file.existsSync(),
+      isTrue,
+      reason: 'draw it with `make feature-graphic`',
+    );
+
+    // A PNG opens with its signature and then IHDR: width, height, bit depth, colour type.
+    final head = file.readAsBytesSync().take(26).toList();
+    int be32(int at) =>
+        (head[at] << 24) |
+        (head[at + 1] << 16) |
+        (head[at + 2] << 8) |
+        head[at + 3];
+
+    expect(head.take(8), equals(const [137, 80, 78, 71, 13, 10, 26, 10]));
+    expect(be32(16), 1024);
+    expect(be32(20), 500);
+    // Colour type 2 is red, green and blue with nothing else: Play refuses an alpha channel here.
+    expect(head[25], 2);
+  });
 
   for (final language in _languages) {
     group(language, () {
