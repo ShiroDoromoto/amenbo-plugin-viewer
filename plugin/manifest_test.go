@@ -3,18 +3,23 @@ package main
 import (
 	"encoding/json"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 )
 
-// The manifest as this test asks about it — the fields that have to agree with the code beside
-// it, not the whole schema `amenbo plugin validate` checks (the Makefile runs that).
+// The manifest as this test asks about it — the fields that have to agree with the code and the
+// build beside it, not the whole schema `amenbo plugin validate` checks (the Makefile runs that).
+// What no test here can see is whether the release it quotes is the newest one; that is the
+// release procedure's.
 type manifest struct {
-	Name   string   `json:"name"`
-	OS     []string `json:"os"`
-	Scope  string   `json:"scope"`
-	Events []string `json:"events"`
-	Config []field  `json:"config"`
+	Name   string           `json:"name"`
+	Repo   string           `json:"repo"`
+	OS     []string         `json:"os"`
+	Scope  string           `json:"scope"`
+	Assets map[string]asset `json:"assets"`
+	Events []string         `json:"events"`
+	Config []field          `json:"config"`
 	Agent  struct {
 		Commands []struct {
 			Cmd  string `json:"cmd"`
@@ -29,6 +34,11 @@ type field struct {
 	Secret bool   `json:"secret"`
 }
 
+type asset struct {
+	URL      string `json:"url"`
+	Checksum string `json:"checksum"`
+}
+
 func read(t *testing.T) manifest {
 	t.Helper()
 	raw, err := os.ReadFile("dev/manifest.json")
@@ -40,6 +50,24 @@ func read(t *testing.T) manifest {
 		t.Fatal(err)
 	}
 	return m
+}
+
+// platforms reads the one list a release bakes from, the Makefile's PLATFORMS, rather than
+// keeping a second copy of it here. A platform is added in one place, and what these tests then
+// catch is the manifest that did not follow it.
+func platforms(t *testing.T) []string {
+	t.Helper()
+	raw, err := os.ReadFile("Makefile")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, line := range strings.Split(string(raw), "\n") {
+		if rest, found := strings.CutPrefix(line, "PLATFORMS :="); found {
+			return strings.Fields(rest)
+		}
+	}
+	t.Fatal("the Makefile no longer declares PLATFORMS — these tests read the platform list from it")
+	return nil
 }
 
 // setting is the declared field under key.
@@ -170,5 +198,66 @@ func TestItSubscribesToEveryEventBecauseEveryWriteLeavesThePhoneBehind(t *testin
 func TestItIsEnabledForTheMachineRatherThanForEachProject(t *testing.T) {
 	if scope := read(t).Scope; scope != "machine" {
 		t.Errorf("the manifest declares scope %q, so the user pays for the whole setup per project", scope)
+	}
+}
+
+// Every platform a release bakes has to be published under a key, and nothing may be published
+// that no run bakes: a key with no build behind it is an install that 404s on the machine it was
+// offered to, and a build nobody publishes is a platform the plugin never reaches.
+func TestEveryPlatformTheBuildBakesIsPublished(t *testing.T) {
+	assets := read(t).Assets
+
+	for _, platform := range platforms(t) {
+		if _, published := assets[platform]; !published {
+			t.Errorf("the build bakes %q, the manifest publishes no asset under it", platform)
+		}
+	}
+	if len(assets) != len(platforms(t)) {
+		t.Errorf("the manifest publishes %d asset(s) for %d baked platform(s)", len(assets), len(platforms(t)))
+	}
+}
+
+// One release, quoted the same way by every key. The version is written twice in each url — once
+// in the path and once in the filename — and every asset has to agree with every other, since a
+// single line left behind at the previous release serves that one platform an old binary whose
+// digest still checks out, so nothing anywhere fails.
+//
+// The digest itself is only shaped here. Whether it is the digest of the file it names is for the
+// release procedure to settle, against the bytes it downloaded from the release.
+func TestEveryAssetQuotesOneRelease(t *testing.T) {
+	m := read(t)
+	url := regexp.MustCompile(`^https://github\.com/(.+)/releases/download/(v\d+)/` +
+		regexp.QuoteMeta(pluginName) + `-(v\d+)-([a-z0-9-]+)\.tar\.gz$`)
+	digest := regexp.MustCompile(`^sha256:[0-9a-f]{64}$`)
+
+	releases := map[string]string{}
+	for _, platform := range platforms(t) {
+		published, ok := m.Assets[platform]
+		if !ok {
+			continue // already reported, by the test that asks for the key at all
+		}
+		parts := url.FindStringSubmatch(published.URL)
+		if parts == nil {
+			t.Errorf("%s: %q is not a release asset of this repository", platform, published.URL)
+			continue
+		}
+		repo, inPath, inName, named := parts[1], parts[2], parts[3], parts[4]
+		if repo != m.Repo {
+			t.Errorf("%s: the url names %q, the manifest names %q", platform, repo, m.Repo)
+		}
+		if inPath != inName {
+			t.Errorf("%s: the url is under %s and the file says %s", platform, inPath, inName)
+		}
+		if named != platform {
+			t.Errorf("%s: the url points at the %s build", platform, named)
+		}
+		if !digest.MatchString(published.Checksum) {
+			t.Errorf("%s: %q is not a sha256 digest", platform, published.Checksum)
+		}
+		releases[inPath] = platform
+	}
+
+	if len(releases) > 1 {
+		t.Errorf("the assets are spread over %d releases: %v", len(releases), releases)
 	}
 }
