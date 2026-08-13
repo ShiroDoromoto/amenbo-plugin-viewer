@@ -13,14 +13,17 @@ import (
 // What no test here can see is whether the release it quotes is the newest one; that is the
 // release procedure's.
 type manifest struct {
-	Name   string           `json:"name"`
-	Repo   string           `json:"repo"`
-	OS     []string         `json:"os"`
-	Scope  string           `json:"scope"`
-	Assets map[string]asset `json:"assets"`
-	Events []string         `json:"events"`
-	Config []field          `json:"config"`
-	Agent  struct {
+	Name     string           `json:"name"`
+	Repo     string           `json:"repo"`
+	OS       []string         `json:"os"`
+	Scope    string           `json:"scope"`
+	Assets   map[string]asset `json:"assets"`
+	Events   []string         `json:"events"`
+	Config   []field          `json:"config"`
+	Settings struct {
+		Actions []action `json:"actions"`
+	} `json:"settings"`
+	Agent struct {
 		Commands []struct {
 			Cmd  string `json:"cmd"`
 			Does string `json:"does"`
@@ -32,6 +35,15 @@ type field struct {
 	Key    string `json:"key"`
 	Label  string `json:"label"`
 	Secret bool   `json:"secret"`
+}
+
+// action is one button the settings screen offers, and what it asks for before pressing it. The
+// asked fields are shaped like the saved ones, which is the point of the difference: the same
+// declaration, handed over for one run instead of written down.
+type action struct {
+	Cmd   string  `json:"cmd"`
+	Label string  `json:"label"`
+	Ask   []field `json:"ask"`
 }
 
 type asset struct {
@@ -112,6 +124,79 @@ func TestEveryAdvertisedCommandIsDispatched(t *testing.T) {
 			}
 		})
 	}
+}
+
+// **A button the settings screen offers has to be a command the binary knows**, the same way an
+// advertised one does — and it is the harder half to notice, since nobody types it: a user who
+// only ever opens the settings screen would press it and be told the plugin does not know the
+// word its own manifest put on the button.
+func TestEveryButtonTheSettingsScreenOffersIsDispatched(t *testing.T) {
+	actions := read(t).Settings.Actions
+
+	if len(actions) == 0 {
+		t.Fatal("the settings screen offers nothing to press, so setup is still terminal-only")
+	}
+	for _, offered := range actions {
+		t.Run(offered.Cmd, func(t *testing.T) {
+			var code int
+			capture(t, func() { code = run(input{}, strings.Fields(offered.Cmd)) })
+
+			if code == 2 {
+				t.Errorf("%q is on a button but not dispatched", offered.Cmd)
+			}
+			if offered.Label == "" {
+				t.Errorf("%q is offered on a button with nothing written on it", offered.Cmd)
+			}
+		})
+	}
+}
+
+// The API token reaches the run under the name its declared key becomes, the way a secret setting
+// does — one spelling on both sides, or the button hands the token over into a variable nothing
+// reads and `setup` goes looking for a terminal that a settings screen does not have.
+func TestTheAskedTokenReachesTheCodeUnderTheNameItsKeyBecomes(t *testing.T) {
+	asked := whatSetupAsksFor(t)
+
+	if len(asked) != 1 || asked[0].Key != askAPIToken {
+		t.Fatalf("setup asks for %v, and the code reads %q", asked, askAPIToken)
+	}
+	if !asked[0].Secret {
+		t.Error("the API token is not declared secret, so the screen would show it as it is typed")
+	}
+	if asked[0].Label == "" {
+		t.Error("the box has no label, so nobody knows what to paste into it")
+	}
+	if want := "AMENBO_ASK_" + strings.ToUpper(asked[0].Key); want != envAskAPIToken {
+		t.Errorf("the answer reaches the plugin as %q, and it is read from %q", want, envAskAPIToken)
+	}
+}
+
+// **What is asked for is not one of the saved settings.** The whole worth of asking is that the
+// answer is used once and kept nowhere, so a key that collided with a declared setting would put
+// a Cloudflare API token — the one credential here that can build in someone's account — into the
+// three values `setup` writes back and leaves behind.
+func TestWhatSetupAsksForIsKeptNowhere(t *testing.T) {
+	declared := read(t).Config
+
+	for _, asked := range whatSetupAsksFor(t) {
+		for _, saved := range declared {
+			if asked.Key == saved.Key {
+				t.Errorf("%q is asked for at the button and saved as a setting", asked.Key)
+			}
+		}
+	}
+}
+
+// whatSetupAsksFor is the boxes the settings screen puts up before it runs `setup`.
+func whatSetupAsksFor(t *testing.T) []field {
+	t.Helper()
+	for _, offered := range read(t).Settings.Actions {
+		if offered.Cmd == "setup" {
+			return offered.Ask
+		}
+	}
+	t.Fatal("the settings screen offers no button that runs setup")
+	return nil
 }
 
 // The setting the code reads off the stdin document is declared, and declared open: a secret

@@ -52,6 +52,21 @@
       "required": false
     }
   ],
+  "settings": {
+    "actions": [
+      {
+        "cmd": "setup",
+        "label": "Set up the Cloudflare route",
+        "ask": [
+          {
+            "key": "api_token",
+            "label": "Cloudflare API token",
+            "secret": true
+          }
+        ]
+      }
+    ]
+  },
   "events": [
     "task.created",
     "task.status_changed",
@@ -71,7 +86,7 @@
     "commands": [
       {
         "cmd": "setup",
-        "does": "Stands up the Worker and its database in the user's own Cloudflare account, and generates the token and key. Asks for a Cloudflare API token on the terminal, or reads CLOUDFLARE_API_TOKEN"
+        "does": "Stands up the Worker and its database in the user's own Cloudflare account, and generates the token and key. Takes a Cloudflare API token from the settings screen, a terminal or CLOUDFLARE_API_TOKEN"
       },
       {
         "cmd": "push",

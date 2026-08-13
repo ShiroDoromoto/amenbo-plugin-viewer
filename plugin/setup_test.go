@@ -296,6 +296,31 @@ func TestSetupStandsTheWholeRouteUp(t *testing.T) {
 	}
 }
 
+// Pressing the button on the settings screen is a person handing over a token for this run, and
+// it is that token the account is built with — not one the machine happens to be carrying from
+// some other piece of work. Nor is it written down: what is asked for at the button is used once,
+// and the three values left behind afterwards can build nothing in anybody's account.
+func TestTheTokenTypedOnTheSettingsScreenIsTheOneUsedAndIsKeptNowhere(t *testing.T) {
+	account := oneAccount()
+	written := watched(t, account)
+	t.Setenv(envAskAPIToken, "the-token-just-typed")
+
+	var code int
+	capture(t, func() { code = run(input{}, []string{"setup"}) })
+
+	if code != 0 {
+		t.Fatalf("exit %d", code)
+	}
+	if account.offered != "the-token-just-typed" {
+		t.Errorf("Cloudflare was reached with %q", account.offered)
+	}
+	for _, setting := range *written {
+		if setting.value == "the-token-just-typed" {
+			t.Errorf("the API token was written back as the %s setting", setting.key)
+		}
+	}
+}
+
 // The secrets it generates are the whole of what this design has, and the place they leak from is
 // a diagnostic. Neither may appear on either channel, ever.
 func TestNothingSetupPrintsCarriesASecret(t *testing.T) {

@@ -55,9 +55,18 @@ var (
 	workerSchema string
 )
 
-// envCloudflareToken is the way to hand the API token over without a terminal. It is spelled the
-// way wrangler spells it, so a machine that already has one set is already set up for this.
-const envCloudflareToken = "CLOUDFLARE_API_TOKEN"
+// The three ways the Cloudflare API token reaches this run, and not one of them keeps it.
+//
+// askAPIToken is what the manifest declares the settings screen to ask for when the user presses
+// the button that runs this: Amenbo hands the answer over in envAskAPIToken for that one run and
+// saves nothing. envCloudflareToken is spelled the way wrangler spells it, so a machine that
+// already has one set is already set up for this. A terminal is the third, and the only one that
+// asks a person while the run waits.
+const (
+	askAPIToken        = "api_token"
+	envAskAPIToken     = "AMENBO_ASK_API_TOKEN"
+	envCloudflareToken = "CLOUDFLARE_API_TOKEN"
+)
 
 // The permissions the token has to carry, and nothing besides. They are put into the link that
 // opens the token screen with the boxes already ticked — the user presses Create, and is never
@@ -238,7 +247,15 @@ func layTheSchemaDown(air sky, account, database string, fresh bool) error {
 // every process listing on the machine for as long as the call runs, and a credential that can
 // deploy into someone's account is not one to leave in either. So it is read from the terminal,
 // with the echo off, which is also what makes it a paste rather than something to read back.
+//
+// What the user just typed comes first. The settings screen asks only when its button was
+// pressed, so an answer there is this run's; a variable the machine happens to carry is ambient,
+// and standing up someone's account with a token they did not mean to use this time is the one
+// mistake here nobody can undo from a prompt.
 func pastedToken() (string, error) {
+	if token := strings.TrimSpace(os.Getenv(envAskAPIToken)); token != "" {
+		return token, nil
+	}
 	if token := strings.TrimSpace(os.Getenv(envCloudflareToken)); token != "" {
 		logf("%s: using the token in %s", pluginName, envCloudflareToken)
 		return token, nil
