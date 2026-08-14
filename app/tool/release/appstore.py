@@ -13,6 +13,8 @@ loses the place in the review queue, and no amount of care afterwards buys it ba
     uv run app/tool/release/appstore.py upload build/ios/ipa/*.ipa
     uv run app/tool/release/appstore.py notes 1.0
     uv run app/tool/release/appstore.py notes 1.0 app/tool/release/review-notes.txt
+    uv run app/tool/release/appstore.py attach 1.0
+    uv run app/tool/release/appstore.py attach 1.0 ~/.config/amenbo-release/demo-secrets/pairing-appreview.png
     uv run app/tool/release/appstore.py withdraw
     uv run app/tool/release/appstore.py bind 1.0.0 2
     uv run app/tool/release/appstore.py submit 1.0.0
@@ -23,6 +25,7 @@ upload needs nothing said twice.
 """
 
 import argparse
+import hashlib
 import pathlib
 import subprocess
 import sys
@@ -171,6 +174,66 @@ def notes(args):
     print(f"version {args.version} now carries {len(text)} characters of notes")
 
 
+def attach(args):
+    """Lists what is attached to the review panel, adds a file to it, or takes one away.
+
+    The pairing code we hand App Review is a picture, and a picture is the one thing the notes
+    field cannot carry. It goes up the same way an archive does — reserve, put, commit — so the
+    whole submission still leaves from here rather than from a browser.
+    """
+    detail = review_detail(args.version)
+    here = f"/v1/appStoreReviewDetails/{detail['id']}/appStoreReviewAttachments"
+    if args.file is None:
+        for one in call("GET", here)["data"]:
+            a = one["attributes"]
+            print(f"  {one['id']}  {a['fileName']}  {a['fileSize']} bytes  {a['assetDeliveryState']['state']}")
+        return
+    if args.rm:
+        call("DELETE", f"/v1/appStoreReviewAttachments/{args.file}")
+        print(f"removed {args.file}")
+        return
+
+    body = pathlib.Path(args.file).read_bytes()
+    reserved = call(
+        "POST",
+        "/v1/appStoreReviewAttachments",
+        {
+            "data": {
+                "type": "appStoreReviewAttachments",
+                "attributes": {"fileName": pathlib.Path(args.file).name, "fileSize": len(body)},
+                "relationships": {
+                    "appStoreReviewDetail": {
+                        "data": {"type": "appStoreReviewDetails", "id": detail["id"]}
+                    }
+                },
+            }
+        },
+    )["data"]
+    for step in reserved["attributes"]["uploadOperations"]:
+        piece = body[step["offset"] : step["offset"] + step["length"]]
+        sent = requests.request(
+            step["method"],
+            step["url"],
+            headers={h["name"]: h["value"] for h in step["requestHeaders"]},
+            data=piece,
+            timeout=300,
+        )
+        if sent.status_code >= 300:
+            sys.exit(f"upload → {sent.status_code}\n{sent.text[:400]}")
+    call(
+        "PATCH",
+        f"/v1/appStoreReviewAttachments/{reserved['id']}",
+        {
+            "data": {
+                "type": "appStoreReviewAttachments",
+                "id": reserved["id"],
+                "attributes": {"uploaded": True, "sourceFileChecksum": hashlib.md5(body).hexdigest()},
+            }
+        },
+    )
+    print(f"attached {pathlib.Path(args.file).name} as {reserved['id']}")
+
+
 def upload(args):
     """Hands the archive to Apple, after asking Apple whether it would take it.
 
@@ -264,6 +327,12 @@ if __name__ == "__main__":
     one.add_argument("version")
     one.add_argument("file", nargs="?", type=pathlib.Path)
     one.set_defaults(run=notes)
+
+    one = steps.add_parser("attach", help="list, add or remove a review attachment")
+    one.add_argument("version")
+    one.add_argument("file", nargs="?", help="a file to attach, or an attachment id with --rm")
+    one.add_argument("--rm", action="store_true", help="remove the attachment named instead")
+    one.set_defaults(run=attach)
 
     one = steps.add_parser("upload", help="validate an ipa, then send it")
     one.add_argument("ipa", type=pathlib.Path)

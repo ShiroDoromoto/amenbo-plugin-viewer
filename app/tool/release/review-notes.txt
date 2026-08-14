@@ -6,24 +6,23 @@ It is for people who already run Amenbo on their own machine — mostly develope
 
 WITHOUT A PAIRED COMPUTER, THE APP SHOWS ITS PAIRING GUIDE
 
-There is no account, no login, and no content of ours. The app has nothing to show until the user's own computer hands it a backlog, so a reviewer without Amenbo installed on a computer will see the pairing guide and nothing else. That is the intended state, not a crash and not a broken build. "What is this app" and the privacy policy are both reachable from that guide, before any pairing.
+There is no account, no login and no content of ours. The app has nothing to show until a computer hands it a backlog, so a reviewer without Amenbo installed sees the pairing guide and nothing else. That is the intended state, not a crash. "What is this app" and the privacy policy are both reachable from that guide, before any pairing.
 
-HOW THE BACKLOG REACHES THE PHONE (TWO ROUTES, BOTH OWNED BY THE USER)
+HOW TO SEE IT WORKING
 
-1. iCloud, for a Mac and an iPhone. The desktop writes an encrypted snapshot into this app's own iCloud container (iCloud.work.amenbo.viewer). There is nothing to set up on the phone, and no control for it in the app.
+A pairing code is attached to this submission (pairing-appreview.png). Display it on any screen and point the app's camera at it. It pairs the app with a sample backlog we stood up for this review: invented rows about a website relaunch, on a Worker that holds nothing else. There is nothing to type. The code carries the address, the read token and the key.
 
-2. Cloudflare, for any computer. The user deploys a small Cloudflare Worker into their OWN Cloudflare account. The desktop uploads the encrypted snapshot to it; the phone fetches it over HTTPS. Pairing is done by pointing the phone's camera at a QR code shown on the computer screen. That code carries the Worker URL, a per-device read token, and the encryption key.
+The app does not read codes out of the photo library, deliberately: the key would then sit there and in every backup it reaches. A code on a screen, read by the camera, is the only path — and it is the path a real user takes.
 
-What crosses the network is ciphertext. The key never travels over the network — only optically, in the QR code. That is why the camera is requested, and it is the only reason.
+After scanning, the first sync runs and the app opens on the task list. The three tabs are tasks, decision records and search. The task screen switches between four states (to do, in progress, blocked, done). Tapping a row opens its detail and its comments. Turn the network off and it all still reads: the phone works from its own copy.
 
-SETTING UP AND REACHING THE MAIN FEATURES
+HOW A REAL USER SETS IT UP
 
-1. Install Amenbo on a computer, and install its viewer plugin.
-2. Either sign the Mac and the iPhone into the same iCloud account, or deploy the viewer Worker to your own Cloudflare account.
-3. On the phone, tap "Scan the code", allow the camera, and point it at the QR code the computer displays.
-4. The first sync runs, and the app opens on the task list. The three tabs at the bottom are tasks, decision records, and search. Tapping a row opens its detail and its comments. Everything is read from the phone's own copy, so it works with the network off.
+1. Install Amenbo on a computer, and its viewer plugin.
+2. Either sign a Mac and an iPhone into the same iCloud account — the computer then writes an encrypted snapshot into this app's own iCloud container (iCloud.work.amenbo.viewer), with nothing to set up on the phone — or deploy the viewer Worker into their own Cloudflare account and let the phone fetch over HTTPS.
+3. Scan the code the computer displays.
 
-There are no credentials to supply — the app has no accounts of any kind. If it would help the review to see the app with real content, tell us in App Review and we will stand up a demo Worker and send a pairing QR code you can scan from your screen.
+What crosses the network is ciphertext. The key never travels over the network, only optically in the QR code. That is why the camera is requested, and it is the only reason. There are no credentials to supply anywhere in this app.
 
 DEVICE MODELS AND OPERATING SYSTEMS TESTED
 
@@ -36,9 +35,9 @@ Minimum supported version is iOS 15.0.
 EXTERNAL SERVICES, TOOLS AND PLATFORMS
 
 - Apple iCloud — the app's own container, in the user's own iCloud account.
-- Cloudflare Workers — deployed into and owned by the END USER's Cloudflare account. We operate no instance of it and hold no account on the user's behalf.
+- Cloudflare Workers — deployed into and owned by the END USER's Cloudflare account. For a shipped app we operate no instance and hold no account on the user's behalf. The one exception is the sample Worker behind the attached code, which exists for this review and carries only invented rows.
 
-There is no analytics, no advertising, no crash reporting, no authentication provider, no payment processor, and no AI service. The app makes no network request other than to the user's own Worker, so no data of any kind reaches us.
+There is no analytics, no advertising, no crash reporting, no authentication provider, no payment processor, and no AI service. The app makes no network request other than to the Worker its pairing code names, so no data of any kind reaches us.
 
 REGIONAL DIFFERENCES
 
