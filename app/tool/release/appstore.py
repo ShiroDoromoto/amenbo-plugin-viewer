@@ -11,6 +11,8 @@ loses the place in the review queue, and no amount of care afterwards buys it ba
 
     uv run app/tool/release/appstore.py state
     uv run app/tool/release/appstore.py upload build/ios/ipa/*.ipa
+    uv run app/tool/release/appstore.py notes 1.0
+    uv run app/tool/release/appstore.py notes 1.0 app/tool/release/review-notes.txt
     uv run app/tool/release/appstore.py withdraw
     uv run app/tool/release/appstore.py bind 1.0.0 2
     uv run app/tool/release/appstore.py submit 1.0.0
@@ -38,6 +40,10 @@ KEYS = HOME / ".appstoreconnect/private_keys"
 # The states a submission can be in while it is still the app's turn to act. Anything outside this
 # has either finished or been cancelled, and withdrawing it would be a no-op at best.
 PENDING = {"READY_FOR_REVIEW", "WAITING_FOR_REVIEW", "IN_REVIEW", "UNRESOLVED_ISSUES"}
+
+# What the notes field holds. Checked here because the API refuses the whole PATCH over it, and a
+# rejection at that point costs a round trip to find out which of the two fields was too long.
+NOTES_LIMIT = 4000
 
 
 def ids():
@@ -132,6 +138,39 @@ def state(_args):
         print(f"  submission {sid}  {s}")
 
 
+def review_detail(version):
+    """The panel App Review reads before it opens the app — contact, demo account, notes."""
+    return call("GET", f"/v1/appStoreVersions/{version_named(version)}/appStoreReviewDetail")["data"]
+
+
+def notes(args):
+    """Reads the review notes, or replaces them with a file.
+
+    This is the one answer to a Guideline 2.1 that asks for information rather than a fix: what
+    the app is, what it needs to show anything, and what was tested on. Kept in a file because it
+    is written once and handed over again at every submission.
+    """
+    detail = review_detail(args.version)
+    if args.file is None:
+        print(detail["attributes"]["notes"] or "(empty)")
+        return
+    text = args.file.read_text()
+    if len(text) > NOTES_LIMIT:
+        sys.exit(f"{len(text)} characters — App Store Connect takes {NOTES_LIMIT}")
+    call(
+        "PATCH",
+        f"/v1/appStoreReviewDetails/{detail['id']}",
+        {
+            "data": {
+                "type": "appStoreReviewDetails",
+                "id": detail["id"],
+                "attributes": {"notes": text},
+            }
+        },
+    )
+    print(f"version {args.version} now carries {len(text)} characters of notes")
+
+
 def upload(args):
     """Hands the archive to Apple, after asking Apple whether it would take it.
 
@@ -220,6 +259,11 @@ if __name__ == "__main__":
     steps = parser.add_subparsers(required=True)
 
     steps.add_parser("state", help="what the store is holding").set_defaults(run=state)
+
+    one = steps.add_parser("notes", help="read the review notes, or replace them with a file")
+    one.add_argument("version")
+    one.add_argument("file", nargs="?", type=pathlib.Path)
+    one.set_defaults(run=notes)
 
     one = steps.add_parser("upload", help="validate an ipa, then send it")
     one.add_argument("ipa", type=pathlib.Path)

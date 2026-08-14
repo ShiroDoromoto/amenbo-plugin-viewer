@@ -1,0 +1,49 @@
+WHAT THE APP IS, AND WHO IT IS FOR
+
+Amenbo Viewer is the phone half of Amenbo, a local-first task manager that runs on the user's own computer (macOS, Windows or Linux). Amenbo keeps a backlog there — tasks, decision records, and the comments on both. This app reads that backlog on the phone. It never writes to it.
+
+It is for people who already run Amenbo on their own machine — mostly developers who track work alongside AI coding agents — and want to read that backlog away from the desk. The problem it solves: the backlog lives on one computer and is reachable nowhere else.
+
+WITHOUT A PAIRED COMPUTER, THE APP SHOWS ITS PAIRING GUIDE
+
+There is no account, no login, and no content of ours. The app has nothing to show until the user's own computer hands it a backlog, so a reviewer without Amenbo installed on a computer will see the pairing guide and nothing else. That is the intended state, not a crash and not a broken build. "What is this app" and the privacy policy are both reachable from that guide, before any pairing.
+
+HOW THE BACKLOG REACHES THE PHONE (TWO ROUTES, BOTH OWNED BY THE USER)
+
+1. iCloud, for a Mac and an iPhone. The desktop writes an encrypted snapshot into this app's own iCloud container (iCloud.work.amenbo.viewer). There is nothing to set up on the phone, and no control for it in the app.
+
+2. Cloudflare, for any computer. The user deploys a small Cloudflare Worker into their OWN Cloudflare account. The desktop uploads the encrypted snapshot to it; the phone fetches it over HTTPS. Pairing is done by pointing the phone's camera at a QR code shown on the computer screen. That code carries the Worker URL, a per-device read token, and the encryption key.
+
+What crosses the network is ciphertext. The key never travels over the network — only optically, in the QR code. That is why the camera is requested, and it is the only reason.
+
+SETTING UP AND REACHING THE MAIN FEATURES
+
+1. Install Amenbo on a computer, and install its viewer plugin.
+2. Either sign the Mac and the iPhone into the same iCloud account, or deploy the viewer Worker to your own Cloudflare account.
+3. On the phone, tap "Scan the code", allow the camera, and point it at the QR code the computer displays.
+4. The first sync runs, and the app opens on the task list. The three tabs at the bottom are tasks, decision records, and search. Tapping a row opens its detail and its comments. Everything is read from the phone's own copy, so it works with the network off.
+
+There are no credentials to supply — the app has no accounts of any kind. If it would help the review to see the app with real content, tell us in App Review and we will stand up a demo Worker and send a pairing QR code you can scan from your screen.
+
+DEVICE MODELS AND OPERATING SYSTEMS TESTED
+
+- iPhone 12 mini (iPhone13,1), iOS 26.6 — physical device, full pairing and sync flow
+- iPhone 17 Pro Max simulator, iOS 26.5
+- iPad Pro 13-inch (M5) simulator, iOS 26.5
+
+Minimum supported version is iOS 15.0.
+
+EXTERNAL SERVICES, TOOLS AND PLATFORMS
+
+- Apple iCloud — the app's own container, in the user's own iCloud account.
+- Cloudflare Workers — deployed into and owned by the END USER's Cloudflare account. We operate no instance of it and hold no account on the user's behalf.
+
+There is no analytics, no advertising, no crash reporting, no authentication provider, no payment processor, and no AI service. The app makes no network request other than to the user's own Worker, so no data of any kind reaches us.
+
+REGIONAL DIFFERENCES
+
+None. The app behaves identically in every region. It is localized into 19 languages, but no feature and no content differs by region. What is shown is whatever the user's own computer wrote.
+
+REGULATED INDUSTRY OR PROTECTED THIRD-PARTY MATERIAL
+
+Neither. The app is not in a regulated industry and carries no third-party protected material. It is the client of our own open-source project, published under the Apache License 2.0.
