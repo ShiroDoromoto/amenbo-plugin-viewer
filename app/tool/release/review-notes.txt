@@ -1,28 +1,28 @@
 WHAT THE APP IS, AND WHO IT IS FOR
 
-Amenbo Viewer is the phone half of Amenbo, a local-first task manager that runs on the user's own computer (macOS, Windows or Linux). Amenbo keeps a backlog there — tasks, decision records, and the comments on both. This app reads that backlog on the phone. It never writes to it.
+Amenbo Viewer is the phone half of Amenbo, a local-first task manager that runs on the user's own computer (macOS, Windows or Linux). Amenbo keeps a backlog there — tasks, decision records and the comments on both. This app reads it on the phone, and never writes to it.
 
-It is for people who already run Amenbo on their own machine — mostly developers who track work alongside AI coding agents — and want to read that backlog away from the desk. The problem it solves: the backlog lives on one computer and is reachable nowhere else.
+It is for people who already run Amenbo on their own machine — mostly developers who track work alongside AI coding agents — and want to read that backlog away from the desk. It otherwise lives on one computer and is reachable nowhere else.
 
 WITHOUT A PAIRED COMPUTER, THE APP SHOWS ITS PAIRING GUIDE
 
-There is no account, no login and no content of ours. The app has nothing to show until a computer hands it a backlog, so a reviewer without Amenbo installed sees the pairing guide and nothing else. That is the intended state, not a crash. "What is this app" and the privacy policy are both reachable from that guide, before any pairing.
+There is no account, no login, no content of ours. The app has nothing to show until a computer hands it a backlog, so a reviewer without Amenbo installed sees the pairing guide and nothing else. That is the intended state, not a crash. "What is this app" and the privacy policy are both reachable from that guide, before any pairing.
 
 HOW TO SEE IT WORKING
 
-A pairing code is attached to this submission (pairing-appreview.png). Display it on any screen and point the app's camera at it. It pairs the app with a sample backlog we stood up for this review: invented rows about a website relaunch, on a Worker that holds nothing else. There is nothing to type. The code carries the address, the read token and the key.
+Attached is a screen recording of the whole flow on an iPhone 12 mini, from launch through pairing to reading offline. A pairing code (pairing-appreview.png) comes with our message in App Review, so you can walk the same path yourself: display it on any screen and point the app's camera at it. It pairs the app with a sample backlog we stood up for this review — invented rows about a website relaunch, on a Worker that holds nothing else. Nothing to type: the code carries the address, the read token and the key.
 
-The app does not read codes out of the photo library, deliberately: the key would then sit there and in every backup it reaches. A code on a screen, read by the camera, is the only path — and it is the path a real user takes.
+The app does not read codes out of the photo library, deliberately: the key would then sit there and in every backup it reaches. A code on a screen read by the camera is the only path, and it is the path a real user takes.
 
-After scanning, the first sync runs and the app opens on the task list. The three tabs are tasks, decision records and search. The task screen switches between four states (to do, in progress, blocked, done). Tapping a row opens its detail and its comments. Turn the network off and it all still reads: the phone works from its own copy.
+After scanning, the first sync runs and the app opens on the task list. The three tabs are tasks, decision records and search. The task screen switches between four states (to do, in progress, blocked, done). Tapping a row opens its detail and comments. Turn the network off and it all still reads: the phone works from its own copy.
 
 HOW A REAL USER SETS IT UP
 
 1. Install Amenbo on a computer, and its viewer plugin.
-2. Either sign a Mac and an iPhone into the same iCloud account — the computer then writes an encrypted snapshot into this app's own iCloud container (iCloud.work.amenbo.viewer), with nothing to set up on the phone — or deploy the viewer Worker into their own Cloudflare account and let the phone fetch over HTTPS.
+2. Either sign a Mac and an iPhone into the same iCloud account — the computer then writes an encrypted snapshot into this app's own iCloud container (iCloud.work.amenbo.viewer), nothing to set up on the phone — or deploy the viewer Worker into their own Cloudflare account.
 3. Scan the code the computer displays.
 
-What crosses the network is ciphertext. The key never travels over the network, only optically in the QR code. That is why the camera is requested, and it is the only reason. There are no credentials to supply anywhere in this app.
+What crosses the network is ciphertext. The key never travels over it, only optically in the QR code — that is why the camera is requested, and it is the only reason. There are no credentials to supply anywhere in this app.
 
 DEVICE MODELS AND OPERATING SYSTEMS TESTED
 
@@ -35,14 +35,14 @@ Minimum supported version is iOS 15.0.
 EXTERNAL SERVICES, TOOLS AND PLATFORMS
 
 - Apple iCloud — the app's own container, in the user's own iCloud account.
-- Cloudflare Workers — deployed into and owned by the END USER's Cloudflare account. For a shipped app we operate no instance and hold no account on the user's behalf. The one exception is the sample Worker behind the attached code, which exists for this review and carries only invented rows.
+- Cloudflare Workers — deployed into and owned by the END USER's Cloudflare account. For a shipped app we operate no instance and hold no account on the user's behalf. The one exception is the sample Worker behind the code we sent, which exists for this review and holds only invented rows.
 
-There is no analytics, no advertising, no crash reporting, no authentication provider, no payment processor, and no AI service. The app makes no network request other than to the Worker its pairing code names, so no data of any kind reaches us.
+There is no analytics, advertising, crash reporting, authentication provider, payment processor or AI service. The app makes no network request other than to the Worker its pairing code names, so no data of any kind reaches us.
 
 REGIONAL DIFFERENCES
 
-None. The app behaves identically in every region. It is localized into 19 languages, but no feature and no content differs by region. What is shown is whatever the user's own computer wrote.
+None. The app behaves identically in every region. It is localized into 19 languages, but no feature or content differs by region. What is shown is whatever the user's computer wrote.
 
 REGULATED INDUSTRY OR PROTECTED THIRD-PARTY MATERIAL
 
-Neither. The app is not in a regulated industry and carries no third-party protected material. It is the client of our own open-source project, published under the Apache License 2.0.
+Neither. Not a regulated industry, and no third-party protected material. The app is the client of our own open-source project, published under the Apache License 2.0.
