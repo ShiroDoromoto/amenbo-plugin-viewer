@@ -186,6 +186,10 @@ make test      # gofmt / go vet / go test と、manifest の検証
 make dist      # リリース資産一式と、カタログに貼る digest
 ```
 
+CI（[`.github/workflows/plugin.yml`](../.github/workflows/plugin.yml)）が回すのも `make build` と
+`make test` の2行だけ。**段を向こう側だけに足さない**——足した瞬間、手元が全部緑でも push すると
+赤くなる形ができる。manifest の検証は Amenbo が PATH に在るときだけ走るので、CI では飛ぶ。
+
 ## 手元で1周回す
 
 Amenbo に起動してもらわずに、観測面へイベントを1つ流す。

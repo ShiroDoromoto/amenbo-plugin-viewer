@@ -1,0 +1,39 @@
+# Worker だけで回る CI。
+#
+# **手元のゲートと同じものを回す。** 段を CI 側だけに足すと「手元が全部緑でも push した瞬間に
+# 赤くなる」が生まれる。回すのは `make -C worker build` と `make -C worker test` の2行だけで、
+# 中身の持ち主は worker/Makefile。
+#
+# **どこにもデプロイしない。** `build` の中の `wrangler deploy --dry-run` は組めるかを見るだけで、
+# Worker が立つ先は利用者自身の Cloudflare だから、ここに資格情報は要らないし置かない。
+name: worker
+
+on:
+  push:
+    branches: [main]
+    paths: ["worker/**", ".tool-versions", ".github/workflows/worker.yml"]
+  pull_request:
+    paths: ["worker/**", ".tool-versions", ".github/workflows/worker.yml"]
+  workflow_dispatch:
+
+# PR で走っている古い実行だけ畳む。main では畳まない——複数のセッションが並行して入れるので、
+# 畳むと判定が付くのは最後の1つだけになり、自分の変更が緑かどうかを他人の実行から探すことになる。
+concurrency:
+  group: worker-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # 版は .tool-versions が唯一の持ち主。手元は mise がそこから入れるので、CI が同じ
+      # ファイルを読むかぎり2つは離れない。
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .tool-versions
+          cache: npm
+          cache-dependency-path: worker/package-lock.json
+      - run: make -C worker install
+      - run: make -C worker build
+      - run: make -C worker test
