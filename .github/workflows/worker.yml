@@ -29,9 +29,19 @@ jobs:
       - uses: actions/checkout@v7
       # 版は .tool-versions が唯一の持ち主。手元は mise がそこから入れるので、CI が同じ
       # ファイルを読むかぎり2つは離れない。
+      #
+      # setup-node の `node-version-file` には渡せない——あれは `nodejs <版>` の行しか読まず、
+      # しかも先に当たったコメント行を版と読んでしまう。だから行そのものをここで引く。
+      # 引けなければ落とす：無言で既定の版に落ちると、手元と CI が黙って離れる。
+      - name: Read the Node version .tool-versions declares
+        id: node
+        run: |
+          version=$(awk '$1 == "node" { print $2 }' .tool-versions)
+          test -n "$version" || { echo ".tool-versions declares no node version"; exit 1; }
+          echo "version=$version" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-node@v6
         with:
-          node-version-file: .tool-versions
+          node-version: ${{ steps.node.outputs.version }}
           cache: npm
           cache-dependency-path: worker/package-lock.json
       - run: make -C worker install
