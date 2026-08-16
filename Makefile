@@ -28,12 +28,18 @@ help:
 	@echo 'make worker   Worker（Cloudflare）をビルドする'
 	@echo 'make app      アプリ（Flutter）をビルドする'
 	@echo 'make build    3部品すべてをビルドする'
-	@echo 'make test     3部品すべてのテストを走らせる'
+	@echo 'make test     ガード ＋ 3部品すべてのテストを走らせる'
+	@echo 'make guards   ツリーの形を見るガードだけを走らせる'
 	@echo 'make clean    3部品すべての生成物を消す'
 
 build: $(addprefix build-,$(PARTS))
-test: $(addprefix test-,$(PARTS))
+test: guards $(addprefix test-,$(PARTS))
 clean: $(addprefix clean-,$(PARTS))
+
+# 部品に属さない検査。見ているのはツリーの形——どの部品の Makefile にも置けないので、束ねる側が持つ。
+# CI の guards ジョブもこれを回す。数秒で終わるので、部品ごとの反復とは別に締めで通ればよい。
+guards:
+	@set -e; for g in guards/*.sh; do "$$g"; done
 
 $(addprefix build-,$(PARTS)): build-%:
 	$(call delegate,$*,build)
@@ -48,7 +54,7 @@ $(addprefix clean-,$(PARTS)): clean-%:
 # .PHONY に入れておかないと「もう在る」と見なされて何も走らない。
 $(PARTS): %: build-%
 
-.PHONY: help build test clean $(PARTS) \
+.PHONY: help build test clean guards $(PARTS) \
 	$(addprefix build-,$(PARTS)) \
 	$(addprefix test-,$(PARTS)) \
 	$(addprefix clean-,$(PARTS))

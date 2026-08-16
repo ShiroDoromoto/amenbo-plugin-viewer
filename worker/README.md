@@ -120,9 +120,9 @@ npm run dev        # ローカル。.dev.vars.example を .dev.vars に写す
 
 `npm run deploy` は手で触るとき用。ルートの `Makefile` からは届かない位置に置いてある。
 
-CI（[`.github/workflows/worker.yml`](../.github/workflows/worker.yml)）が回すのは `make build` と
-`make test` の2行だけ。**段を向こう側だけに足さない**——足した瞬間、手元が全部緑でも push すると
-赤くなる形ができる。`deploy --dry-run` は組めるかを見るだけなので、資格情報は要らないし置いていない。
+CI（[`.github/workflows/ci.yml`](../.github/workflows/ci.yml)）の `worker` ジョブが回すのは
+`make build` と `make test` の2行だけ。**段を向こう側だけに足さない**——足した瞬間、手元が全部緑でも
+push すると赤くなる形ができる。`deploy --dry-run` は組めるかを見るだけなので、資格情報は要らないし置いていない。
 
 ## プラグインが焼き込んで運ぶ
 

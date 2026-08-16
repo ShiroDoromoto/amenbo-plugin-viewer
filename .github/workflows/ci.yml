@@ -1,0 +1,215 @@
+# マージ前のゲート。
+#
+# **task ブランチは PR で載る。** `push` は `main` に絞ってあり、広げない——push のとき path フィルタが
+# 見るのは「その push の差分」だけなので、何度かに分けて押したブランチは各回を単独で判定してしまう。
+# `pull_request` なら merge base との差分＝ブランチの差分全体を見る。
+#
+# **絞るのはトリガではなくジョブ。** トリガに `paths` を置くと、当たらない変更ではワークフローごと走らず、
+# 必須チェックが報告されないまま PR が永久に待つ。層の判定は `changes` ジョブがやり、各ジョブは自分の層で
+# 立つ・立たなければ skip される。
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# 畳んでよいのは PR だけ。PR の run はブランチの差分全体を見るので、新しい run は古い run を包含している。
+#
+# main はそうならない——push の run が見るのはその push の差分だけなので、畳むと「畳まれた側の変更を
+# 誰も検証しないまま main が緑を名乗る」。だから main は SHA でグループを分け、どの run も畳まれない。
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  # どの層が動いたか。ここだけが差分を読み、以降のジョブはこの答えしか見ない。
+  changes:
+    name: detect changed paths
+    runs-on: ubuntu-latest
+    # PR では dorny/paths-filter が GitHub API で変更ファイルを引くので pull-requests:read が要る。
+    # 既定のトークンには無く、無いと PR のたびにここが落ちて、下のジョブは全部 skip になる。
+    # push は git で差分を取るので追加の権限は要らない。
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      app: ${{ steps.filter.outputs.app }}
+      plugin: ${{ steps.filter.outputs.plugin }}
+      worker: ${{ steps.filter.outputs.worker }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dorny/paths-filter@v4
+        id: filter
+        with:
+          # 層の定義は .github/paths-filters.yml が持ち主。ジョブの並びと別々に書くと離れる。
+          filters: .github/paths-filters.yml
+
+  # ツールチェーンの版は .tool-versions が唯一の持ち主。手元は mise がそこから入れるので、CI が同じ
+  # ファイルを読むかぎり2つは離れない。**ここに数字を書かない**——片方だけ上げたとき、落ちた理由が
+  # 自分の変更なのか版の更新なのか読めなくなる。
+  #
+  # setup-node / flutter-action のファイル読み取り機能には渡せない。setup-node の
+  # `node-version-file` は `nodejs <版>` の行しか読まず、先に当たったコメント行を版と読んでしまう。
+  # 引けなければ落とす：無言で既定の版に落ちると、手元と CI が黙って離れる。
+  versions:
+    name: read the declared tool versions
+    runs-on: ubuntu-latest
+    outputs:
+      node: ${{ steps.read.outputs.node }}
+      flutter: ${{ steps.read.outputs.flutter }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: read
+        run: |
+          for tool in node flutter; do
+            version=$(awk -v t="$tool" '$1 == t { print $2 }' .tool-versions)
+            test -n "$version" || { echo ".tool-versions declares no $tool version"; exit 1; }
+            echo "$tool=$version" >> "$GITHUB_OUTPUT"
+          done
+
+  # 静的解析とテスト。プラットフォームの SDK が要らないので、いちばん安い runner で回る。
+  app-check:
+    name: app — analyze and test
+    runs-on: ubuntu-latest
+    needs: [changes, versions]
+    if: ${{ needs.changes.outputs.app == 'true' }}
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v7
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ needs.versions.outputs.flutter }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: dart format --output=none --set-exit-if-changed .
+      - run: flutter analyze
+      - run: flutter test
+
+  # 2つの OS 向けに実際に組めること。ここが通らないビルドは、テストが全部緑でも出せない。
+  app-android:
+    name: app — build the APK
+    runs-on: ubuntu-latest
+    needs: [changes, versions]
+    if: ${{ needs.changes.outputs.app == 'true' }}
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ needs.versions.outputs.flutter }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter build apk --debug
+
+  app-ios:
+    name: app — build for iOS
+    runs-on: macos-latest
+    needs: [changes, versions]
+    if: ${{ needs.changes.outputs.app == 'true' }}
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v7
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ needs.versions.outputs.flutter }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      # 署名しない。証明書はリリースの持ち物で、組めるかどうかとは別の話。
+      - run: flutter build ios --no-codesign
+
+  # プラグインと Worker が回すのは**手元のゲートと同じ2行だけ**。段を CI 側にだけ足すと、
+  # 手元が全部緑でも push した瞬間に赤くなる形ができる。
+  plugin:
+    name: plugin — build and test
+    runs-on: ubuntu-latest
+    needs: changes
+    if: ${{ needs.changes.outputs.plugin == 'true' }}
+    steps:
+      - uses: actions/checkout@v7
+      # 版は plugin/go.mod が唯一の持ち主。
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: plugin/go.mod
+      - run: make -C plugin build
+      # マニフェスト検査は amenbo が PATH に在るときだけ走る（plugin/Makefile が自分で分岐する）。
+      # CI に amenbo は入れない——このリポの持ち物ではないし、配布の入口で同じ規則がもう一度見る。
+      - run: make -C plugin test
+
+  worker:
+    name: worker — build and test
+    runs-on: ubuntu-latest
+    needs: [changes, versions]
+    if: ${{ needs.changes.outputs.worker == 'true' }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ needs.versions.outputs.node }}
+          cache: npm
+          cache-dependency-path: worker/package-lock.json
+      - run: make -C worker install
+      # build の中の `wrangler deploy --dry-run` は組めるかを見るだけ。Worker が立つ先は利用者自身の
+      # Cloudflare だから、ここに資格情報は要らないし置いていない。
+      - run: make -C worker build
+      - run: make -C worker test
+
+  # 層で絞らない。見ているのはツリーの形で、どのファイルの変更でも崩れうるうえ、数秒で終わる。
+  guards:
+    name: guards
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: make guards
+
+  # main が要求する唯一のチェック。**ジョブを足したら needs にも足す**——書かれていないジョブを
+  # これは待たないので、その判定が無いまま緑になり、赤くなるものが何も無い。
+  # guards/check-ci-aggregate.sh が2つの並びを突き合わせる（上の guards ジョブが回す）。
+  #
+  # `always()` で回すのは、依存が落ちたときに skip ではなく fail させるため。skip された必須チェックは
+  # 赤ではないので、マージは来ない判定を待ち続けるか、与えられていない判定で入る。
+  # `skipped` は通す——層で絞ったジョブが skip されるのは、動いていない層に対する普通の答え。
+  # `cancelled` は落とす——そのジョブは何も判定していない。
+  all-green:
+    name: all green
+    runs-on: ubuntu-latest
+    if: ${{ always() }}
+    needs:
+      - changes
+      - versions
+      - app-check
+      - app-android
+      - app-ios
+      - plugin
+      - worker
+      - guards
+    steps:
+      - name: Fold every job's result
+        env:
+          # ジョブごとに書き下さず、`needs` を丸ごとデータとして読む。needs の並びが増えても、
+          # 畳む側が置いていかれない。
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          echo "$RESULTS" | jq -r 'to_entries[] | "  \(.value.result)\t\(.key)"'
+          failed=$(echo "$RESULTS" | jq -r '
+            to_entries[]
+            | select(.value.result != "success" and .value.result != "skipped")
+            | .key')
+          if [ -n "$failed" ]; then
+            echo "::error::did not pass: $(echo "$failed" | tr '\n' ' ')"
+            exit 1
+          fi
+          echo "every job in this workflow passed or was skipped"

@@ -1,0 +1,28 @@
+# 変更が動かしうる層を、パスの並びで宣言する。
+#
+# `ci.yml` の `changes` ジョブがこのファイルを `dorny/paths-filter` へ渡し、各ジョブは自分の層が
+# 立ったときだけ走る。**トリガ側の `paths` ではなくここで絞る**——トリガで絞ると、当たらない変更では
+# ワークフローごと走らず、必須チェックが「報告されない」まま PR が永久に待つ。
+#
+# 1つの層に並ぶのは、その層の判定を変えうるものすべて——中身と、それが解決に使う宣言と、
+# ゲートそのものの定義。ゲートだけを直しても、判定される側は開き直さないといけない。
+
+app:
+  - "app/**"
+  # Flutter の版はここが持ち主（ci.yml が読む）
+  - ".tool-versions"
+  - ".github/workflows/ci.yml"
+  - ".github/paths-filters.yml"
+
+plugin:
+  # plugin/worker.js と plugin/schema.sql は worker/ から焼いたもの。焼き直しはこの層にも当たる
+  - "plugin/**"
+  - ".github/workflows/ci.yml"
+  - ".github/paths-filters.yml"
+
+worker:
+  - "worker/**"
+  # Node の版はここが持ち主（ci.yml が読む）
+  - ".tool-versions"
+  - ".github/workflows/ci.yml"
+  - ".github/paths-filters.yml"
