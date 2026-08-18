@@ -177,7 +177,7 @@
   "pairTitle": "Ghép nối máy này",
   "pairHeading": "Đọc mã đang hiện trên máy tính",
   "pairWhy": "Mã nằm trên màn hình máy tính, nên nó vào đây qua camera. Mã được đọc ngay trên máy này và không gửi đi đâu cả.",
-  "pairTurnOnCamera": "Bật camera",
+  "pairContinue": "Tiếp tục",
   "pairInFrame": "Giữ mã trong khung.",
   "pairCameraRefused": "Camera đang tắt cho ứng dụng này.",
   "pairRefusedDetail": "Ghép nối chỉ cần đọc một mã trên màn hình máy tính. Hãy bật camera trong cài đặt rồi quay lại đây.",

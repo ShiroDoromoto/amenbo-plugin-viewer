@@ -177,7 +177,7 @@
   "pairTitle": "配對這台手機",
   "pairHeading": "讀取電腦上顯示的配對碼",
   "pairWhy": "配對碼在電腦螢幕上，所以要用相機讀進來。它只在這台手機上讀取，不會傳到任何地方。",
-  "pairTurnOnCamera": "開啟相機",
+  "pairContinue": "繼續",
   "pairInFrame": "把配對碼放進方框裡。",
   "pairCameraRefused": "這個 App 的相機權限是關著的。",
   "pairRefusedDetail": "配對只需要從電腦螢幕上讀一個碼。請在設定裡開啟相機，然後回到這裡。",

@@ -177,7 +177,7 @@
   "pairTitle": "Pasangkan ponsel ini",
   "pairHeading": "Baca kode yang ada di PC-mu",
   "pairWhy": "Kodenya ada di layar PC, jadi jalan masuknya lewat kamera. Kode itu dibaca di ponsel ini dan tidak dikirim ke mana pun.",
-  "pairTurnOnCamera": "Nyalakan kamera",
+  "pairContinue": "Lanjutkan",
   "pairInFrame": "Tahan kodenya di dalam bingkai.",
   "pairCameraRefused": "Kamera untuk aplikasi ini sedang mati.",
   "pairRefusedDetail": "Pemasangan hanya perlu membaca satu kode dari layar PC-mu. Nyalakan kamera di pengaturan, lalu kembali ke sini.",

@@ -243,13 +243,13 @@ void main() {
               locale: locale,
               text: text,
             );
-            final turnOn = find.text(lookupWords(locale).pairTurnOnCamera);
+            final onward = find.text(lookupWords(locale).pairContinue);
             await tester.dragUntilVisible(
-              turnOn,
+              onward,
               find.byType(ListView),
               const Offset(0, -100),
             );
-            await tester.tap(turnOn);
+            await tester.tap(onward);
             await tester.pumpAndSettle();
           });
 

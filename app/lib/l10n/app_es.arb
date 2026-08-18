@@ -177,7 +177,7 @@
   "pairTitle": "Emparejar este teléfono",
   "pairHeading": "Lee el código que hay en tu PC",
   "pairWhy": "El código está en la pantalla del PC, así que llega aquí por la cámara. Se lee en este teléfono y no se envía a ningún sitio.",
-  "pairTurnOnCamera": "Activar la cámara",
+  "pairContinue": "Continuar",
   "pairInFrame": "Mantén el código dentro del marco.",
   "pairCameraRefused": "La cámara está desactivada para esta app.",
   "pairRefusedDetail": "Emparejar solo necesita leer un código de la pantalla de tu PC. Activa la cámara en los ajustes y vuelve aquí.",

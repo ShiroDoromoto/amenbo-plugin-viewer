@@ -177,7 +177,7 @@
   "pairTitle": "Bu telefonu eşle",
   "pairHeading": "Bilgisayarındaki kodu oku",
   "pairWhy": "Kod bilgisayarın ekranında, buraya kamerayla geliyor. Bu telefonda okunur ve hiçbir yere gönderilmez.",
-  "pairTurnOnCamera": "Kamerayı aç",
+  "pairContinue": "Devam et",
   "pairInFrame": "Kodu çerçevenin içinde tut.",
   "pairCameraRefused": "Bu uygulama için kamera kapalı.",
   "pairRefusedDetail": "Eşleme yalnızca bilgisayar ekranındaki bir kodu okumak için gerekli. Ayarlardan kamerayı aç ve buraya dön.",

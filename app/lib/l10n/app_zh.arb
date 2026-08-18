@@ -177,7 +177,7 @@
   "pairTitle": "配对这台手机",
   "pairHeading": "读取电脑上显示的配对码",
   "pairWhy": "配对码在电脑屏幕上，所以要用相机读进来。它只在这台手机上读取，不会发到任何地方。",
-  "pairTurnOnCamera": "打开相机",
+  "pairContinue": "继续",
   "pairInFrame": "把配对码放进方框里。",
   "pairCameraRefused": "这个应用的相机权限是关着的。",
   "pairRefusedDetail": "配对只需要从电脑屏幕上读一个码。请在设置里打开相机，然后回到这里。",
