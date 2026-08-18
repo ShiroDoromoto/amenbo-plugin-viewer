@@ -177,7 +177,7 @@
   "pairTitle": "Deze telefoon koppelen",
   "pairHeading": "Lees de code op je pc",
   "pairWhy": "De code staat op het scherm van de pc, dus hij komt hier via de camera binnen. Hij wordt op deze telefoon gelezen en nergens heen gestuurd.",
-  "pairTurnOnCamera": "Camera aanzetten",
+  "pairContinue": "Doorgaan",
   "pairInFrame": "Houd de code binnen het kader.",
   "pairCameraRefused": "De camera staat uit voor deze app.",
   "pairRefusedDetail": "Koppelen hoeft alleen één code van je pc-scherm te lezen. Zet de camera aan in de instellingen en kom hier terug.",

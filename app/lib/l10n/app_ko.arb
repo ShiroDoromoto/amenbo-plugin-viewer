@@ -177,7 +177,7 @@
   "pairTitle": "이 휴대폰 페어링",
   "pairHeading": "PC에 뜬 코드를 읽습니다",
   "pairWhy": "코드는 PC 화면에 있으므로 카메라로 읽습니다. 이 휴대폰 안에서만 읽고, 어디로도 보내지 않습니다.",
-  "pairTurnOnCamera": "카메라 켜기",
+  "pairContinue": "계속",
   "pairInFrame": "코드를 사각형 안에 넣어 주세요.",
   "pairCameraRefused": "이 앱의 카메라가 꺼져 있습니다.",
   "pairRefusedDetail": "페어링은 PC 화면의 코드 하나만 읽으면 됩니다. 설정에서 카메라를 켜고 여기로 돌아오세요.",

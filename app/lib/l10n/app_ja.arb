@@ -177,7 +177,7 @@
   "pairTitle": "この端末をペアリングする",
   "pairHeading": "PC に出ているコードを読みます",
   "pairWhy": "コードは PC の画面にあるので、カメラで読みます。読むのはこの端末の中だけで、どこにも送りません。",
-  "pairTurnOnCamera": "カメラを有効にする",
+  "pairContinue": "続ける",
   "pairInFrame": "コードを枠の中に入れてください。",
   "pairCameraRefused": "このアプリのカメラが無効になっています。",
   "pairRefusedDetail": "ペアリングでは、PC の画面のコードを1つ読むだけです。設定でカメラを有効にして、ここへ戻ってください。",

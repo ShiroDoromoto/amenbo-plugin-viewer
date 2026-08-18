@@ -177,7 +177,7 @@
   "pairTitle": "Parear este telefone",
   "pairHeading": "Leia o código que está no seu PC",
   "pairWhy": "O código está na tela do PC, então ele chega aqui pela câmera. Ele é lido neste telefone e não é enviado a lugar nenhum.",
-  "pairTurnOnCamera": "Ligar a câmera",
+  "pairContinue": "Continuar",
   "pairInFrame": "Mantenha o código dentro do quadro.",
   "pairCameraRefused": "A câmera está desligada para este app.",
   "pairRefusedDetail": "Parear só precisa ler um código da tela do seu PC. Ligue a câmera nos ajustes e volte aqui.",

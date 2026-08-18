@@ -177,7 +177,7 @@
   "pairTitle": "Dieses Telefon koppeln",
   "pairHeading": "Lies den Code auf deinem PC",
   "pairWhy": "Der Code steht auf dem PC-Bildschirm, also kommt er über die Kamera hierher. Er wird auf diesem Telefon gelesen und nirgendwohin geschickt.",
-  "pairTurnOnCamera": "Kamera einschalten",
+  "pairContinue": "Weiter",
   "pairInFrame": "Halte den Code in den Rahmen.",
   "pairCameraRefused": "Die Kamera ist für diese App ausgeschaltet.",
   "pairRefusedDetail": "Zum Koppeln muss ein Code vom PC-Bildschirm gelesen werden. Schalte die Kamera in den Einstellungen ein und komm hierher zurück.",

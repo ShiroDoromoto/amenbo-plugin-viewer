@@ -6,7 +6,9 @@
 /// * **the reason comes before the request.** An OS permission sheet that arrives unannounced is
 ///   answered on instinct, and "no" to the camera on a phone whose only job is to read one code
 ///   is a dead end reached in a single tap. So the screen says why first, and the sheet appears
-///   when the person asks for it.
+///   when the person asks for it. **The button that moves on says only that.** Saying what it
+///   turns on reads as urging the permission, which App Review refuses under 5.1.1(iv) — the
+///   reason may be given, the answer may not be pushed.
 /// * **a code that reads is acted on.** No confirm button: scanning is reversible — a wrong code
 ///   is scanned again — so a button between reading and pairing only asks people to approve a
 ///   string of base64 they cannot check.
@@ -258,7 +260,7 @@ class _Explaining extends StatelessWidget {
         const SizedBox(height: Space.s4),
         Text(words.pairWhy, style: theme.textTheme.bodyLarge),
         const SizedBox(height: Space.s7),
-        FilledButton(onPressed: onAsk, child: Text(words.pairTurnOnCamera)),
+        FilledButton(onPressed: onAsk, child: Text(words.pairContinue)),
       ],
     );
   }

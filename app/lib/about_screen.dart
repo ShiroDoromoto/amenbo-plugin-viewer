@@ -31,7 +31,7 @@ const appVersion = '1.0.0';
 /// A copy handed out for testing keeps the same version for build after build, so the version
 /// alone cannot tell somebody which one they are holding — and a tester who cannot say that is a
 /// tester whose report cannot be placed. Held to the pubspec by the same test as [appVersion].
-const appBuild = '2';
+const appBuild = '3';
 
 /// The two together, the way both stores write them.
 const appVersionShown = '$appVersion ($appBuild)';

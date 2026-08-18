@@ -177,7 +177,7 @@
   "pairTitle": "Sparuj ten telefon",
   "pairHeading": "Odczytaj kod z ekranu komputera",
   "pairWhy": "Kod jest na ekranie komputera, więc trafia tutaj przez aparat. Jest czytany na tym telefonie i nigdzie nie jest wysyłany.",
-  "pairTurnOnCamera": "Włącz aparat",
+  "pairContinue": "Dalej",
   "pairInFrame": "Trzymaj kod wewnątrz ramki.",
   "pairCameraRefused": "Aparat jest wyłączony dla tej aplikacji.",
   "pairRefusedDetail": "Parowanie musi tylko odczytać jeden kod z ekranu komputera. Włącz aparat w ustawieniach i wróć tutaj.",

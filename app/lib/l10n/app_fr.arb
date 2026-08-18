@@ -177,7 +177,7 @@
   "pairTitle": "Appairer ce téléphone",
   "pairHeading": "Lisez le code affiché sur votre PC",
   "pairWhy": "Le code est sur l'écran du PC, donc il arrive ici par l'appareil photo. Il est lu sur ce téléphone et n'est envoyé nulle part.",
-  "pairTurnOnCamera": "Activer l'appareil photo",
+  "pairContinue": "Continuer",
   "pairInFrame": "Placez le code dans le cadre.",
   "pairCameraRefused": "L'appareil photo est désactivé pour cette app.",
   "pairRefusedDetail": "L'appairage n'a besoin que de lire un code sur l'écran de votre PC. Activez l'appareil photo dans les réglages, puis revenez ici.",

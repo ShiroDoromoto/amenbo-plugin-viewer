@@ -73,8 +73,8 @@ Future<Pairing? Function()> open(WidgetTester tester, FakeCamera camera) async {
   return () => paired;
 }
 
-Future<void> turnOnTheCamera(WidgetTester tester) async {
-  await tester.tap(find.text('Turn on the camera'));
+Future<void> goOnToTheCamera(WidgetTester tester) async {
+  await tester.tap(find.text('Continue'));
   await tester.pumpAndSettle();
 }
 
@@ -91,7 +91,7 @@ void main() {
     expect(camera.asked, 0);
     expect(find.text(words.pairWhy), findsOneWidget);
 
-    await turnOnTheCamera(tester);
+    await goOnToTheCamera(tester);
 
     expect(camera.asked, 1);
     expect(find.text(words.pairInFrame), findsOneWidget);
@@ -100,7 +100,7 @@ void main() {
   testWidgets('a code that reads pairs the phone and closes', (tester) async {
     final camera = FakeCamera();
     final paired = await open(tester, camera);
-    await turnOnTheCamera(tester);
+    await goOnToTheCamera(tester);
 
     camera.watching!(good);
     await tester.pumpAndSettle();
@@ -148,7 +148,7 @@ void main() {
   ) async {
     final camera = FakeCamera();
     await open(tester, camera);
-    await turnOnTheCamera(tester);
+    await goOnToTheCamera(tester);
 
     camera.watching!('{"ssid":"home","pass":"a-wifi-password"}');
     await tester.pumpAndSettle();
@@ -164,7 +164,7 @@ void main() {
   ) async {
     final camera = FakeCamera();
     await open(tester, camera);
-    await turnOnTheCamera(tester);
+    await goOnToTheCamera(tester);
 
     camera.watching!('not a code of ours');
     await tester.pumpAndSettle();
@@ -179,7 +179,7 @@ void main() {
   ) async {
     final camera = FakeCamera(access: CameraAccess.refused);
     await open(tester, camera);
-    await turnOnTheCamera(tester);
+    await goOnToTheCamera(tester);
 
     expect(find.text(words.pairCameraRefused), findsOneWidget);
 

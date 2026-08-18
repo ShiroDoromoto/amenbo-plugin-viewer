@@ -177,7 +177,7 @@
   "pairTitle": "Associa questo telefono",
   "pairHeading": "Leggi il codice che c'è sul tuo PC",
   "pairWhy": "Il codice è sullo schermo del PC, quindi arriva qui con la fotocamera. Viene letto su questo telefono e non viene mandato da nessuna parte.",
-  "pairTurnOnCamera": "Attiva la fotocamera",
+  "pairContinue": "Continua",
   "pairInFrame": "Tieni il codice dentro il riquadro.",
   "pairCameraRefused": "La fotocamera è disattivata per questa app.",
   "pairRefusedDetail": "Per associare basta leggere un codice dallo schermo del tuo PC. Attiva la fotocamera nelle impostazioni e torna qui.",
