@@ -31,6 +31,9 @@ import 'store/backlog_store.dart';
 /// the app, not an error to retry.
 const contractVersion = 1;
 
+/// How the intake waits, when a place asks it to come back in a moment.
+Future<void> _sleep(Duration howLong) => Future<void>.delayed(howLong);
+
 /// Why a round of the intake could not be finished.
 enum IntakeFailure {
   /// The place could not be reached at all — no network, or nothing answering there.
@@ -49,6 +52,12 @@ enum IntakeFailure {
 
   /// The place answered, and what it said could not be read as records.
   unreadable,
+
+  /// The place is being written again from the beginning, and what is there now is part of a
+  /// backlog. It closed its reading doors rather than answer with a fraction — a phone cannot
+  /// tell that fraction from a backlog that really did shrink, and would write it down and call
+  /// itself level. Seconds, not a fault.
+  placing,
 }
 
 /// Whether another round could end any differently.
@@ -199,6 +208,7 @@ class CloudflareIntake {
     required this.store,
     http.Client? client,
     this.timeout = const Duration(seconds: 30),
+    this._pause = _sleep,
   }) : _client = client ?? http.Client();
 
   final Pairing pairing;
@@ -208,6 +218,18 @@ class CloudflareIntake {
   /// How long one request may take. A round nobody is watching still has to end — the phone
   /// refreshes on coming to the front, and a request left hanging would be joined by the next.
   final Duration timeout;
+
+  /// How the round waits out a placement. Handed in so a test can sit through five seconds
+  /// without taking five seconds.
+  final Future<void> Function(Duration) _pause;
+
+  /// The longest `Retry-After` this phone will actually sit through.
+  ///
+  /// A placement is seconds, which is why waiting it out inside the round is worth doing at all:
+  /// the person who pulled gets their rows instead of a line about a state they cannot act on.
+  /// A longer wait than this is not that state wearing the same status, and sleeping on it would
+  /// be an app that hangs on whatever a header says.
+  static const _longestPause = Duration(seconds: 10);
 
   /// Takes everything the place has that this device has not.
   ///
@@ -406,7 +428,14 @@ class CloudflareIntake {
   }
 
   /// One GET, with this device's token on it, read as the JSON object every answer is.
-  Future<Map<String, Object?>> _get(Uri url, {required String from}) async {
+  ///
+  /// [again] is set on the one retry a placement gets, so that a place which is still placing
+  /// when the wait is over ends the round instead of being waited on twice.
+  Future<Map<String, Object?>> _get(
+    Uri url, {
+    required String from,
+    bool again = false,
+  }) async {
     final http.Response answered;
     try {
       answered = await _client
@@ -427,6 +456,26 @@ class CloudflareIntake {
     }
     if (status == 409) {
       throw IntakeException(IntakeFailure.rebuilt, at: from, status: status);
+    }
+    if (status == 503) {
+      // Two things answer 503, and only one of them is worth waiting for: a placement says when
+      // to come back, and a Worker deployed without its write token has nothing to say and
+      // nothing that waiting would fix.
+      final comeBack = answered.headers['retry-after'];
+      if (comeBack == null) {
+        throw IntakeException(
+          IntakeFailure.unreadable,
+          at: from,
+          status: status,
+        );
+      }
+      final seconds = int.tryParse(comeBack.trim());
+      final wait = seconds == null ? null : Duration(seconds: seconds);
+      if (!again && wait != null && wait <= _longestPause) {
+        await _pause(wait);
+        return _get(url, from: from, again: true);
+      }
+      throw IntakeException(IntakeFailure.placing, at: from, status: status);
     }
     if (status != 200) {
       throw IntakeException(IntakeFailure.unreadable, at: from, status: status);

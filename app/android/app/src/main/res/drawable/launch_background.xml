@@ -2,14 +2,18 @@
 <!-- The launch screen up to Android 11: the ground, and the mark on it. Android 12 and later
      draw their own splash instead, from the two lines in values-v31/styles.xml.
 
-     The mark is the adaptive icon's foreground layer, which already keeps itself inside the
-     middle two thirds of its square — so the box below is 192dp and the strider comes out
-     at 128dp. -->
+     The mark is `launch_mark` and not the icon's foreground layer, though the two are the same
+     drawing: the ground here follows the phone's setting (`values-night/colors.xml`), and the
+     delivered mark is one colour, so a black sheet would vanish on the dark ground. The
+     `mipmap-night-*` copies are the same mark in white, and the qualifier is what picks them.
+
+     It keeps itself inside the middle two thirds of its square, the way an adaptive icon's
+     foreground must — so the box below is 192dp and the mark comes out at 128dp. -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:drawable="@color/launch_background" />
     <item
         android:width="192dp"
         android:height="192dp"
-        android:drawable="@mipmap/ic_launcher_foreground"
+        android:drawable="@mipmap/launch_mark"
         android:gravity="center" />
 </layer-list>

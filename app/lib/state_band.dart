@@ -1,4 +1,4 @@
-/// One line at the top, for the seven ways things can stand.
+/// One line at the top, for the eight ways things can stand.
 ///
 /// The promise the whole app is built on is that **it never breaks quietly**. Every state below is
 /// one the person can end up in without doing anything wrong — a train tunnel, a signed-out iCloud,
@@ -39,6 +39,10 @@ enum Standing {
   /// The iCloud route, with nobody signed in to iCloud.
   noICloud,
 
+  /// The place is being written again from the beginning, and has closed its reading doors for
+  /// the length of it.
+  placing,
+
   /// The last round could not reach the place.
   offline,
 
@@ -55,7 +59,9 @@ enum Standing {
 ///
 /// Among the causes the order is how much they take away: a contract this build cannot read stops
 /// everything, a key that does not open stops the records, a refusal stops the fetch, a signed-out
-/// iCloud stops one route, and being unreachable stops nothing that is already here.
+/// iCloud stops one route, and being unreachable stops nothing that is already here. A placement
+/// stops nothing either — it is the one cause that ends by itself, and it is here rather than
+/// silent because a pull that brought nothing owes the person a reason.
 Standing standingOf({
   required bool anythingHere,
   IntakeFailure? failure,
@@ -68,6 +74,8 @@ Standing standingOf({
       return Standing.unreadable;
     case IntakeFailure.refused:
       return Standing.refused;
+    case IntakeFailure.placing:
+      return Standing.placing;
     case IntakeFailure.unreachable:
       // Held below iCloud: being signed out is the more specific of the two, and the one with
       // something to do about it.
@@ -91,6 +99,7 @@ String standingWords(Words words, Standing standing) => switch (standing) {
   Standing.unreadable => words.standingUnreadable,
   Standing.refused => words.standingRefused,
   Standing.noICloud => words.standingNoICloud,
+  Standing.placing => words.standingPlacing,
   Standing.offline => words.standingOffline,
   Standing.waiting => words.standingWaiting,
 };
@@ -104,13 +113,14 @@ String standingDetail(Words words, Standing standing) => switch (standing) {
   Standing.unreadable => words.standingDetailUnreadable,
   Standing.refused => words.standingDetailRefused,
   Standing.noICloud => words.standingDetailNoICloud,
+  Standing.placing => words.standingDetailPlacing,
   Standing.waiting => words.standingDetailWaiting,
   _ => '',
 };
 
 /// The three the person can do something about, and the only three drawn to be noticed.
 ///
-/// Seven lines all wearing the same quiet strip is seven lines nobody reads, and the one that
+/// Eight lines all wearing the same quiet strip is eight lines nobody reads, and the one that
 /// matters — a device whose key does not open what arrives — then goes on receiving nothing for as
 /// long as it is ignored. So these are lifted: a colour of their own, a mark, and their way out as
 /// a button that looks like one.
@@ -236,7 +246,7 @@ class StateBand extends StatelessWidget {
     }
     return Container(
       width: double.infinity,
-      // Two surfaces, not seven: the quiet one for what the person cannot do anything about, and
+      // Two surfaces, not eight: the quiet one for what the person cannot do anything about, and
       // the accent for the three they can. Neither is the error colour — a band that turned red
       // for being out of signal would teach the person to read the colour instead of the words,
       // and then the colour would be all that is read.
