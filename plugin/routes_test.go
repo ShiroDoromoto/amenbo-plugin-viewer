@@ -317,3 +317,70 @@ func TestEveryPlaceTickedOffIsNotTheSameAsASettingThatNeverCame(t *testing.T) {
 		}
 	}
 }
+
+// **Three states, and a line that tells them apart.** A place that is carrying, a place that is
+// ticked and waiting, and a place this machine does not have at all — the third is the one that
+// used to wear the second's words, telling a Windows user to open the app on a phone and wait for
+// a folder that never comes.
+func TestTheCheckTellsAPlaceThatIsNotHereFromOneThatIsWaiting(t *testing.T) {
+	was := icloudIsARoadHere
+	icloudIsARoadHere = func() bool { return false }
+	t.Cleanup(func() { icloudIsARoadHere = was })
+	withICloud(t, false)
+	t.Setenv(envAuthToken, "a-throwaway-token")
+	t.Setenv(envEncryptionKey, throwawayKey)
+
+	_, said := answeredCheck(t, fired("", map[string]any{
+		configRoutes:    "icloud,cloudflare",
+		configWorkerURL: "https://viewer.example.workers.dev",
+	}))
+
+	if strings.Contains(said, "Waiting on the iCloud") {
+		t.Errorf("%q tells this machine to wait for a place it will never have", said)
+	}
+	if !strings.Contains(said, "no such place") {
+		t.Errorf("%q does not say the folder is not on this machine at all", said)
+	}
+	if strings.Contains(said, "Carrying to the iCloud folder") {
+		t.Errorf("%q says a place that is not here is carrying", said)
+	}
+}
+
+// And a place nobody ticked stays out of the line, whichever machine this is — that absence is
+// how "turned off" reads, and it is the one of the three states that needs no words.
+func TestAPlaceThatIsNotHereAndNotTickedIsStillNotMentioned(t *testing.T) {
+	was := icloudIsARoadHere
+	icloudIsARoadHere = func() bool { return false }
+	t.Cleanup(func() { icloudIsARoadHere = was })
+	withICloud(t, false)
+	t.Setenv(envAuthToken, "a-throwaway-token")
+	t.Setenv(envEncryptionKey, throwawayKey)
+
+	_, said := answeredCheck(t, fired("", map[string]any{
+		configRoutes:    "cloudflare",
+		configWorkerURL: "https://viewer.example.workers.dev",
+	}))
+
+	if strings.Contains(said, "iCloud") {
+		t.Errorf("%q reports a place the user ticked off as though it were a fault", said)
+	}
+}
+
+// On a mac the folder is a place that will appear, so it keeps the words that say how.
+func TestOnAMacTheFolderIsStillSomethingToWaitFor(t *testing.T) {
+	was := icloudIsARoadHere
+	icloudIsARoadHere = func() bool { return true }
+	t.Cleanup(func() { icloudIsARoadHere = was })
+	withICloud(t, false)
+	t.Setenv(envAuthToken, "")
+	t.Setenv(envEncryptionKey, "")
+
+	_, said := answeredCheck(t, fired("", map[string]any{configRoutes: "icloud"}))
+
+	if !strings.Contains(said, "open Amenbo Viewer") {
+		t.Errorf("%q does not say how the folder appears", said)
+	}
+	if strings.Contains(said, "no such place") {
+		t.Errorf("%q writes a mac's own folder off", said)
+	}
+}
