@@ -28,7 +28,7 @@ Amenbo 本体は外部と通信しない。運営もデータをホスティン�
 | [`plugin/`](plugin/) | プラグイン（Go） |
 | [`worker/`](worker/) | Cloudflare Worker |
 | [`app/`](app/) | スマートフォンアプリ（Flutter。`ios/` と `android/` はこの下に生成される） |
-| [`guards/`](guards/) | どの部品にも属さない検査（ツリーの形を見る。`make guards` と CI が回す） |
+| [`guards/`](guards/) | どの部品にも属さない検査（ツリーの形と、部品をまたぐ綴りの規約を見る。`make guards` と CI が回す） |
 
 **契約を散文で置く場所は作らない。** 置けば、どの部品を直しても文書の追従が要り、
 その漏れは静かに起きる——3つとも動いていて文書だけが嘘、という形になる。
@@ -72,6 +72,8 @@ PC が送るのは動いた行だけになる。
 | リポジトリ | `amenbo-plugin-viewer` |
 | アプリ名（ストア表示） | **Amenbo Viewer** |
 | バンドル ID / パッケージ名 | `work.amenbo.viewer` |
+
+大小は、その文字列が**実体か呼び名か**で決まる。機械がその綴りのまま解決するもの——打つコマンド、PATH に載る名前、リポジトリ名、URL、バンドル ID——は小文字の `amenbo`。文章の中で製品を指すときは `Amenbo` / `Amenbo Viewer`。迷ったら「`Amenbo` へ書き換えたら何かが動かなくなるか」を問う。なるなら小文字側で、そこは `guards/check-program-name-casing.sh` が見張っている。
 
 ## 状態
 
