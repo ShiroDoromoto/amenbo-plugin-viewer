@@ -48,6 +48,10 @@ Nessuna pubblicità. Nessun tracciamento. Nessun account.
 
 ## release_notes
 
-La prima versione.
+Su iPhone la via iCloud ora si può spegnere.
 
-Ora il backlog di Amenbo si legge sul telefono: attività, registri delle decisioni e i commenti di entrambi, con la ricerca e anche senza rete. Accoppia inquadrando il codice mostrato dal PC, oppure lascia che Mac e iPhone passino per il tuo iCloud.
+- Spegni «Ricevi da iCloud» nelle impostazioni, e riaccendilo nello stesso posto
+- Icona e schermata di avvio ridisegnate dal nuovo segno; quella di avvio si rovescia tra chiaro e scuro
+- Il PC che rimette tutto il backlog ora si legge come un'attesa, non come qualcosa di illeggibile
+- Se la copia sul PC è stata rifatta da zero, l'app lo dice prima di andare avanti
+- Di ciò che arriva si leggono solo i nomi scritti dal contratto

@@ -48,6 +48,10 @@ Bez reklam. Bez śledzenia. Bez konta.
 
 ## release_notes
 
-Pierwsze wydanie.
+Na iPhonie drogę przez iCloud można teraz wyłączyć.
 
-Backlog Amenbo można teraz czytać na telefonie: zadania, zapisy decyzji i komentarze do jednych i drugich, z wyszukiwaniem i bez sieci. Sparuj, skanując kod pokazany przez komputer, albo pozwól, by Mac i iPhone przepuściły wszystko przez twój własny iCloud.
+- Wyłącz „Odbieraj z iCloud” w ustawieniach i włącz z powrotem w tym samym miejscu
+- Ikona i ekran startowy przerysowane z nowego znaku; ekran odwraca się między jasnym a ciemnym
+- To, że komputer układa cały backlog od nowa, czyta się jako czekanie, a nie jako coś nieczytelnego
+- Jeśli kopia na komputerze została zbudowana od nowa, aplikacja powie o tym przed dalszym czytaniem
+- Czytane są tylko te nazwy, które pisze umowa

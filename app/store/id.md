@@ -48,6 +48,10 @@ Tanpa iklan. Tanpa pelacakan. Tanpa akun.
 
 ## release_notes
 
-Versi pertama.
+Di iPhone, jalur iCloud kini bisa dimatikan.
 
-Backlog Amenbo kini bisa dibaca di ponsel: tugas, catatan keputusan, dan komentar pada keduanya — dapat dicari, dan tetap terbaca tanpa jaringan. Pasangkan dengan memindai kode di layar PC, atau biarkan Mac dan iPhone melewatkannya melalui iCloud Anda sendiri.
+- Matikan "Terima dari iCloud" di pengaturan, dan nyalakan lagi di tempat yang sama
+- Ikon dan layar pembuka digambar ulang dari tanda baru; layar pembuka berbalik antara terang dan gelap
+- PC yang menaruh ulang seluruh daftar kerja kini terbaca sebagai menunggu, bukan sebagai yang tak terbaca
+- Kalau salinan di PC dibangun ulang dari nol, kamu diberi tahu sebelum membaca lebih jauh
+- Hanya nama yang ditulis kontrak yang dibaca

@@ -48,6 +48,10 @@ Sin anuncios. Sin rastreo. Sin cuenta.
 
 ## release_notes
 
-La primera versión.
+En el iPhone, la vía de iCloud ya se puede apagar.
 
-Ya puedes leer tu backlog de Amenbo en el móvil: tareas, registros de decisión y los comentarios de ambos, con búsqueda y sin conexión. Empareja escaneando el código que muestra tu PC, o deja que un Mac y un iPhone lo pasen por tu propio iCloud.
+- Apaga «Recibir desde iCloud» en los ajustes, y vuelve a encenderlo en el mismo sitio
+- El icono y la pantalla de inicio están redibujados con la marca nueva; la de inicio se invierte entre claro y oscuro
+- Que tu PC coloque de nuevo todo el backlog ahora se lee como una espera, no como algo ilegible
+- Si la copia de tu PC se rehízo desde cero, se avisa antes de seguir leyendo
+- Solo se leen los nombres que escribe el contrato
