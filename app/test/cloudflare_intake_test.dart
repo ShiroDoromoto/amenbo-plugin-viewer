@@ -70,6 +70,11 @@ class Place {
   /// A status `GET /meta` answers with instead of saying where it stands.
   int? metaRefusal;
 
+  /// How many more answers are the closed door of a placement, and what each one says to come
+  /// back after. Counted down, so a test can have the door open again on the second ask.
+  int closedFor = 0;
+  String? comeBackAfter = '5';
+
   /// The points the intake asked from, in order.
   final asked = <int>[];
 
@@ -96,6 +101,20 @@ class Place {
   http.Client get client => MockClient((request) async {
     carried.add(request.headers['Authorization']);
     visited.add(request.url.path);
+
+    // Both reading doors close together for the length of a placement, so this is asked before
+    // either of them is answered.
+    if (closedFor > 0) {
+      closedFor -= 1;
+      return http.Response(
+        jsonEncode({'error': 'the whole of this store is being placed again'}),
+        503,
+        headers: {
+          ..._json,
+          if (comeBackAfter != null) 'retry-after': comeBackAfter!,
+        },
+      );
+    }
 
     if (request.url.path.endsWith('/meta')) {
       if (metaRefusal != null) {
@@ -496,6 +515,104 @@ void main() {
         intakeFrom(place).run(),
         throwsA(isA<IntakeException>()),
       );
+    });
+  });
+
+  group('a place that is being written again from the beginning', () {
+    /// The waits the round sat through, instead of sitting through them.
+    ({List<Duration> waited, CloudflareIntake intake}) intakeCounting(
+      Place place,
+    ) {
+      final waited = <Duration>[];
+      return (
+        waited: waited,
+        intake: CloudflareIntake(
+          pairing: _pairing,
+          store: store,
+          client: place.client,
+          pause: (howLong) async => waited.add(howLong),
+        ),
+      );
+    }
+
+    test('the round waits out the placement and takes what follows', () async {
+      final place = Place(seq: 1)
+        ..closedFor = 1
+        ..page(
+          0,
+          seq: 1,
+          more: false,
+          records: [await sealed('task/1', task(id: 1, title: 'あとから来た'))],
+        );
+      final counting = intakeCounting(place);
+
+      final report = await counting.intake.run();
+
+      // The door said five seconds, so five seconds is what was waited — and the ask that
+      // followed is the one that brought the rows.
+      expect(counting.waited, [const Duration(seconds: 5)]);
+      expect(report.records, 1);
+      expect(store.record('task', 1)!['title'], 'あとから来た');
+    });
+
+    test('a door still closed after the wait ends the round as a wait', () async {
+      final place = Place(seq: 1)..closedFor = 5;
+      final counting = intakeCounting(place);
+
+      // Not unreadable: the place is not broken and this device's key is fine. Waiting twice on
+      // one round would be the app deciding how long the person stands there.
+      await expectLater(
+        counting.intake.run(),
+        throwsA(
+          isA<IntakeException>().having(
+            (stopped) => stopped.failure,
+            'failure',
+            IntakeFailure.placing,
+          ),
+        ),
+      );
+      expect(counting.waited, hasLength(1));
+    });
+
+    test('a wait longer than a placement is not sat through', () async {
+      final place = Place(seq: 1)
+        ..closedFor = 1
+        ..comeBackAfter = '600';
+      final counting = intakeCounting(place);
+
+      await expectLater(
+        counting.intake.run(),
+        throwsA(
+          isA<IntakeException>().having(
+            (stopped) => stopped.failure,
+            'failure',
+            IntakeFailure.placing,
+          ),
+        ),
+      );
+      // Ten minutes is not the state that ends by itself, whatever status it wears.
+      expect(counting.waited, isEmpty);
+    });
+
+    test('a 503 with nothing to come back for is not a placement', () async {
+      final place = Place(seq: 1)
+        ..closedFor = 1
+        ..comeBackAfter = null;
+      final counting = intakeCounting(place);
+
+      // A Worker deployed without its write token answers 503 too, and no amount of waiting
+      // fixes a deployment.
+      await expectLater(
+        counting.intake.run(),
+        throwsA(
+          isA<IntakeException>().having(
+            (stopped) => stopped.failure,
+            'failure',
+            IntakeFailure.unreadable,
+          ),
+        ),
+      );
+      expect(counting.waited, isEmpty);
     });
   });
 }
