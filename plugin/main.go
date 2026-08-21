@@ -178,6 +178,14 @@ func run(in input, args []string) int {
 		return 0
 	}
 
+	// The five calls the settings screen raises are the ones a person reads on a screen, so they
+	// are said in the language that person reads Amenbo in (see `wording.go`). The read costs one
+	// run of Amenbo, and it is paid here — by those five, and by nothing else: the observation
+	// face is fired on every write, and what is typed is answered in English.
+	if settingsFace[args[0]] {
+		screen = wordsIn(languageInTheStore())
+	}
+
 	switch args[0] {
 	case "app":
 		return do(getTheApp(in, args[1:]))
@@ -207,6 +215,18 @@ func run(in input, args []string) int {
 		usage()
 		return 2
 	}
+}
+
+// settingsFace is the calls the settings screen raises: the line it asks for on its own
+// (`settings.check`) and the four buttons it offers (`settings.actions`), as `dev/manifest.json`
+// declares them. They are the plugin's only face a person reads without having typed anything,
+// which is what makes them the ones worth translating.
+var settingsFace = map[string]bool{
+	"check": true,
+	"app":   true,
+	"token": true,
+	"setup": true,
+	"qr":    true,
 }
 
 // do ends the command face on the verdict the exit code carries.

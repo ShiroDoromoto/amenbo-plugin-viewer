@@ -479,3 +479,25 @@ func TestTheButtonsAreNumberedInTheOrderTheyArePressed(t *testing.T) {
 		}
 	}
 }
+
+// **What the settings screen raises is what gets said in the user's language.** The list the code
+// keeps (`settingsFace`) and the calls the manifest declares are two spellings of one set, and a
+// button added to the manifest and forgotten there would answer in English under a form that is
+// in Japanese — which is exactly the mixture the wording exists to end, arriving quietly.
+func TestEveryCallTheSettingsScreenRaisesIsSaidInTheUsersLanguage(t *testing.T) {
+	declared := read(t)
+
+	raised := []string{declared.Settings.Check}
+	for _, offered := range declared.Settings.Actions {
+		raised = append(raised, offered.Cmd)
+	}
+	for _, cmd := range raised {
+		if word := strings.Fields(cmd)[0]; !settingsFace[word] {
+			t.Errorf("%q is raised by the settings screen and answers in English", cmd)
+		}
+	}
+	if len(settingsFace) != len(raised) {
+		t.Errorf("%d calls are worded for the settings screen and the manifest raises %d",
+			len(settingsFace), len(raised))
+	}
+}

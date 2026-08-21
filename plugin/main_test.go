@@ -27,6 +27,11 @@ func TestMain(m *testing.M) {
 	openInTheSystem = func(target string) error {
 		return fmt.Errorf("a test reached for the machine's screen with %q", target)
 	}
+	// **The store's language is the third.** A whole invocation runs `amenbo config --json` for
+	// the five calls the settings screen raises, and a suite that let it would read the language
+	// of whoever is running the tests — so the same run would pass on one machine and fail on
+	// the next. A test about the language says so by swapping this back.
+	languageInTheStore = func() string { return fallbackLanguage }
 	os.Exit(m.Run())
 }
 

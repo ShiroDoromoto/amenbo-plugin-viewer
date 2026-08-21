@@ -101,12 +101,19 @@ func qr(in input, args []string) error {
 	// The route and the key are read before anything is asked of the user: a pairing that cannot
 	// work is one to refuse now, not after they have named a phone.
 	where, err := storeFor(in)
+	if errors.Is(err, errNoCloudflareRoute) {
+		// The two sentinels below are the ones a person actually meets on the settings screen:
+		// pairing is the fourth button, and pressing it before the third has run is the ordinary
+		// way to arrive here. They are worded rather than passed on so that the answer to "why
+		// did nothing happen" is in the language the rest of the form is in.
+		return refuse(phNoCloudflareRouteYet, pluginName)
+	}
 	if err != nil {
 		return err
 	}
 	key := secret(envEncryptionKey)
 	if key == "" {
-		return errNoKey
+		return refuse(phNoEncryptionKey)
 	}
 
 	named := strings.TrimSpace(*label)
@@ -137,7 +144,7 @@ func qr(in input, args []string) error {
 		return err
 	}
 
-	logf("%s: %q may read from now on. Cut it off later by that name.", pluginName, named)
+	logf("%s: %s", pluginName, say(phPhoneMayReadFromNowOn, named))
 	return json.NewEncoder(out).Encode(map[string]any{
 		"label":     named,
 		"issued_at": issuedAt,
@@ -165,7 +172,7 @@ func (s store) issue(label, hash string) (string, error) {
 	answered, err := s.askTheStore(request)
 	var turnedDown storeRefused
 	if errors.As(err, &turnedDown) && turnedDown.status == http.StatusConflict {
-		return "", fmt.Errorf("a phone is already paired as %q — cut it off with `%s revoke %s`, then pair it again",
+		return "", refuse(phPhoneAlreadyPaired,
 			label, pluginName, label)
 	}
 	if err != nil {
@@ -218,13 +225,13 @@ func getTheApp(_ input, args []string) error {
 	// Nothing to open an image on and nothing to draw blocks in: the address in words is what is
 	// left, and writing it out costs nothing when the page it names is public.
 	if !thereIsAScreen() && !thereIsATerminal() {
-		logf("%s: there is nothing here to draw a code on. Amenbo Viewer is at %s", pluginName, appStoreLink)
+		logf("%s: %s", pluginName, say(phNothingToDrawOn, appStoreLink))
 		return nil
 	}
 	if _, _, err := present([]byte(appStoreLink), *inTerminal, carriesNoSecret); err != nil {
-		return fmt.Errorf("the code could not be drawn (%w) — Amenbo Viewer is at %s", err, appStoreLink)
+		return refuse(phCodeNotDrawn, err, appStoreLink)
 	}
-	logf("%s: point the phone's camera at the code. Amenbo Viewer is also at %s", pluginName, appStoreLink)
+	logf("%s: %s", pluginName, say(phPointTheCamera, appStoreLink))
 	return nil
 }
 
@@ -263,7 +270,7 @@ func show(code *qrcode.Code, inTerminal, carriesASecret bool) (shown, left strin
 		if err == nil {
 			return "image", left, nil
 		}
-		logf("%s: the image could not be opened (%v) — drawing it here instead", pluginName, err)
+		logf("%s: %s", pluginName, say(phImageNotOpened, err))
 	}
 	if err := drawInTheTerminal(code, carriesASecret); err != nil {
 		return "", "", err
@@ -295,14 +302,13 @@ func openAsAnImage(code *qrcode.Code, carriesASecret bool) (left string, err err
 
 	if err := eraseLater(dir); err != nil {
 		if carriesASecret {
-			logf("%s: the code is at %s, and it carries the key — delete it once the phone has read it (%v).", pluginName, path, err)
+			logf("%s: %s", pluginName, say(phCodeLeftWithKey, path, err))
 		} else {
-			logf("%s: the code is at %s, and nothing was started to take it away again (%v).", pluginName, path, err)
+			logf("%s: %s", pluginName, say(phCodeLeftBehind, path, err))
 		}
 		return path, nil
 	}
-	logf("%s: the code is on screen, and the image goes in %d minutes — read it with the phone before then.",
-		pluginName, int(codeLifetime/time.Minute))
+	logf("%s: %s", pluginName, say(phCodeIsOnScreen, int(codeLifetime/time.Minute)))
 	return "", nil
 }
 
@@ -466,7 +472,7 @@ func askForALabel() (string, error) {
 	}
 	named = strings.TrimSpace(named)
 	if named == "" {
-		return "", errors.New("the phone was not named, and a name is what revoking one gives")
+		return "", refuse(phThePhoneWasNotNamed)
 	}
 	return named, nil
 }
