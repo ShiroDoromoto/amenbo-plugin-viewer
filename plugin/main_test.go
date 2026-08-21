@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -18,6 +19,14 @@ import (
 func TestMain(m *testing.M) {
 	os.Setenv(envCloudflareToken, "a-throwaway-api-token")
 	os.Setenv(envStandIn, "http://127.0.0.1:1")
+	// **The machine's screen is the other thing no test may reach.** `token` and `qr` hand a
+	// link or an image to whatever the system opens those with, and a suite that got that far
+	// would put a browser window in front of whoever ran it. The opener is refused here by
+	// default, so a path nobody thought to hold refuses instead of opening; the tests that are
+	// about the opening swap in one of their own.
+	openInTheSystem = func(target string) error {
+		return fmt.Errorf("a test reached for the machine's screen with %q", target)
+	}
 	os.Exit(m.Run())
 }
 

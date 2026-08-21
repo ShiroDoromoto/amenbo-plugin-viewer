@@ -103,6 +103,20 @@ func TestTheManifestAndTheCodeAgreeOnTheName(t *testing.T) {
 	}
 }
 
+// nothingOpens holds the two variables a run reaches the machine's screen through, for as long
+// as the test lasts.
+//
+// **Walking the manifest means running the commands on it**, and one of them — `token` — is a
+// page and nothing else: it opens Cloudflare's token screen and ends there. Held like this, the
+// suite still sees the command dispatched, and the person running it does not get a browser
+// window in front of whatever they were doing.
+func nothingOpens(t *testing.T) {
+	t.Helper()
+	wasOpen, wasScreen := openInTheSystem, thereIsAScreen
+	openInTheSystem, thereIsAScreen = opensFine, onAScreen
+	t.Cleanup(func() { openInTheSystem, thereIsAScreen = wasOpen, wasScreen })
+}
+
 // **Every command the manifest advertises must be dispatched.** The manifest is what an AI
 // reads to learn this plugin's command face, so one the binary does not know is a line that
 // sends a caller to a usage error.
@@ -112,6 +126,7 @@ func TestEveryAdvertisedCommandIsDispatched(t *testing.T) {
 	if len(commands) == 0 {
 		t.Fatal("the manifest advertises no command at all")
 	}
+	nothingOpens(t)
 	for _, command := range commands {
 		t.Run(command.Cmd, func(t *testing.T) {
 			var code int
@@ -137,6 +152,7 @@ func TestEveryButtonTheSettingsScreenOffersIsDispatched(t *testing.T) {
 	if len(actions) == 0 {
 		t.Fatal("the settings screen offers nothing to press, so setup is still terminal-only")
 	}
+	nothingOpens(t)
 	for _, offered := range actions {
 		t.Run(offered.Cmd, func(t *testing.T) {
 			var code int
