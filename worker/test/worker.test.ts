@@ -752,3 +752,89 @@ describe("a store with no room left", () => {
 		await expect(refused).rejects.toThrow("UNIQUE constraint failed");
 	});
 });
+
+/**
+ * The size of a real backlog, as the store that went to iCloud held it.
+ *
+ * **This is the run that was never made.** Every test above works at two or three records, and
+ * what broke on the other route broke only once there were twenty thousand — so the number itself
+ * is the point here, not the shape. It is not a round one on purpose: a backlog that divides
+ * evenly into writes and pages never sends a short last one, and a real turn always does.
+ */
+const A_REAL_BACKLOG = 20202;
+
+/**
+ * How long a test at that size is given.
+ *
+ * The default of five seconds is right for a test at three records and wrong for one at twenty
+ * thousand: reading this backlog back is a hundred and two pages, and a runner slower than a
+ * laptop crosses five seconds on the way. The number is a ceiling on a test that has already
+ * passed, not a target — what it buys is the difference between a slow machine and a broken one.
+ */
+const LONG_ENOUGH_FOR_A_REAL_BACKLOG = 60_000;
+
+describe("the whole of a real backlog", () => {
+	/** Places `total` records through the door that empties first, in the parts a write takes. */
+	async function placeWhole(total: number, version: number): Promise<void> {
+		const parts = Math.ceil(total / 500);
+		for (let part = 1; part <= parts; part++) {
+			const from = (part - 1) * 500;
+			const records = Array.from({ length: Math.min(500, total - from) }, (_, at) => sealed(`task/${from + at}`));
+			const answered = await sendingPart("/reset", version, part, parts, records);
+			expect(answered.status, `part ${part} of ${parts}`).toBe(200);
+		}
+	}
+
+	it("holds every record it was sent, once each", async () => {
+		await placeWhole(A_REAL_BACKLOG, 7);
+
+		const held = await env.RECORDS.prepare("SELECT COUNT(*) AS n FROM records").first<{ n: number }>();
+		expect(held?.n).toBe(A_REAL_BACKLOG);
+		const distinct = await env.RECORDS.prepare("SELECT COUNT(DISTINCT k) AS n FROM records").first<{ n: number }>();
+		expect(distinct?.n).toBe(A_REAL_BACKLOG);
+	}, LONG_ENOUGH_FOR_A_REAL_BACKLOG);
+
+	it("names the version only once the last part has landed", async () => {
+		const parts = Math.ceil(A_REAL_BACKLOG / 500);
+		for (let part = 1; part < parts; part++) {
+			await sendingPart("/reset", 7, part, parts, [sealed(`task/${part}`)]);
+			const midway = await env.RECORDS.prepare("SELECT version FROM store WHERE id = 1").first<{ version: number | null }>();
+			expect(midway?.version, `after part ${part}`).toBeNull();
+		}
+		await sendingPart("/reset", 7, parts, parts, [sealed("task/last")]);
+
+		const settled = await env.RECORDS.prepare("SELECT version FROM store WHERE id = 1").first<{ version: number }>();
+		expect(settled?.version).toBe(7);
+	}, LONG_ENOUGH_FOR_A_REAL_BACKLOG);
+
+	it("reads back to a phone with nothing missing and nothing twice", async () => {
+		await placeWhole(A_REAL_BACKLOG, 7);
+
+		const seen = new Set<string>();
+		let cursor = 0;
+		let pages = 0;
+		for (;;) {
+			const answered = await reading(`/records?since=${cursor}`);
+			expect(answered.status, `page ${pages + 1}`).toBe(200);
+			const read = (await answered.json()) as { records: { k: string }[]; seq: number; more: boolean };
+			for (const record of read.records) {
+				// A key twice would have the phone write one row over another and never learn of
+				// the one it lost.
+				expect(seen.has(record.k), `${record.k} came twice`).toBe(false);
+				seen.add(record.k);
+			}
+			// The order belongs to the page rather than to each row, and it is what the next read
+			// asks from — a page that did not move it on would have the phone read it again.
+			expect(read.seq, `page ${pages + 1} did not move the order on`).toBeGreaterThan(cursor);
+			cursor = read.seq;
+			pages++;
+			if (!read.more) break;
+			// A backlog this size is a hundred pages; a read that stopped answering would
+			// otherwise sit here rather than saying so.
+			expect(pages, "the phone is still reading well past the pages this backlog holds").toBeLessThan(A_REAL_BACKLOG);
+		}
+
+		expect(seen.size).toBe(A_REAL_BACKLOG);
+		expect(pages).toBe(Math.ceil(A_REAL_BACKLOG / 200));
+	}, LONG_ENOUGH_FOR_A_REAL_BACKLOG);
+});

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -669,5 +670,159 @@ func TestALevelRouteIsCarriedToWhenItIsAskedForOutLoud(t *testing.T) {
 	}
 	if placed != 1 || level.placed != 1 {
 		t.Errorf("push placed %d record(s) over %d send(s)", placed, level.placed)
+	}
+}
+
+// The size of a real backlog, as the store that went to iCloud held it — the count of files that
+// landed in that folder, to the record. It is the number this route has never been run at: every
+// part of the split is tested at two records, and what broke on the other route broke only once
+// there were twenty thousand.
+//
+// **It is not a round one on purpose.** A backlog that divides evenly into writes never sends a
+// part that is short, and the last part of a real turn always is.
+const aRealBacklog = 20202
+
+// wholeOf is a ledger whose picture is a backlog of the given size, spread over the datasets a
+// store actually has. The rows are the smallest thing that carries an id, because what is inside
+// them never leaves this plugin unread.
+func wholeOf(t *testing.T, records int) ledger {
+	t.Helper()
+	datasets := []string{"task", "task_comment", "task_dimension_value", "decision"}
+	tables := map[string][]json.RawMessage{}
+	for at := range records {
+		dataset := datasets[at%len(datasets)]
+		tables[dataset] = append(tables[dataset], json.RawMessage(`{"id":`+strconv.Itoa(at)+`}`))
+	}
+	from := oneChange(t)
+	// The ledger no longer reaches back to where any route left off, which is one of the three
+	// ways a whole placement is asked for — the other two being a first run and a reset. A route
+	// that had a place would otherwise be carried the difference, which is not what this is about.
+	from.changed = func(int64) ([]change, int64, error) { return nil, 0, errSyncGap }
+	from.whole = func() (window, error) {
+		picture := window{Tables: tables}
+		picture.Header.Cursor = 99
+		return picture, nil
+	}
+	return from
+}
+
+// aStoreAtVolume answers the way the Worker does for a whole placement, and refuses everything the
+// Worker refuses. A stand-in that took anything would let a turn pass here and fail in the user's
+// own account, which is the one place nobody is watching.
+type aStoreAtVolume struct {
+	t     *testing.T
+	took  map[string]int
+	parts []placement
+	// emptied counts the parts that said "empty first", which the Worker only honours on the
+	// first one — a turn that emptied twice would leave the store holding its own last part.
+	emptied int
+}
+
+func (s *aStoreAtVolume) handler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var body placement
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			http.Error(w, `{"error":"unreadable"}`, http.StatusBadRequest)
+			return
+		}
+		// The Worker's own cap. Sending more is a 413 there, and a turn that split wrongly would
+		// find that out in the user's account rather than here.
+		if len(body.Records) > recordsPerWrite {
+			http.Error(w, `{"error":"too many records"}`, http.StatusRequestEntityTooLarge)
+			return
+		}
+		if r.URL.Path == "/reset" && body.Part <= 1 {
+			s.emptied++
+			s.took = map[string]int{}
+		}
+		for _, record := range body.Records {
+			s.took[record.Key]++
+		}
+		s.parts = append(s.parts, body)
+		w.Write([]byte(`{"seq":1}`))
+	}
+}
+
+// The whole of a real backlog reaches the store, once each, in parts the store will take.
+//
+// **This is the run that was never made on the other route.** Twenty thousand records went into
+// the iCloud folder in four seconds and 8883 of them were never picked up, while the plugin
+// recorded the send as done — because writing was taken for arriving. This route answers, so the
+// same question has an answer here: every key the picture held is one the store said it took.
+func TestAWholeBacklogReachesTheStoreOnceEach(t *testing.T) {
+	answered := &aStoreAtVolume{t: t, took: map[string]int{}}
+	answering := httptest.NewServer(answered.handler())
+	defer answering.Close()
+
+	where := store{url: answering.URL, token: "a-throwaway-token", seal: sealerForTest(t)}
+	placed, settled, err := carryTurn([]route{where}, 7, false, state{}, wholeOf(t, aRealBacklog))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if placed != aRealBacklog {
+		t.Errorf("the turn placed %d records, want the whole backlog of %d", placed, aRealBacklog)
+	}
+	if len(answered.took) != aRealBacklog {
+		t.Errorf("the store holds %d keys, want %d — records were lost between the picture and the door", len(answered.took), aRealBacklog)
+	}
+	for key, times := range answered.took {
+		if times != 1 {
+			t.Fatalf("%s reached the store %d times, want once", key, times)
+		}
+	}
+	// The store empties on the first part alone: emptying again would leave it holding whichever
+	// part arrived last.
+	if answered.emptied != 1 {
+		t.Errorf("the turn emptied the store %d times, want once", answered.emptied)
+	}
+	if want := (aRealBacklog + recordsPerWrite - 1) / recordsPerWrite; len(answered.parts) != want {
+		t.Errorf("the turn went in %d parts, want %d of at most %d records", len(answered.parts), want, recordsPerWrite)
+	}
+	for at, part := range answered.parts {
+		if part.Part != at+1 || part.Parts != len(answered.parts) {
+			t.Errorf("part %d says it is %d of %d", at+1, part.Part, part.Parts)
+		}
+		if part.Version != 7 || part.SpecV != specVersion {
+			t.Errorf("part %d = version %d spec %d, want the turn's own", at+1, part.Version, part.SpecV)
+		}
+	}
+	if left := settled.Routes[where.name()]; left.Cursor != 99 || left.Version != 7 {
+		t.Errorf("the route was left at %+v, want the whole picture's own cursor and version", left)
+	}
+}
+
+// A backlog that stops part way through leaves the route with no place at all, so the next turn
+// places the whole of it again rather than carrying the difference over a hole.
+//
+// **The hole is what makes this the failure that matters.** A turn cut off at part 30 of 40 has
+// put three quarters of a backlog in the store; a route remembered at the picture's cursor would
+// carry only what moved after it, and the missing quarter would never be sent again.
+func TestABacklogCutOffPartWayLeavesTheRouteWithNoPlace(t *testing.T) {
+	answered := &aStoreAtVolume{t: t, took: map[string]int{}}
+	takes := answered.handler()
+	stopAfter := 30
+	answering := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if len(answered.parts) >= stopAfter {
+			http.Error(w, `{"error":"the store is full"}`, http.StatusInsufficientStorage)
+			return
+		}
+		takes(w, r)
+	}))
+	defer answering.Close()
+
+	where := store{url: answering.URL, token: "a-throwaway-token", seal: sealerForTest(t)}
+	_, settled, err := carryTurn([]route{where}, 7, false, state{Routes: map[string]carried{
+		where.name(): {Version: 1, Cursor: 7},
+	}}, wholeOf(t, aRealBacklog))
+
+	if err == nil {
+		t.Fatal("a backlog that was refused part way through read as one that landed")
+	}
+	if _, remembered := settled.Routes[where.name()]; remembered {
+		t.Error("a route holding three quarters of a backlog kept its place, and the missing quarter would never be sent again")
+	}
+	if len(answered.parts) != stopAfter {
+		t.Errorf("the turn went on to %d parts, want it to stop at the refusal on %d", len(answered.parts), stopAfter)
 	}
 }
