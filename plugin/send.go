@@ -237,7 +237,14 @@ func changedRecords(changes []change, rows readBack) ([]outgoing, error) {
 // **The keys and the version are the send's, not the route's**, which is what keeps the two ends
 // from drifting into two contracts. What each route adds is only what its destination demands: the
 // Cloudflare one seals the rows on the way out, because that place is rented rather than owned.
+//
+// **Where each of them has got to is its own**, though — which is why a route is named as well as
+// described. The two fail apart, and one that is failing must not hold the other where it stands.
 type route interface {
+	// name is what this route is remembered under, and nothing else. It is not the diagnostic
+	// one: that is written for a person and may be reworded, and rewording it would lose every
+	// route's place in the order at once.
+	name() string
 	// String names the route in a diagnostic, in the user's own words for it.
 	String() string
 	// holdsNothing says the place has never been written into, so it needs the whole window
@@ -271,26 +278,6 @@ func routesFor(in input) []route {
 	return open
 }
 
-// carryTo puts one body on every route, and says which of them did not take it.
-//
-// **A route that fails does not stop the others.** They are two places holding the same records,
-// and a phone reading one of them is not waiting on the other. What a failure does stop is the
-// state: nothing is remembered until every route has it, so the next turn carries the same
-// records again — which both routes take twice as well as once, being addressed by key.
-func carryTo(routes []route, body placement, whole bool) error {
-	var refusals []error
-	for _, where := range routes {
-		place := where.place
-		if whole {
-			place = where.replace
-		}
-		if err := place(body); err != nil {
-			refusals = append(refusals, fmt.Errorf("nothing reached %s: %w", where, err))
-		}
-	}
-	return errors.Join(refusals...)
-}
-
 // store is the place the records are put: the user's own Worker, the token that opens its writing
 // door, and the key nothing there is written without.
 type store struct {
@@ -298,6 +285,9 @@ type store struct {
 	token string
 	seal  *sealer
 }
+
+// name is what the Cloudflare route is remembered under.
+func (s store) name() string { return routeCloudflare }
 
 // String names the route in a diagnostic.
 func (s store) String() string { return "the Cloudflare Worker" }
@@ -393,8 +383,8 @@ func storeFor(in input) (store, error) {
 
 // put sends one body to one door and reads the ordering the store answered with.
 //
-// **No diagnostic here carries the token or anything the body held.** What comes back from a
-// refusal is the store's own sentence, which is written for whoever has to fix it.
+// A refusal is read where every door's is (see `askTheStore`), so what reaches the user's log
+// says what happened and what to do about it, whichever door turned them down.
 func (s store) put(path string, body placement) (int64, error) {
 	raw, err := json.Marshal(body)
 	if err != nil {
@@ -404,30 +394,34 @@ func (s store) put(path string, body placement) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	request.Header.Set("Authorization", "Bearer "+s.token)
 	request.Header.Set("Content-Type", "application/json")
 
-	answer, err := (&http.Client{Timeout: sendTimeout}).Do(request)
+	answered, err := s.askTheStore(request)
 	if err != nil {
-		return 0, fmt.Errorf("%s did not answer: %w", path, err)
+		return 0, err
 	}
-	defer answer.Body.Close()
-
 	var said struct {
-		Seq   int64  `json:"seq"`
-		Error string `json:"error"`
+		Seq int64 `json:"seq"`
 	}
-	decoded := json.NewDecoder(answer.Body).Decode(&said)
-	if answer.StatusCode < 200 || answer.StatusCode > 299 {
-		if decoded == nil && said.Error != "" {
-			return 0, fmt.Errorf("%s answered %d: %s", path, answer.StatusCode, said.Error)
-		}
-		return 0, fmt.Errorf("%s answered %d", path, answer.StatusCode)
-	}
-	if decoded != nil {
-		return 0, fmt.Errorf("%s answered %d with something this build cannot read: %w", path, answer.StatusCode, decoded)
+	if err := json.Unmarshal(answered, &said); err != nil {
+		return 0, fmt.Errorf("%s answered with something this build cannot read: %w", path, err)
 	}
 	return said.Seq, nil
+}
+
+// ledger is what a turn reads the store through. It is a set of functions rather than direct
+// calls so that a whole turn — which route is owed what, and what is remembered afterwards — can
+// be exercised without Amenbo standing behind it. What they stand for in a running plugin is
+// always the three below.
+type ledger struct {
+	whole   func() (window, error)
+	changed func(cursor int64) ([]change, int64, error)
+	rows    readBack
+}
+
+// theLedger is that set as a running plugin has it.
+func theLedger() ledger {
+	return ledger{whole: wholeWindow, changed: changesSince, rows: rowsIn}
 }
 
 // carry runs one turn of the send and says how many records it placed.
@@ -448,104 +442,143 @@ func carry(in input, force bool) (int, error) {
 		}
 		version = &asked
 	}
-
-	remembered, found, err := readState()
+	remembered, _, err := readState()
 	if err != nil {
 		return 0, err
 	}
+	placed, settled, err := carryTurn(routes, *version, force, remembered, theLedger())
+	if wrote := writeState(settled); wrote != nil && err == nil {
+		err = wrote
+	}
+	return placed, err
+}
 
-	if found && !anyRouteHoldsNothing(routes) {
-		if !force && remembered.Version == *version {
-			return 0, nil
+// carryTurn is one turn: what each route is owed, the reading it takes to answer that, and what
+// is remembered when it is over.
+//
+// **Every route is asked its own question, and answered on its own.** One may have never been
+// written into while the other is level; one may refuse everything while the other takes it all.
+// A route that fails keeps the place it had — the next turn carries the same stretch to it again,
+// which it takes twice as well as once, being addressed by key — and the routes beside it move on.
+//
+// The version is read before the picture is taken, never after: a write landing in between makes
+// a remembered version one turn stale, which costs a turn that finds nothing. Remembering a
+// version newer than the picture would instead skip whatever landed in that gap, and the phone
+// would never learn of it.
+func carryTurn(routes []route, version int64, force bool, remembered state, from ledger) (int, state, error) {
+	settled := state{Routes: map[string]carried{}}
+	for name, left := range remembered.Routes {
+		settled.Routes[name] = left
+	}
+
+	whole, changed := whatEachRouteIsOwed(routes, version, force, remembered)
+	placed := 0
+	var refusals []error
+
+	// The stretches are walked in cursor order so that one turn always reads the same way, and
+	// each stretch is read once however many routes are waiting on it.
+	for _, cursor := range inOrder(changed) {
+		records, moved, err := from.since(cursor)
+		if errors.Is(err, errSyncGap) {
+			logf("%s: the ledger no longer reaches back to where a route left off — placing the whole store there again", pluginName)
+			whole = append(whole, changed[cursor]...)
+			continue
 		}
-		placed, cursor, err := carryChanged(routes, remembered.Cursor, *version)
-		if !errors.Is(err, errSyncGap) {
-			if err != nil {
-				return 0, err
+		if err != nil {
+			return placed, settled, err
+		}
+		took := false
+		for _, where := range changed[cursor] {
+			if len(records) > 0 {
+				if err := where.place(placement{SpecV: specVersion, Version: version, Records: records}); err != nil {
+					refusals = append(refusals, fmt.Errorf("nothing reached %s: %w", where, err))
+					continue
+				}
 			}
-			return placed, writeState(state{Version: *version, Cursor: cursor})
+			// A stretch that turns out to hold nothing to carry is still a turn: the cursor
+			// moves, so the next one does not read it again.
+			settled.Routes[where.name()] = carried{Version: version, Cursor: moved}
+			took = true
 		}
-		logf("%s: the ledger no longer reaches back to where this plugin left off — placing the whole store again", pluginName)
+		if took {
+			placed += len(records)
+		}
 	}
 
-	placed, cursor, err := carryWhole(routes, *version)
+	if len(whole) == 0 {
+		return placed, settled, errors.Join(refusals...)
+	}
+	picture, err := from.whole()
 	if err != nil {
-		forgetWhatWasNotPlaced()
-		return 0, err
+		return placed, settled, err
 	}
-	return placed, writeState(state{Version: *version, Cursor: cursor})
+	records, err := carryWindow(picture)
+	if err != nil {
+		return placed, settled, err
+	}
+	took := false
+	for _, where := range whole {
+		if err := where.replace(placement{SpecV: specVersion, Version: version, Records: records}); err != nil {
+			refusals = append(refusals, fmt.Errorf("nothing reached %s: %w", where, err))
+			// **A whole placement stops part way through the store, not before it.** That route
+			// is left holding a fraction of a backlog, and any place it had points well past the
+			// hole — so carrying what moved since then would leave the middle missing for good.
+			// Forgetting puts it back where a first run is, and a first run is placed whole.
+			delete(settled.Routes, where.name())
+			continue
+		}
+		settled.Routes[where.name()] = carried{Version: version, Cursor: picture.Header.Cursor}
+		took = true
+	}
+	if took {
+		placed += len(records)
+	}
+	return placed, settled, errors.Join(refusals...)
 }
 
-// forgetWhatWasNotPlaced throws away the memory of an older send, after a whole placement failed.
-//
-// **A whole placement stops part way through the store, not before it.** A route emptied and
-// half filled is a place holding part of a backlog, and what was remembered from before points at
-// a cursor much further on — so the next turn would carry what moved since then and lay it on top,
-// leaving the missing middle missing for good.
-//
-// Forgetting puts the next turn back where a first run is: it places the whole store again, which
-// is the only thing that puts a half-placed one right. It costs one large send and no correctness.
-func forgetWhatWasNotPlaced() {
-	if err := forgetState(); err != nil {
-		logf("%s: %s", pluginName, err)
+// since reads one stretch of the ledger into the records it comes to.
+func (l ledger) since(cursor int64) ([]outgoing, int64, error) {
+	changes, moved, err := l.changed(cursor)
+	if err != nil {
+		return nil, 0, err
 	}
+	records, err := changedRecords(changes, l.rows)
+	if err != nil {
+		return nil, 0, err
+	}
+	return records, moved, nil
 }
 
-// anyRouteHoldsNothing says whether one of the open routes is starting from nothing.
+// whatEachRouteIsOwed sorts the open routes into the ones to place whole and the ones to carry a
+// stretch to, the latter gathered by where each is reading on from.
 //
 // **What this plugin remembers is what it sent, not what a place holds.** The iCloud folder comes
 // into being when the user first opens the app on their phone, which can be any number of sends
 // later, and handing that folder only what has moved since would leave a phone reading this
 // week's edits with no backlog behind them.
-func anyRouteHoldsNothing(routes []route) bool {
+func whatEachRouteIsOwed(routes []route, version int64, force bool, remembered state) ([]route, map[int64][]route) {
+	var whole []route
+	changed := map[int64][]route{}
 	for _, where := range routes {
-		if where.holdsNothing() {
-			return true
+		left, known := remembered.Routes[where.name()]
+		switch {
+		case !known, where.holdsNothing():
+			whole = append(whole, where)
+		case !force && left.Version == version:
+			// Level, and saying so costs nothing.
+		default:
+			changed[left.Cursor] = append(changed[left.Cursor], where)
 		}
 	}
-	return false
+	return whole, changed
 }
 
-// carryChanged places what moved since the cursor, and hands back the cursor to remember.
-//
-// A stretch that turns out to hold nothing to carry is still a turn: the cursor moves, so the
-// next one does not read it again.
-func carryChanged(routes []route, cursor, version int64) (int, int64, error) {
-	changes, moved, err := changesSince(cursor)
-	if err != nil {
-		return 0, 0, err
+// inOrder is the cursors of a turn, settled so that two runs over one turn read the same way.
+func inOrder(changed map[int64][]route) []int64 {
+	cursors := make([]int64, 0, len(changed))
+	for cursor := range changed {
+		cursors = append(cursors, cursor)
 	}
-	records, err := changedRecords(changes, rowsIn)
-	if err != nil {
-		return 0, 0, err
-	}
-	if len(records) == 0 {
-		return 0, moved, nil
-	}
-	if err := carryTo(routes, placement{SpecV: specVersion, Version: version, Records: records}, false); err != nil {
-		return 0, 0, err
-	}
-	return len(records), moved, nil
-}
-
-// carryWhole empties every route and places everything, which is what a first run, a reset, a gap
-// and a route that has just appeared all come down to.
-//
-// The version is read before the picture is taken, never after: a write landing in between makes
-// the remembered version one turn stale, which costs a turn that finds nothing. Remembering a
-// version newer than the picture would instead skip whatever landed in that gap, and the phone
-// would never learn of it.
-func carryWhole(routes []route, version int64) (int, int64, error) {
-	whole, err := wholeWindow()
-	if err != nil {
-		return 0, 0, err
-	}
-	records, err := carryWindow(whole)
-	if err != nil {
-		return 0, 0, err
-	}
-	if err := carryTo(routes, placement{SpecV: specVersion, Version: version, Records: records}, true); err != nil {
-		return 0, 0, err
-	}
-	return len(records), whole.Header.Cursor, nil
+	sort.Slice(cursors, func(a, b int) bool { return cursors[a] < cursors[b] })
+	return cursors
 }

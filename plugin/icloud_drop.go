@@ -67,6 +67,9 @@ type drop struct {
 	dir string
 }
 
+// name is what the iCloud route is remembered under.
+func (d drop) name() string { return routeICloud }
+
 // String names the route in a diagnostic, in the words the user's own question is asked in.
 func (d drop) String() string { return "the iCloud Drive folder" }
 
