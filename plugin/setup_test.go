@@ -371,11 +371,17 @@ func TestSetupKeepsTheKeyThePhonesAreAlreadyPairedWith(t *testing.T) {
 // A store that has just been stood up holds nothing, whatever this plugin remembers sending to
 // the last one. Left remembered, the memory would say "the phone is level" over an empty store,
 // and the next edit would be all that ever reached it.
-func TestSetupForgetsWhatWasSentToTheStoreBeforeIt(t *testing.T) {
+//
+// **The folder beside it is left where it stands.** Nothing happened to it, and forgetting it too
+// would cost it a whole placement for a Worker it has nothing to do with.
+func TestSetupForgetsWhatWasSentToTheStoreBeforeItAndNothingElse(t *testing.T) {
 	account := oneAccount()
 	watched(t, account)
 	remembering(t)
-	if err := writeState(state{Version: 12345, Cursor: 42}); err != nil {
+	if err := writeState(state{Routes: map[string]carried{
+		routeCloudflare: {Version: 12345, Cursor: 42},
+		routeICloud:     {Version: 12345, Cursor: 42},
+	}}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -385,8 +391,15 @@ func TestSetupForgetsWhatWasSentToTheStoreBeforeIt(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("exit %d", code)
 	}
-	if _, found, err := readState(); err != nil || found {
-		t.Errorf("the send still remembers a store that is not there any more (found %v, err %v)", found, err)
+	remembered, _, err := readState()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, known := remembered.Routes[routeCloudflare]; known {
+		t.Error("the send still remembers a store that is not there any more")
+	}
+	if left := remembered.Routes[routeICloud]; left.Cursor != 42 {
+		t.Errorf("the folder was left at %+v, and it is owed a whole placement it has no reason for", left)
 	}
 }
 
