@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"regexp"
 	"strings"
@@ -114,18 +115,20 @@ func TestTheManifestAndTheCodeAgreeOnTheName(t *testing.T) {
 	}
 }
 
-// nothingOpens holds the two variables a run reaches the machine's screen through, for as long
-// as the test lasts.
+// nothingOpens holds the ways a run reaches the machine's screen, for as long as the test lasts.
 //
-// **Walking the manifest means running the commands on it**, and one of them — `token` — is a
-// page and nothing else: it opens Cloudflare's token screen and ends there. Held like this, the
-// suite still sees the command dispatched, and the person running it does not get a browser
-// window in front of whatever they were doing.
+// **Walking the manifest means running the commands on it**, and two of them are a screen and
+// nothing else: `token` opens Cloudflare's token screen and ends there, and `app` draws a code
+// and ends there. Held like this, the suite still sees each command dispatched, and the person
+// running it gets neither a browser window nor an image viewer in front of whatever they were
+// doing — nor, since the drawing is held too, the run that outlives this one and would be the
+// test binary handed a directory to sleep over.
 func nothingOpens(t *testing.T) {
 	t.Helper()
-	wasOpen, wasScreen := openInTheSystem, thereIsAScreen
+	wasOpen, wasScreen, wasShown := openInTheSystem, thereIsAScreen, present
 	openInTheSystem, thereIsAScreen = opensFine, onAScreen
-	t.Cleanup(func() { openInTheSystem, thereIsAScreen = wasOpen, wasScreen })
+	present = func([]byte, bool, bool) (string, string, error) { return "image", "", nil }
+	t.Cleanup(func() { openInTheSystem, thereIsAScreen, present = wasOpen, wasScreen, wasShown })
 }
 
 // **Every command the manifest advertises must be dispatched.** The manifest is what an AI
@@ -463,5 +466,16 @@ func TestTheChoicesOfferedAreThePlacesTheCodeKnows(t *testing.T) {
 	// has to be every place — the bound only ever takes one away.
 	if declared.Default != strings.Join(routesDeclared, ",") {
 		t.Errorf("the default is %q, and a plugin that was never configured would carry to less than everywhere", declared.Default)
+	}
+}
+
+// **The numbers on the buttons are the order they are pressed in**, and they are written into the
+// labels by hand. A button added at the front renumbers every one after it, so a run that added
+// one and stopped there leaves the settings screen telling the user to press 1, 1, 2, 3.
+func TestTheButtonsAreNumberedInTheOrderTheyArePressed(t *testing.T) {
+	for at, offered := range read(t).Settings.Actions {
+		if want := fmt.Sprintf("%d. ", at+1); !strings.HasPrefix(offered.Label, want) {
+			t.Errorf("the %s button reads %q, and it is the one to press %s", offered.Cmd, offered.Label, want)
+		}
 	}
 }

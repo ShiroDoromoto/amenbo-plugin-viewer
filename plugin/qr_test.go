@@ -68,7 +68,7 @@ func pairingAgainst(t *testing.T, store *pretendStore) (in input, carried *pairi
 
 	shown := &pairing{}
 	was := present
-	present = func(what []byte, _ bool) (string, string, error) {
+	present = func(what []byte, _, _ bool) (string, string, error) {
 		if err := json.Unmarshal(what, shown); err != nil {
 			t.Errorf("what was about to be shown does not parse: %q", what)
 		}
@@ -284,7 +284,7 @@ func TestAnImageThatCannotTakeItselfAwayIsSaidOutLoud(t *testing.T) {
 
 	var left string
 	var err error
-	_, stderr := capture(t, func() { left, err = openAsAnImage(code) })
+	_, stderr := capture(t, func() { left, err = openAsAnImage(code, carriesTheKey) })
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -376,7 +376,7 @@ func capturedOpen(t *testing.T, code *qrcode.Code) (string, error) {
 	t.Helper()
 	var left string
 	var err error
-	capture(t, func() { left, err = openAsAnImage(code) })
+	capture(t, func() { left, err = openAsAnImage(code, carriesTheKey) })
 	return left, err
 }
 
@@ -407,4 +407,112 @@ func TestTheDrawnCodeKeepsItsQuietZone(t *testing.T) {
 			t.Fatalf("a line has no quiet zone on both sides: %q", line)
 		}
 	}
+}
+
+// **The page is for a phone, and the screen it is drawn on belongs to a PC.** Opening it in the
+// browser here would land the App Store on the one machine that cannot install from it, leaving
+// the person to carry the address across by hand — which is the gap the button exists to close.
+func TestTheAppButtonDrawsTheStorePageRatherThanOpeningItHere(t *testing.T) {
+	carried, secret := drawingIsHeld(t)
+	opened := watchTheViewer(t)
+	onlyAScreen(t)
+
+	var code int
+	_, stderr := capture(t, func() { code = run(input{}, []string{"app"}) })
+
+	if code != 0 {
+		t.Fatalf("exit %d", code)
+	}
+	if *carried != appStoreLink {
+		t.Errorf("the code carries %q, and the app is at %q", *carried, appStoreLink)
+	}
+	if *secret {
+		t.Error("a public page was drawn as a code carrying a secret")
+	}
+	if *opened != "" {
+		t.Errorf("the page was opened here, on the machine that cannot install it: %q", *opened)
+	}
+	if !strings.Contains(stderr, appStoreLink) {
+		t.Errorf("the address is nowhere for someone who would rather type it: %q", stderr)
+	}
+}
+
+// A machine with neither a screen to open an image on nor a terminal to draw blocks in has
+// nowhere to put a code — and that is not a failure to report, because the address in words is
+// the whole of what the code was carrying. Drawing it anyway would leave a screenful of blocks
+// in a log nobody can point a camera at.
+func TestAMachineWithNothingToDrawOnIsGivenTheAddressInWords(t *testing.T) {
+	carried, _ := drawingIsHeld(t)
+	nothingToDrawOn(t)
+
+	var code int
+	_, stderr := capture(t, func() { code = run(input{}, []string{"app"}) })
+
+	if code != 0 {
+		t.Fatalf("exit %d — a machine with nothing to draw on is not a failure to report", code)
+	}
+	if *carried != "" {
+		t.Errorf("a code was drawn where nothing could put it in front of a camera: %q", *carried)
+	}
+	if !strings.Contains(stderr, appStoreLink) {
+		t.Errorf("the address the person has to reach by hand was not written out: %q", stderr)
+	}
+}
+
+// The warning about what is left on disk belongs to the code that carries the key, and not to the
+// one that carries a public address. Saying it of both would teach the user to read past it on
+// the run where it is true.
+func TestACodeWithNoSecretOnItIsNotSaidToCarryTheKey(t *testing.T) {
+	code := codeForATest(t)
+	watchTheViewer(t)
+	watchTheErasing(t, errors.New("nothing could be started"))
+
+	var left string
+	var err error
+	_, stderr := capture(t, func() { left, err = openAsAnImage(code, carriesNoSecret) })
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !strings.Contains(stderr, left) {
+		t.Errorf("nobody was told where the file that was left behind is: %q", stderr)
+	}
+	if strings.Contains(stderr, "key") {
+		t.Errorf("a public page was reported as carrying the key: %q", stderr)
+	}
+	os.RemoveAll(filepath.Dir(left))
+}
+
+// drawingIsHeld stands in for putting a code in front of a camera, and hands back what was going
+// to be on it and whether it was drawn as something carrying a secret. What comes back empty is
+// a run that drew nothing.
+func drawingIsHeld(t *testing.T) (carried *string, secret *bool) {
+	t.Helper()
+	var what string
+	var hidden bool
+	was := present
+	present = func(bytes []byte, _, carriesASecret bool) (string, string, error) {
+		what, hidden = string(bytes), carriesASecret
+		return "image", "", nil
+	}
+	t.Cleanup(func() { present = was })
+	return &what, &hidden
+}
+
+// onlyAScreen is the machine a settings screen's button is pressed on: there is a display, and
+// asking after a terminal would reach for the one a GUI does not have.
+func onlyAScreen(t *testing.T) {
+	t.Helper()
+	wasScreen, wasTerminal := thereIsAScreen, thereIsATerminal
+	thereIsAScreen, thereIsATerminal = onAScreen, func() bool { return false }
+	t.Cleanup(func() { thereIsAScreen, thereIsATerminal = wasScreen, wasTerminal })
+}
+
+// nothingToDrawOn is the machine with no display and no terminal either — a run under something
+// that started it with neither.
+func nothingToDrawOn(t *testing.T) {
+	t.Helper()
+	wasScreen, wasTerminal := thereIsAScreen, thereIsATerminal
+	thereIsAScreen, thereIsATerminal = withNoScreen, func() bool { return false }
+	t.Cleanup(func() { thereIsAScreen, thereIsATerminal = wasScreen, wasTerminal })
 }

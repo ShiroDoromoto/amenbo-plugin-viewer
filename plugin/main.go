@@ -179,6 +179,8 @@ func run(in input, args []string) int {
 	}
 
 	switch args[0] {
+	case "app":
+		return do(getTheApp(in, args[1:]))
 	case "token":
 		return do(token(in, args[1:]))
 	case "setup":
@@ -268,6 +270,8 @@ Viewer on the phone reads it there. Nothing is hosted by anyone else, and nothin
 %s
 
 Usage (through Amenbo, from the project the plugin is enabled for):
+  amenbo plugin run %s app       put the app's App Store page on a code the phone reads
+                                      --terminal      draw the code here instead of opening it
   amenbo plugin run %s token     open Cloudflare's token screen, with the permissions
                                       'setup' needs already ticked
   amenbo plugin run %s setup     stand up the Worker and its database in your own account
@@ -287,8 +291,10 @@ Cloudflare token screen with the permissions already ticked, and 'setup' takes b
 page gives you. That token stands the Worker and the database up and is not kept. What it leaves
 in your account is yours — uninstalling this plugin does not take it away.
 
-Those two and 'qr' are on the settings screen as buttons, numbered in the order they are pressed,
-which is the only route for someone who has no terminal to type any of this into.
+Those two, 'app' and 'qr' are on the settings screen as buttons, numbered in the order they are
+pressed, which is the only route for someone who has no terminal to type any of this into. 'app'
+is the first of them: the phone is what reads all this, and the iCloud folder does not exist until
+the app has been opened on one.
 
 With no arguments the plugin is an observation hook: Amenbo fires it when the project changed,
 which is what tells it the phone is now behind. It carries what moved on its own, so 'push' is
@@ -316,6 +322,6 @@ read by the camera and never goes over the network, which is what keeps the key 
 The iCloud folder needs none of that: it holds one file per record, the folder itself is what the
 phone reads, and a record you delete here is a file that goes away.`,
 		pluginName, theRoutesFromHere(),
-		pluginName, pluginName, pluginName, pluginName, pluginName, pluginName, pluginName,
+		pluginName, pluginName, pluginName, pluginName, pluginName, pluginName, pluginName, pluginName,
 		configRoutes, configWorkerURL, configAuthToken, configEncryptionKey)
 }
