@@ -185,26 +185,14 @@ func (s store) cutOff(label string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	request.Header.Set("Authorization", "Bearer "+s.token)
 
-	answer, err := (&http.Client{Timeout: sendTimeout}).Do(request)
-	if err != nil {
-		return false, fmt.Errorf("/tokens did not answer: %w", err)
-	}
-	defer answer.Body.Close()
-
-	var said struct {
-		Error string `json:"error"`
-	}
-	decoded := json.NewDecoder(answer.Body).Decode(&said)
-	switch {
-	case answer.StatusCode == http.StatusNotFound:
+	_, err = s.askTheStore(request)
+	var turnedDown storeRefused
+	if errors.As(err, &turnedDown) && turnedDown.status == http.StatusNotFound {
 		return false, nil
-	case answer.StatusCode < 200 || answer.StatusCode > 299:
-		if decoded == nil && said.Error != "" {
-			return false, fmt.Errorf("/tokens answered %d: %s", answer.StatusCode, said.Error)
-		}
-		return false, fmt.Errorf("/tokens answered %d", answer.StatusCode)
+	}
+	if err != nil {
+		return false, err
 	}
 	return true, nil
 }
