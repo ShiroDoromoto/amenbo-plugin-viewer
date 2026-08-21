@@ -30,6 +30,11 @@ import (
 // It also settles what a deletion is: the file goes away. The phone learns of it by finding the
 // key gone, so nothing has to keep tombstones on a route where nobody could ever collect them.
 //
+// **iCloud is a second writer, and it never asks.** Two machines writing the same file leaves one
+// of them beside the other under a number — `meta 2.json`, `records 2` — with the write it holds
+// gone from everywhere else. Nothing on either end reads those names, so a send says what it
+// found rather than tidying it away (see tellOfCopies).
+//
 // **`meta.json` is written last**, so it never claims a version the files beside it do not yet
 // carry. It is also how a drop says it has never been written into: the folder appears when the
 // user first opens the app on their phone, which is long after this plugin started counting its
@@ -42,6 +47,10 @@ const (
 	dropRecordsDir = "records"
 	// dropSuffix is what a record's file is called after its id.
 	dropSuffix = ".json"
+	// copiesNamed is how many conflict copies one line names before it counts the rest. The
+	// point of the line is that the user go and look, and a name or three is enough to find
+	// the folder by.
+	copiesNamed = 3
 )
 
 // dropMeta is what meta.json holds: which contract the files are written to, which store version
@@ -84,6 +93,7 @@ func (d drop) holdsNothing() bool {
 // place puts what moved into the drop: a file per record written, a file per record deleted taken
 // away, and the meta written once at the end.
 func (d drop) place(body placement) error {
+	d.tellOfCopies()
 	for _, record := range body.Records {
 		path, err := d.pathFor(record.Key)
 		if err != nil {
@@ -109,6 +119,7 @@ func (d drop) place(body placement) error {
 // thought you knew", and a file left standing from before would be a record the phone keeps
 // holding with nothing to say it is gone.
 func (d drop) replace(body placement) error {
+	d.tellOfCopies()
 	placed := make(map[string]bool, len(body.Records))
 	for _, record := range body.Records {
 		path, err := d.pathFor(record.Key)
@@ -166,7 +177,10 @@ func isNumber(id string) bool {
 	return err == nil
 }
 
-// sweep takes away every record file the placement did not write.
+// sweep takes away every record file the placement did not write, conflict copies included: the
+// phone reads this tree, and a copy left in it arrives as a record filed under a key naming
+// nothing. What the copy was evidence of is said before the sweep runs (see tellOfCopies), so the
+// file goes without the fact going with it.
 func (d drop) sweep(placed map[string]bool) error {
 	records := filepath.Join(d.dir, dropRecordsDir)
 	err := filepath.WalkDir(records, func(path string, entry fs.DirEntry, err error) error {
@@ -185,6 +199,85 @@ func (d drop) sweep(placed map[string]bool) error {
 		return fmt.Errorf("what the drop held before cannot be cleared: %w", err)
 	}
 	return nil
+}
+
+// tellOfCopies says what iCloud left beside what this route writes.
+//
+// **A copy means the folder was written from two places at once, and one of those writes is
+// gone.** iCloud does not merge and does not ask: it keeps one of the two and puts the other
+// next to it under a number — `meta 2.json` beside `meta.json`, `records 2` beside `records`.
+// Nothing on either end reads those names, so they sit there for good, and the write they hold
+// is the only place that write still exists.
+//
+// So it is said out loud rather than tidied away. The copies under `records/` do go, but they go
+// through the sweep, whose reason is a different one — the phone reads that tree, and a copy left
+// in it is filed under a key naming no record. Saying so first is what keeps the sweep from
+// taking the fact along with the file.
+//
+// It costs a walk of the folder per send, which is what the sweep already costs on the turns that
+// take the whole window.
+func (d drop) tellOfCopies() {
+	copies := d.copiesLeftBehind()
+	if len(copies) == 0 {
+		return
+	}
+	named, rest := copies, ""
+	if len(named) > copiesNamed {
+		named, rest = named[:copiesNamed], fmt.Sprintf(", and %d more", len(copies)-copiesNamed)
+	}
+	logf("%s: iCloud made %d copy(ies) in the drop because it was written from two places at once — %s%s. One of the two writes was lost, and the copy is the only thing still holding it: read it before you take it away.",
+		pluginName, len(copies), strings.Join(named, ", "), rest)
+}
+
+// copiesLeftBehind names every conflict copy in the drop, relative to it. A copied directory is
+// named once rather than once per file below it: what the user has to open is the directory.
+func (d drop) copiesLeftBehind() []string {
+	var copies []string
+	err := filepath.WalkDir(d.dir, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil || path == d.dir || !isConflictCopy(entry.Name()) {
+			// A folder that cannot be read is not this line's to raise: whatever the send is
+			// doing at the time will fail on its own, with the reason it failed for.
+			return nil
+		}
+		if at, err := filepath.Rel(d.dir, path); err == nil {
+			copies = append(copies, filepath.ToSlash(at))
+		}
+		if entry.IsDir() {
+			return fs.SkipDir
+		}
+		return nil
+	})
+	if err != nil {
+		return nil
+	}
+	return copies
+}
+
+// isConflictCopy says whether a name is one iCloud made rather than one this route wrote. Every
+// name written here is a bare word or a number, so a number put after a space is not a name that
+// could have come from this side.
+func isConflictCopy(name string) bool {
+	base := strings.TrimSuffix(name, filepath.Ext(name))
+	space := strings.LastIndex(base, " ")
+	if space <= 0 {
+		return false
+	}
+	return isCopyNumber(base[space+1:])
+}
+
+// isCopyNumber says whether what follows the space is the number iCloud counts copies with. The
+// count starts at the second copy, so a name ending in "0" or "1" — or in a number written with
+// a zero in front of it — is somebody's own.
+func isCopyNumber(number string) bool {
+	if number == "" || number == "0" || number == "1" || number[0] == '0' {
+		return false
+	}
+	for _, digit := range number {
+		if digit < '0' || digit > '9' {
+			return false
+		}
+	}
+	return true
 }
 
 // writeMeta says what the drop as a whole now holds. It goes in last, so a turn that is cut short
