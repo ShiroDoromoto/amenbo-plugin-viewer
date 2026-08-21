@@ -55,11 +55,24 @@ Map<String, Object?> deleted(String recordKey) => {'k': recordKey, 'op': 'del'};
 
 /// A place, answering whatever the test says it answers.
 class Place {
-  Place({this.seq = 0, this.version = 100, this.specVersion = 1});
+  Place({
+    this.seq = 0,
+    this.version = 100,
+    this.specVersion = 1,
+    this.placedFrom = 0,
+    this.saysPlacedFrom = true,
+  });
 
   int seq;
   int? version;
   int specVersion;
+
+  /// Where the placement standing here began.
+  int placedFrom;
+
+  /// Whether `GET /meta` carries that number at all — a place deployed before it existed does
+  /// not, and the phone has to read that as a place nothing has overtaken.
+  bool saysPlacedFrom;
 
   /// What `GET /records?since=` hands back, keyed by the point it was asked from.
   final pages = <int, Map<String, Object?>>{};
@@ -132,6 +145,7 @@ class Place {
           'version': version,
           'seq': seq,
           'updated_at': '2026-08-09T12:00:00Z',
+          if (saysPlacedFrom) 'placed_from': placedFrom,
         }),
         200,
         headers: _json,
@@ -438,6 +452,79 @@ void main() {
         ),
       );
     });
+
+    // The place is standing further along than this device, so the cursor looks like an ordinary
+    // catching-up. What says otherwise is where the placement began: everything this device holds
+    // was written again above it, and whatever was deleted in between is in neither. The cheap
+    // question already carries that number, so the copy goes without a refusal being spent on it.
+    test(
+      'is thrown away before the round asks, when the placement began above the cursor',
+      () async {
+        store.applyPage([
+          BacklogChange.put('task', 1, task(id: 1, title: 'おき直しの前のもの')),
+        ], seq: 3);
+        final place = Place(seq: 9, placedFrom: 4)
+          ..page(
+            0,
+            seq: 9,
+            more: false,
+            records: [await sealed('task/2', task(id: 2, title: 'おき直しのあとのもの'))],
+          );
+
+        final report = await intakeFrom(place).run();
+
+        // The refused ask is the one that is not there: `3` never leaves the phone.
+        expect(place.asked, [0]);
+        expect(report.startedOver, isTrue);
+        expect(store.record('task', 1), isNull);
+        expect(store.record('task', 2), isNotNull);
+        expect(store.seq, 9);
+      },
+    );
+
+    // A cursor past where the placement began is one counted against that placement, so the copy
+    // it goes with is the beginning of what is there now.
+    test(
+      'is read on from, when the cursor is past where the placement began',
+      () async {
+        store.applyPage([BacklogChange.put('task', 1, task(id: 1))], seq: 5);
+        final place = Place(seq: 6, placedFrom: 4)
+          ..page(
+            5,
+            seq: 6,
+            more: false,
+            records: [await sealed('task/2', task(id: 2))],
+          );
+
+        final report = await intakeFrom(place).run();
+
+        expect(place.asked, [5]);
+        expect(report.startedOver, isFalse);
+        expect(store.record('task', 1), isNotNull);
+      },
+    );
+
+    // A place deployed before this number existed leaves it out. Reading that as a placement at
+    // zero would have every device throw its copy away on every round.
+    test(
+      'is read on from, when the place does not say where a placement began',
+      () async {
+        store.applyPage([BacklogChange.put('task', 1, task(id: 1))], seq: 5);
+        final place = Place(seq: 6, saysPlacedFrom: false)
+          ..page(
+            5,
+            seq: 6,
+            more: false,
+            records: [await sealed('task/2', task(id: 2))],
+          );
+
+        final report = await intakeFrom(place).run();
+
+        expect(place.asked, [5]);
+        expect(report.startedOver, isFalse);
+        expect(store.record('task', 1), isNotNull);
+      },
+    );
   });
 
   group('what the round cannot go on from', () {
