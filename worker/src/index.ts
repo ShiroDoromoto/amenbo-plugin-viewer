@@ -225,12 +225,17 @@ interface Standing {
 	updated_at: string | null;
 	/** 1 while a replacement is half placed — see `halfReplaced`. */
 	replacing: number;
+	/**
+	 * The point the placement now standing in the records began above. A cursor that has not
+	 * passed it holds nothing from that placement — see `read`.
+	 */
+	placed_from: number;
 }
 
 /** Reads that row. It is there from the first migration, so there is no "no store yet" to handle. */
 async function standing(env: Env): Promise<Standing> {
 	const row = await env.RECORDS.prepare(
-		"SELECT version, seq, updated_at, replacing FROM store WHERE id = 1",
+		"SELECT version, seq, updated_at, replacing, placed_from FROM store WHERE id = 1",
 	).first<Standing>();
 	return row!;
 }
@@ -261,13 +266,23 @@ function halfReplaced(): Response {
  * A phone that is level with the store learns so for the price of one small answer, which is what
  * lets it ask often. `seq` is the point the records have reached, so a phone compares it with the
  * one it holds rather than fetching to find out.
+ *
+ * `placed_from` is the other number it compares against: a cursor that has not passed it holds
+ * nothing from the placement standing here, so the answer is to throw that copy away rather than
+ * read on from it. A phone that acts on it here is spared the refusal `read` would give it.
  */
 async function meta(env: Env): Promise<Response> {
 	const now = await standing(env);
 	if (now.replacing) {
 		return halfReplaced();
 	}
-	return Response.json({ spec_v: SPEC_V, version: now.version, seq: now.seq, updated_at: now.updated_at });
+	return Response.json({
+		spec_v: SPEC_V,
+		version: now.version,
+		seq: now.seq,
+		updated_at: now.updated_at,
+		placed_from: now.placed_from,
+	});
 }
 
 /** A record as the table holds it, but for the place in the order the store hands it. */
@@ -294,6 +309,17 @@ interface Stored extends Landing {
  * ahead of it means these are not the records that cursor was counted against — a store rebuilt
  * from nothing under a phone that was paired with the old one. Answering the tail would hand it
  * somebody else's rows under numbers it recognises.
+ *
+ * **A cursor that has not passed the current placement is refused too**, and for a reason that
+ * looks nothing like it from the phone's side. Reading on from there would succeed and return
+ * rows, which is what makes it dangerous: a record deleted before the placement is in neither
+ * what is here nor what is coming, so the phone would keep it and call itself level. The remedy
+ * is the same either way — throw the copy away and read again — so both refusals are the same
+ * status, differing in what they say.
+ *
+ * **Being refused is not left to the phone to avoid.** `GET /meta` carries `placed_from` so a
+ * phone can check before asking, but a phone that does not check must not be handed a quiet
+ * wrong answer for it. `since=0` is the phone having thrown its copy away, and is served.
  */
 async function read(env: Env, url: URL): Promise<Response> {
 	const asked = url.searchParams.get("since") ?? "0";
@@ -311,6 +337,13 @@ async function read(env: Env, url: URL): Promise<Response> {
 			409,
 			`the order here has reached ${now.seq}, and you asked to read on from ${since}` +
 				" — this store is not the one that cursor came from, so read again from the beginning",
+		);
+	}
+	if (since > 0 && since <= now.placed_from) {
+		return problem(
+			409,
+			`the whole of this store was placed again above ${now.placed_from}, and you asked to read on from ${since}` +
+				" — everything you have from before that has been made again, so throw it away and read from the beginning",
 		);
 	}
 
@@ -464,7 +497,15 @@ async function place(env: Env, request: Request, placing: Placing): Promise<Resp
 	const statements = [
 		// Only the first part empties: the ones after it are the rest of the same store, and
 		// emptying again would leave the store holding whichever part arrived last.
-		...(placing === "replace" && first ? [env.RECORDS.prepare("DELETE FROM records")] : []),
+		...(placing === "replace" && first
+			? [
+					env.RECORDS.prepare("DELETE FROM records"),
+					// Where this placement begins, taken before the rows it places move the order
+					// on. It is written with the emptying rather than after it, so there is no
+					// moment where the records are gone and nothing says they were.
+					env.RECORDS.prepare("UPDATE store SET placed_from = seq WHERE id = 1"),
+				]
+			: []),
 		...(placing === "replace" && first && !last
 			? [env.RECORDS.prepare("UPDATE store SET replacing = 1 WHERE id = 1")]
 			: []),
