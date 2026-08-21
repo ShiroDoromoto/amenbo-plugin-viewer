@@ -522,6 +522,15 @@ uv run app/tool/release/play.py state
 | App Store | `appstore.py upload <ipa>` → 版が審査に居るなら `withdraw` → `bind <版> <番号>` → `submit <版>` |
 | Play | `play.py upload <aab> --track alpha` |
 
+- **版名が動くときは `bind` の前に2つ挟まる。** 出し終えた版には二度と紐づけられないので、
+  `appstore.py version <版>` で版レコードを開き、`appstore.py whatsnew <版> <file>` で
+  「何が変わったか」を書く。**空のままでは更新を提出できない**。版名が据え置きなら、
+  版レコードはもう在るので `bind` から始まる
+- **`notes` と `whatsnew` は別の欄。** `notes` は審査する人だけが読む（`appStoreReviewDetail`）、
+  `whatsnew` は利用者だけが読む。どちらも上限4000文字で、超えると API が PATCH ごと断る
+- **添付は版ごと。** 新しい版レコードには前の版の添付が付いてこないので、
+  `appstore.py attach <版> <file>` で入れ直す。審査ノートが「添付した」と書いているものが
+  実際に付いているかを、出す前に `attach <版>` で見る
 - **鍵は手元の置き場から読む。** App Store は `~/.appstoreconnect/private_keys/` の `.p8` と
   `~/.config/amenbo-release/asc.env` の2つの ID、Play は同じ場所のサービスアカウントの JSON。
   **リポジトリには鍵も ID も書かない**

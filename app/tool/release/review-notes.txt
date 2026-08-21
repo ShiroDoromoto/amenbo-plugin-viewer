@@ -10,7 +10,7 @@ There is no account, no login, no content of ours. The app has nothing to show u
 
 HOW TO SEE IT WORKING
 
-Attached is a screen recording of the whole flow on an iPhone 12 mini, from launch through pairing to reading offline. A pairing code (pairing-appreview.png) comes with our message in App Review, so you can walk the same path yourself: display it on any screen and point the app's camera at it. It pairs the app with a sample backlog we stood up for this review — invented rows about a website relaunch, on a Worker that holds nothing else. Nothing to type: the code carries the address, the read token and the key.
+Attached is a pairing code (pairing-appreview.png), so you can walk the whole flow yourself: display it on any screen and point the app's camera at it. It pairs the app with a sample backlog we stood up for this review — invented rows about a website relaunch, on a Worker that holds nothing else. Nothing to type: the code carries the address, the read token and the key.
 
 The app does not read codes out of the photo library, deliberately: the key would then sit there and in every backup it reaches. A code on a screen read by the camera is the only path, and it is the path a real user takes.
 
@@ -23,6 +23,8 @@ HOW A REAL USER SETS IT UP
 3. Scan the code the computer displays.
 
 What crosses the network is ciphertext. The key never travels over it, only optically in the QR code — that is why the camera is requested, and it is the only reason. There are no credentials to supply anywhere in this app.
+
+New in this version: the iCloud route can be switched off, and back on, from Settings > "Receive from iCloud".
 
 DEVICE MODELS AND OPERATING SYSTEMS TESTED
 

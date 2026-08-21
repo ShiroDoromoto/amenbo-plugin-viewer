@@ -16,8 +16,15 @@ loses the place in the review queue, and no amount of care afterwards buys it ba
     uv run app/tool/release/appstore.py attach 1.0
     uv run app/tool/release/appstore.py attach 1.0 ~/.config/amenbo-release/demo-secrets/pairing-appreview.png
     uv run app/tool/release/appstore.py withdraw
+    uv run app/tool/release/appstore.py version 1.1.0
+    uv run app/tool/release/appstore.py whatsnew 1.1.0
+    uv run app/tool/release/appstore.py whatsnew 1.1.0 <this version's text>.txt
     uv run app/tool/release/appstore.py bind 1.0.0 2
     uv run app/tool/release/appstore.py submit 1.0.0
+
+A release whose name stays put starts at `bind`: the version record is already there. A release
+whose name moves starts at `version`, because the one the store is holding has been released and
+nothing can be bound under it again.
 
 Reads `ASC_KEY_ID` and `ASC_ISSUER_ID` from `~/.config/amenbo-release/asc.env`, and the key itself
 from `~/.appstoreconnect/private_keys/AuthKey_<id>.p8` — the directory `altool` looks in, so the
@@ -47,6 +54,10 @@ PENDING = {"READY_FOR_REVIEW", "WAITING_FOR_REVIEW", "IN_REVIEW", "UNRESOLVED_IS
 # What the notes field holds. Checked here because the API refuses the whole PATCH over it, and a
 # rejection at that point costs a round trip to find out which of the two fields was too long.
 NOTES_LIMIT = 4000
+
+# What the store shows a user who is deciding whether to update. Same reason as NOTES_LIMIT: the
+# API refuses the PATCH rather than trimming, and finding that out costs a round trip.
+WHATS_NEW_LIMIT = 4000
 
 
 def ids():
@@ -107,7 +118,80 @@ def version_named(name):
     for version in versions():
         if version["attributes"]["versionString"] == name:
             return version["id"]
-    sys.exit(f"no version {name} on this app")
+    sys.exit(f"no version {name} on this app — `version {name}` makes it")
+
+
+def version(args):
+    """Opens a version record for a name the store has not carried yet.
+
+    A version that has been through review is finished: `bind` and `submit` both refuse to touch
+    it, so a release whose name moves needs a record of its own before either of them has anything
+    to aim at. The store keeps one editable version at a time and says so itself, which is the
+    guard against opening a second one by mistake.
+
+    MANUAL because the switch that puts the app in front of people is the one thing this road
+    should never throw by accident: approval and release stay two separate moments.
+    """
+    for held in versions():
+        if held["attributes"]["versionString"] == args.version:
+            sys.exit(f"version {args.version} is already open ({held['attributes']['appStoreState']})")
+    made = call(
+        "POST",
+        "/v1/appStoreVersions",
+        {
+            "data": {
+                "type": "appStoreVersions",
+                "attributes": {
+                    "platform": "IOS",
+                    "versionString": args.version,
+                    "releaseType": "MANUAL",
+                },
+                "relationships": {"app": {"data": {"type": "apps", "id": app()}}},
+            }
+        },
+    )["data"]
+    print(f"opened version {args.version} ({made['id']}), release=MANUAL")
+
+
+def localizations(name):
+    """The version's per-language sheets — the store carries whatever the listing has, not 19."""
+    return call(
+        "GET", f"/v1/appStoreVersions/{version_named(name)}/appStoreVersionLocalizations",
+        limit=50,
+    )["data"]
+
+
+def whatsnew(args):
+    """Reads what the update tells its users it changed, or writes it.
+
+    Not the same field as `notes`: that one is read by App Review and nobody else, this one is
+    read by everybody and by nobody official. An update is refused without it, so it is a step of
+    the release rather than a nicety.
+
+    The file goes to every language the version carries. That is one of them today, and the day it
+    is more than one this has to start reading the listing sheets per language, the way Play's
+    half already does.
+    """
+    for one in localizations(args.version):
+        locale = one["attributes"]["locale"]
+        if args.file is None:
+            print(f"  {locale}  {one['attributes']['whatsNew'] or '(empty)'}")
+            continue
+        text = args.file.read_text().strip()
+        if len(text) > WHATS_NEW_LIMIT:
+            sys.exit(f"{len(text)} characters — App Store Connect takes {WHATS_NEW_LIMIT}")
+        call(
+            "PATCH",
+            f"/v1/appStoreVersionLocalizations/{one['id']}",
+            {
+                "data": {
+                    "type": "appStoreVersionLocalizations",
+                    "id": one["id"],
+                    "attributes": {"whatsNew": text},
+                }
+            },
+        )
+        print(f"  {locale}  {len(text)} characters")
 
 
 def build_numbered(number):
@@ -339,6 +423,15 @@ if __name__ == "__main__":
     one.set_defaults(run=upload)
 
     steps.add_parser("withdraw", help="take the queued submission back").set_defaults(run=withdraw)
+
+    one = steps.add_parser("version", help="open a version record for a new version name")
+    one.add_argument("version")
+    one.set_defaults(run=version)
+
+    one = steps.add_parser("whatsnew", help="read what the update says it changed, or replace it")
+    one.add_argument("version")
+    one.add_argument("file", nargs="?", type=pathlib.Path)
+    one.set_defaults(run=whatsnew)
 
     one = steps.add_parser("bind", help="put a build under a version")
     one.add_argument("version")
