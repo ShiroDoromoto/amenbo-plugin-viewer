@@ -384,3 +384,64 @@ func TestOnAMacTheFolderIsStillSomethingToWaitFor(t *testing.T) {
 		t.Errorf("%q writes a mac's own folder off", said)
 	}
 }
+
+// **Where to get it, and not only what to do with it.** Every sentence that asks for the app to
+// be opened on a phone is read by somebody who may not have it, and one that names no place to
+// get it sends them off to look with nothing to look for.
+func TestEverySentenceThatAsksForTheAppSaysWhereToGetIt(t *testing.T) {
+	asAMac(t, true)
+	withICloud(t, false)
+	t.Setenv(envAuthToken, "")
+	t.Setenv(envEncryptionKey, "")
+
+	_, waiting := answeredCheck(t, fired("", map[string]any{configRoutes: "icloud,cloudflare"}))
+	_, wayIn := capture(t, func() { usage() })
+
+	for what, said := range map[string]string{
+		"the check's line about the folder": waiting,
+		"the way in from a mac":             onAMac(t, true),
+		"the way in from anywhere else":     onAMac(t, false),
+		"the usage":                         wayIn,
+	} {
+		if !strings.Contains(said, appStoreLink) {
+			t.Errorf("%s does not say where the app is: %q", what, said)
+		}
+	}
+}
+
+// **The line has a budget, and the address spends some of it.** The worst case is the one a fresh
+// install on a mac reads — both places ticked, neither standing — so it is the case that must fit
+// whole: cut, what goes is the tail, which is the Cloudflare route's half of what to do next.
+func TestTheLineAFreshMacReadsFitsWholeWithTheAddressOnIt(t *testing.T) {
+	asAMac(t, true)
+	withICloud(t, false)
+	t.Setenv(envAuthToken, "")
+	t.Setenv(envEncryptionKey, "")
+
+	_, said := answeredCheck(t, fired("", map[string]any{configRoutes: "icloud,cloudflare"}))
+
+	if strings.HasSuffix(said, "…") {
+		t.Errorf("the line a fresh mac reads is cut at %d bytes: %q", checkAnswerBytes, said)
+	}
+	if !strings.Contains(said, appStoreLink) || !strings.Contains(said, "setup") {
+		t.Errorf("%q has lost one of the two things to do next", said)
+	}
+}
+
+// asAMac answers the question of whether this machine has an app container at all, for as long
+// as the test lasts — the suite runs on machines of both kinds, and these lines differ by it.
+func asAMac(t *testing.T, mac bool) {
+	t.Helper()
+	was := icloudIsARoadHere
+	icloudIsARoadHere = func() bool { return mac }
+	t.Cleanup(func() { icloudIsARoadHere = was })
+}
+
+// onAMac is what to do about having nowhere to carry to, as the machine named would read it.
+func onAMac(t *testing.T, mac bool) string {
+	t.Helper()
+	was := icloudIsARoadHere
+	icloudIsARoadHere = func() bool { return mac }
+	defer func() { icloudIsARoadHere = was }()
+	return theWayInFromHere()
+}

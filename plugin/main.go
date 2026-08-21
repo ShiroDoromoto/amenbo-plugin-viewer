@@ -249,7 +249,8 @@ func theRoutesFromHere() string {
 
   mac      the app's own iCloud folder. Nothing to set up, no account, no key to hand over.
            It turns itself on once you have opened the app on your phone — that is what makes
-           the folder exist, and until then there is nothing to do here.
+           the folder exist, so 'app' is where this starts and until then there is nothing
+           else to do here.
   anywhere your own Cloudflare Worker, over HTTPS. 'setup' stands it up in your account.`
 	}
 	return `One route carries the records from this machine:
@@ -266,6 +267,9 @@ func usage() {
 
 The plugin encrypts your backlog a record at a time and carries it to a place YOU own. Amenbo
 Viewer on the phone reads it there. Nothing is hosted by anyone else, and nothing is written back.
+
+The app is at %s. 'app' puts that page on a code, since the
+screen you are reading this on is not the one that installs it.
 
 %s
 
@@ -321,7 +325,7 @@ read by the camera and never goes over the network, which is what keeps the key 
 
 The iCloud folder needs none of that: it holds one file per record, the folder itself is what the
 phone reads, and a record you delete here is a file that goes away.`,
-		pluginName, theRoutesFromHere(),
+		pluginName, appStoreLink, theRoutesFromHere(),
 		pluginName, pluginName, pluginName, pluginName, pluginName, pluginName, pluginName, pluginName,
 		configRoutes, configWorkerURL, configAuthToken, configEncryptionKey)
 }
