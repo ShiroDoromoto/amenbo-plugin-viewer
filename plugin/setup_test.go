@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -22,6 +23,10 @@ type pretendCloudflare struct {
 	databases map[string]string
 	laidOut   bool
 	subdomain string
+
+	// What the database says it has had. `ledger` is nil for one that keeps none at all — which
+	// is every database a release older than the ledger stood up.
+	ledger []string
 
 	// The subdomain call turned down for a reason of its own — a token missing the permission, a
 	// limit, a bad day. Left at zero, the only refusal it has is the account not having
@@ -89,12 +94,29 @@ func answers(t *testing.T, account *pretendCloudflare) {
 		account.statements = append(account.statements, asked.SQL)
 
 		rows := []map[string]any{}
-		if strings.Contains(asked.SQL, "sqlite_master") {
+		switch {
+		case strings.Contains(asked.SQL, "sqlite_master"):
 			if account.laidOut {
 				rows = append(rows, map[string]any{"name": "records"})
 			}
-		} else {
-			account.laidOut = true
+			if account.ledger != nil {
+				rows = append(rows, map[string]any{"name": ledgerTable})
+			}
+		case strings.HasPrefix(strings.TrimSpace(asked.SQL), readTheLedger):
+			for _, name := range account.ledger {
+				rows = append(rows, map[string]any{"name": name})
+			}
+		default:
+			// The run that applies migrations. What it lays down is the tables, and what it
+			// writes into the ledger is the names it recorded — so the database that comes out
+			// of it answers the next run the way a real one would.
+			if strings.Contains(asked.SQL, "CREATE TABLE records") {
+				account.laidOut = true
+			}
+			if account.ledger == nil {
+				account.ledger = []string{}
+			}
+			account.ledger = append(account.ledger, whatItRecorded(asked.SQL)...)
 		}
 		said(w, []map[string]any{{"success": true, "results": rows}})
 	})
@@ -159,6 +181,23 @@ func formPart(t *testing.T, r *http.Request, name string) string {
 		t.Fatal(err)
 	}
 	return string(read)
+}
+
+// whatItRecorded reads back the migration names a run wrote into the ledger — the stand-in's way
+// of remembering what the database has had, without a database.
+func whatItRecorded(sql string) []string {
+	var names []string
+	for _, line := range strings.Split(sql, "\n") {
+		line = strings.TrimSpace(line)
+		if !strings.HasPrefix(line, "INSERT INTO "+ledgerTable) {
+			continue
+		}
+		open, close := strings.Index(line, "'"), strings.LastIndex(line, "'")
+		if open >= 0 && close > open {
+			names = append(names, line[open+1:close])
+		}
+	}
+	return names
 }
 
 func bindingsOf(metadata map[string]any) []map[string]any {
@@ -234,6 +273,9 @@ func TestSetupStandsTheWholeRouteUp(t *testing.T) {
 	}
 	if len(account.statements) != 1 || !strings.Contains(account.statements[0], "CREATE TABLE records") {
 		t.Errorf("the schema did not go in: %v", account.statements)
+	}
+	if !sameNames(account.ledger, everyMigration(t)) {
+		t.Errorf("the database does not say what it was given: %v", account.ledger)
 	}
 	if !account.deployed.happened {
 		t.Fatal("the Worker was not deployed")
@@ -403,8 +445,13 @@ func TestSetupForgetsWhatWasSentToTheStoreBeforeItAndNothingElse(t *testing.T) {
 	}
 }
 
-// A database that is already laid out is left alone. Laying the schema down twice fails on the
-// first table, and a setup that could only ever be run once would be no use for repairing one.
+// A database that already has its tables is not laid out a second time. Laying the schema down
+// twice fails on the first table, and a setup that could only ever be run once would be no use
+// for repairing one.
+//
+// What it does get is a ledger saying what it has had — because a database from before the ledger
+// existed says nothing, and something has to, or the next migration has no way of telling this
+// database apart from one that is up to date.
 func TestSetupLeavesADatabaseThatAlreadyHasItsTables(t *testing.T) {
 	account := oneAccount()
 	account.databases[setupName] = "db-already-there"
@@ -418,10 +465,103 @@ func TestSetupLeavesADatabaseThatAlreadyHasItsTables(t *testing.T) {
 		t.Fatalf("exit %d", code)
 	}
 	for _, statement := range account.statements {
-		if strings.Contains(statement, "CREATE TABLE") {
+		if strings.Contains(statement, "CREATE TABLE records") {
 			t.Errorf("the schema was laid down over one that was already there: %q", statement)
 		}
 	}
+	// What it had is written down first, and whatever was added after that is applied on top —
+	// so it ends up saying it has had them all.
+	if !sameNames(account.ledger[:len(laidDownBeforeTheLedger)], laidDownBeforeTheLedger) {
+		t.Errorf("the ledger does not open with what it already had: %v", account.ledger)
+	}
+	if !sameNames(account.ledger, everyMigration(t)) {
+		t.Errorf("it did not go on to apply what it had not had: %v", account.ledger)
+	}
+}
+
+// A migration added after a user's database was stood up has to reach it, and the run that
+// reaches it must not touch the migrations that database has already had.
+func TestSetupAppliesOnlyWhatTheDatabaseHasNotHad(t *testing.T) {
+	all := everyMigration(t)
+	if len(all) < 2 {
+		t.Skip("there is only one migration, so there is nothing to be behind on")
+	}
+	account := oneAccount()
+	account.databases[setupName] = "db-already-there"
+	account.laidOut = true
+	account.ledger = append([]string{}, all[:len(all)-1]...)
+	behind := all[len(all)-1]
+	watched(t, account)
+
+	var code int
+	capture(t, func() { code = run(input{}, []string{"setup"}) })
+
+	if code != 0 {
+		t.Fatalf("exit %d", code)
+	}
+	applied := ""
+	for _, statement := range account.statements {
+		if strings.Contains(statement, "INSERT INTO "+ledgerTable) {
+			applied = statement
+		}
+	}
+	if applied == "" {
+		t.Fatalf("%s was never applied", behind)
+	}
+	if strings.Contains(applied, "CREATE TABLE records") {
+		t.Error("a migration the database had already had was applied again")
+	}
+	if !sameNames(account.ledger, all) {
+		t.Errorf("the ledger does not name every migration now: %v", account.ledger)
+	}
+}
+
+// Run again with nothing new to apply, it applies nothing — and says so rather than sending a
+// schema at a database that is already up to date.
+func TestSetupAppliesNothingToADatabaseThatIsUpToDate(t *testing.T) {
+	account := oneAccount()
+	account.databases[setupName] = "db-already-there"
+	account.laidOut = true
+	account.ledger = everyMigration(t)
+	watched(t, account)
+
+	var code int
+	capture(t, func() { code = run(input{}, []string{"setup"}) })
+
+	if code != 0 {
+		t.Fatalf("exit %d", code)
+	}
+	for _, statement := range account.statements {
+		if strings.Contains(statement, "CREATE TABLE") || strings.Contains(statement, "INSERT INTO") {
+			t.Errorf("something was applied to a database that has had it all: %q", statement)
+		}
+	}
+}
+
+// everyMigration is what this build carries, by name and in order.
+func everyMigration(t *testing.T) []string {
+	t.Helper()
+	migrations, err := theMigrations()
+	if err != nil {
+		t.Fatal(err)
+	}
+	names := make([]string, len(migrations))
+	for i, one := range migrations {
+		names[i] = one.name
+	}
+	return names
+}
+
+func sameNames(got, want []string) bool {
+	if len(got) != len(want) {
+		return false
+	}
+	for i := range got {
+		if got[i] != want[i] {
+			return false
+		}
+	}
+	return true
 }
 
 // Which account to build in is not a thing to guess at: a Worker and a database put somewhere the
@@ -649,18 +789,34 @@ func TestASecretIsDrawnFreshAndIsLongEnough(t *testing.T) {
 	}
 }
 
-// What the plugin carries has to be the built Worker and the schema that goes under it, or a
+// What the plugin carries has to be the built Worker and the migrations that go under it, or a
 // setup deploys something that cannot answer.
-func TestWhatIsBakedInIsTheWorkerAndItsSchema(t *testing.T) {
+func TestWhatIsBakedInIsTheWorkerAndItsMigrations(t *testing.T) {
 	if !strings.Contains(string(workerScript), "export {") {
 		t.Error("the baked script is not a module")
 	}
 	if !strings.Contains(string(workerScript), "WRITE_TOKEN") {
 		t.Error("the baked script does not gate on the write token")
 	}
+	migrations, err := theMigrations()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var schema strings.Builder
+	for _, one := range migrations {
+		schema.WriteString(one.sql)
+	}
 	for _, table := range []string{"records", "tokens", "store"} {
-		if !strings.Contains(workerSchema, "CREATE TABLE "+table) {
-			t.Errorf("the baked schema has no %s table", table)
+		if !strings.Contains(schema.String(), "CREATE TABLE "+table) {
+			t.Errorf("the baked migrations have no %s table", table)
+		}
+	}
+
+	// The frozen list is what a database from before the ledger is told it has had, so a name in
+	// it that no longer names a migration would leave that migration unapplied forever.
+	for _, name := range laidDownBeforeTheLedger {
+		if !slices.ContainsFunc(migrations, func(one migration) bool { return one.name == name }) {
+			t.Errorf("%s is on the before-the-ledger list and is not a migration this build carries", name)
 		}
 	}
 }

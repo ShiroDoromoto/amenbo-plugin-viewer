@@ -42,18 +42,15 @@ const (
 	compatibilityDate = "2026-08-01"
 )
 
-// The built Worker and the schema its database starts life with, baked in at build time. The
-// user's PC has no Node on it and no copy of this repository, so what stands the route up carries
-// what it deploys.
+// The built Worker, baked in at build time. The user's PC has no Node on it and no copy of this
+// repository, so what stands the route up carries what it deploys. The migrations its database is
+// brought up to are baked in the same way — see migrate.go.
 //
-// **Both files are generated.** The Worker's own source is what they are built from, and the
-// Worker's build is what writes them here.
-var (
-	//go:embed worker.js
-	workerScript []byte
-	//go:embed schema.sql
-	workerSchema string
-)
+// **It is generated.** The Worker's own source is what it is built from, and the Worker's build
+// is what writes it here.
+//
+//go:embed worker.js
+var workerScript []byte
 
 // The three ways the Cloudflare API token reaches this run, and not one of them keeps it.
 //
@@ -76,11 +73,6 @@ var tokenPermissions = []map[string]string{
 	{"key": "d1", "type": "edit"},               // to make the database and write to it
 	{"key": "account_settings", "type": "read"}, // to learn which account this is
 }
-
-// tableThatSaysTheSchemaIsThere is asked of a database that already existed. Laying the schema
-// down twice would fail on the first table, so what decides is whether it is there — not whether
-// this run is the first one, which nothing on this machine can honestly claim to know.
-const tableThatSaysTheSchemaIsThere = "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'records'"
 
 // What the check after the deploy is willing to wait through. A workers.dev name that was turned
 // on a second ago is not answering everywhere yet, and that is not a failure to report — it is a
@@ -220,29 +212,6 @@ func kept(everything bool) string {
 		return "kept"
 	}
 	return "generated"
-}
-
-// layTheSchemaDown gives a new database its tables, and leaves an old one alone.
-//
-// A database that was already there is asked rather than assumed about: a run that failed
-// somewhere between making it and filling it would otherwise leave a user with a Worker bound to
-// an empty database, and every send afterwards failing on a table that is not there.
-func layTheSchemaDown(air sky, account, database string, fresh bool) error {
-	if !fresh {
-		outcomes, err := air.query(account, database, tableThatSaysTheSchemaIsThere)
-		if err != nil {
-			return err
-		}
-		if len(outcomes) > 0 && len(outcomes[0].Results) > 0 {
-			logf("%s: the database already has its tables — leaving them as they are", pluginName)
-			return nil
-		}
-	}
-	if _, err := air.query(account, database, workerSchema); err != nil {
-		return err
-	}
-	logf("%s: the schema is in", pluginName)
-	return nil
 }
 
 // pastedToken gets the Cloudflare API token from the person running this.

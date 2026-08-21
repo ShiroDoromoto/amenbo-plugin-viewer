@@ -15,7 +15,7 @@ app:
   - ".github/paths-filters.yml"
 
 plugin:
-  # plugin/worker.js と plugin/schema.sql は worker/ から焼いたもの。焼き直しはこの層にも当たる
+  # plugin/worker.js と plugin/migrations/ は worker/ から焼いたもの。焼き直しはこの層にも当たる
   - "plugin/**"
   - ".github/workflows/ci.yml"
   - ".github/paths-filters.yml"
