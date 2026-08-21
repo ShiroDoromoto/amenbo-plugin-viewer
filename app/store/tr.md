@@ -48,6 +48,10 @@ Reklam yok. Takip yok. Hesap yok.
 
 ## release_notes
 
-İlk sürüm.
+iPhone'da iCloud yolu artık kapatılabiliyor.
 
-Artık Amenbo backlog'u telefonda okunuyor: işler, karar kayıtları ve ikisinin de yorumları; aranabilir ve ağ olmadan da okunur. Bilgisayarın gösterdiği kodu okutarak eşle, ya da Mac ile iPhone kullanıyorsan her şeyi kendi iCloud'undan geçir.
+- Ayarlardan "iCloud'dan al"ı kapatın, aynı yerden geri açın
+- Simge ve açılış ekranı yeni işaretten yeniden çizildi; açılış ekranı aydınlıkla karanlık arasında ters döner
+- Bilgisayarın bütün iş listesini yeniden koyması artık okunamayan bir şey değil, bir bekleyiş olarak okunuyor
+- Bilgisayardaki kopya sıfırdan yeniden kurulduysa, okumaya devam etmeden önce söyleniyor
+- Gelenin içinden yalnızca sözleşmenin yazdığı adlar okunuyor

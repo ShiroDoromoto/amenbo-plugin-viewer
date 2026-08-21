@@ -48,6 +48,10 @@ Không quảng cáo. Không theo dõi. Không tài khoản.
 
 ## release_notes
 
-Phiên bản đầu tiên.
+Trên iPhone, đường qua iCloud giờ có thể tắt.
 
-Giờ đã có thể đọc sổ việc Amenbo trên điện thoại: công việc, sổ quyết định và bình luận của cả hai, tìm kiếm được và đọc được cả khi không có mạng. Ghép đôi bằng cách quét mã trên màn hình máy tính, hoặc để Mac và iPhone chuyển qua chính iCloud của bạn.
+- Tắt "Nhận từ iCloud" trong cài đặt, và bật lại ngay tại đó
+- Biểu tượng và màn hình mở đầu được vẽ lại từ dấu mới; màn hình mở đầu lật giữa sáng và tối
+- Máy tính đặt lại toàn bộ danh sách việc nay hiện là đang chờ, chứ không phải không đọc được
+- Nếu bản sao ở máy tính đã dựng lại từ đầu, ứng dụng báo trước khi đọc tiếp
+- Trong những gì tới, chỉ đọc những tên mà giao ước viết ra

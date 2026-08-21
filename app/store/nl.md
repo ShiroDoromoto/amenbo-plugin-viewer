@@ -48,6 +48,10 @@ Geen advertenties. Geen tracking. Geen account.
 
 ## release_notes
 
-De eerste versie.
+Op de iPhone kan de weg via iCloud nu uit.
 
-De Amenbo-backlog is nu op de telefoon te lezen: taken, besluitenregisters en de opmerkingen bij allebei, doorzoekbaar en ook zonder netwerk. Koppel door de code op je pc-scherm te scannen, of laat een Mac en een iPhone alles via je eigen iCloud doorgeven.
+- Zet 'Ophalen uit iCloud' uit in de instellingen, en op dezelfde plek weer aan
+- Het icoon en het startscherm zijn opnieuw getekend naar het nieuwe merk; het scherm keert om tussen licht en donker
+- Dat je pc de hele backlog opnieuw plaatst, staat er nu als een wachten en niet als iets onleesbaars
+- Is de kopie op je pc opnieuw opgebouwd, dan zegt de app dat voordat er verder wordt gelezen
+- Gelezen worden alleen de namen die het contract schrijft

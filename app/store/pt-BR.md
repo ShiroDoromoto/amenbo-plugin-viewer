@@ -48,6 +48,10 @@ Sem anúncios. Sem rastreamento. Sem conta.
 
 ## release_notes
 
-A primeira versão.
+No iPhone, o caminho do iCloud agora pode ser desligado.
 
-Agora dá para ler o backlog do Amenbo no celular: tarefas, registros de decisões e os comentários de ambos, com busca e sem depender da rede. Pareie lendo o código que o PC mostra, ou deixe um Mac e um iPhone passarem tudo pelo seu próprio iCloud.
+- Desligue “Receber do iCloud” nos ajustes e ligue de novo no mesmo lugar
+- O ícone e a tela de abertura foram redesenhados com a marca nova; a de abertura se inverte entre claro e escuro
+- O PC recolocar todo o backlog agora aparece como espera, não como algo ilegível
+- Se a cópia do seu PC foi refeita do zero, o aviso vem antes de seguir lendo
+- Do que chega, só são lidos os nomes que o contrato escreve

@@ -48,6 +48,10 @@ Pas de publicité. Pas de pistage. Pas de compte.
 
 ## release_notes
 
-La première version.
+Sur iPhone, la voie iCloud peut désormais être coupée.
 
-Vous pouvez désormais lire votre backlog Amenbo sur le téléphone : tâches, décisions et les commentaires des deux, avec la recherche et sans réseau. Appairez en lisant le code affiché par le PC, ou laissez un Mac et un iPhone le faire passer par votre propre iCloud.
+- Coupez « Recevoir depuis iCloud » dans les réglages, et rallumez-la au même endroit
+- L'icône et l'écran de lancement sont redessinés sur la nouvelle marque ; l'écran s'inverse entre clair et sombre
+- Votre PC redéposant tout le backlog se lit comme une attente, non comme quelque chose d'illisible
+- Si la copie de votre PC a été refaite de zéro, l'app le dit avant d'aller plus loin
+- De ce qui arrive, seuls les noms du contrat sont lus

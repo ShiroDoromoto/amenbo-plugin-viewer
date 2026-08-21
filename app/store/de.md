@@ -48,6 +48,10 @@ Keine Werbung. Kein Tracking. Kein Konto.
 
 ## release_notes
 
-Die erste Fassung.
+Auf dem iPhone lässt sich der iCloud-Weg jetzt abschalten.
 
-Das Amenbo-Backlog lässt sich jetzt am Telefon lesen: Aufgaben, Entscheidungsprotokolle und die Kommentare an beiden, durchsuchbar und auch ohne Netz. Zum Koppeln den Code vom PC-Bildschirm scannen — oder Mac und iPhone über deine eigene iCloud reden lassen.
+- „Aus iCloud übernehmen“ in den Einstellungen abschalten und dort wieder einschalten
+- Symbol und Startbildschirm neu aus der neuen Marke gezeichnet; der Startbildschirm dreht zwischen hell und dunkel um
+- Dass dein PC das Backlog neu ablegt, steht jetzt als Warten da, nicht als etwas Unlesbares
+- Wurde die Kopie auf deinem PC neu aufgebaut, sagt die App das, bevor weitergelesen wird
+- Gelesen wird nur, was der Vertrag benennt

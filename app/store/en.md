@@ -48,6 +48,10 @@ No ads. No tracking. No account.
 
 ## release_notes
 
-The first release.
+The iCloud route now has a switch, on the iPhone.
 
-Read your Amenbo backlog on your phone: tasks, decision records and their comments, searchable and readable offline. Pair with your PC by scanning the code it shows, or let a Mac and an iPhone pass it through your own iCloud.
+- Turn "Take it in from iCloud" off in Settings, and back on in the same place
+- The icon and the launch screen are redrawn from the new mark; the launch screen turns over between light and dark
+- Your PC placing the whole backlog again now reads as a wait, not as something unreadable
+- If your PC's copy was rebuilt from nothing, you hear about it before reading on
+- Of what arrives, only the names the contract writes are read
