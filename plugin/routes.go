@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 )
 
@@ -37,6 +38,10 @@ type routeStanding struct {
 	// stalled says the place itself is there and the send still cannot use it. A place that is
 	// merely not set up yet is not stalled — it is a waiting install.
 	stalled bool
+	// notHere says this machine has no such place at all, whatever anybody ticks. It is not the
+	// same fact as a place that has not appeared yet: one is waited for, and the other never
+	// comes.
+	notHere bool
 }
 
 // carrying says whether records are reaching this place right now.
@@ -50,9 +55,15 @@ func routesStanding(in input) []routeStanding {
 	where := make([]routeStanding, 0, len(routesDeclared))
 
 	there := routeStanding{called: "the iCloud folder", declared: allowed[routeICloud]}
-	if folder, err := dropFor(); err == nil {
+	switch folder, err := dropFor(); {
+	case err == nil:
 		there.open = folder
-	} else {
+	case !icloudIsARoadHere():
+		// The candidates are the same list on every OS, so this is a place a Windows user can
+		// tick. Nothing breaks when they do — it simply never carries — and being told so is the
+		// difference between a choice that did nothing and a choice that did nothing visibly.
+		there.notHere = true
+	default:
 		there.missing = "open Amenbo Viewer on a phone once, and it appears"
 	}
 	where = append(where, there)
@@ -165,19 +176,25 @@ func check(in input, _ []string) error {
 // A place nobody ticked is not mentioned. It was turned off on purpose, and a form that repeats
 // every choice back reads as a list of faults.
 func whatIsReaching(where []routeStanding) string {
-	var reaching, waiting []string
+	var reaching, waiting, absent []string
 	for _, one := range where {
 		switch {
 		case one.carrying():
 			reaching = append(reaching, one.called)
-		case one.declared:
+		case !one.declared:
+			// Turned off on purpose, and not mentioned: a form that reads every choice back
+			// sounds like a list of faults. Being left out of the line is how it reads as off,
+			// which is the one of the three states that needs no words.
+		case one.notHere:
+			absent = append(absent, one.called)
+		default:
 			waiting = append(waiting, one.called+" — "+one.missing)
 		}
 	}
 
 	said := "Carrying to " + inWords(reaching) + "."
 	if len(reaching) == 0 {
-		if len(waiting) == 0 {
+		if len(waiting) == 0 && len(absent) == 0 {
 			return `Carrying nowhere: no place is ticked under "Where to carry".`
 		}
 		said = "Carrying nowhere."
@@ -187,7 +204,26 @@ func whatIsReaching(where []routeStanding) string {
 		// joined into a sentence — an "and" between two dashed clauses reads as one long one.
 		said += " Waiting on " + strings.Join(waiting, "; ") + "."
 	}
+	if len(absent) > 0 {
+		// **Not the same words as waiting.** Waiting is a place that will appear; this is one
+		// that will not, so a sentence about what to do next would be a sentence about nothing.
+		//
+		// One place can be absent and no more — the Cloudflare route is every OS's — so this is
+		// written in the singular.
+		said += " " + openingASentence(inWords(absent)) + " is a mac's own, and this machine has no such place."
+	}
 	return trimmedToTheLine(said)
+}
+
+// openingASentence puts a name at the start of one. The names are written to sit inside a
+// sentence ("carrying to the iCloud folder"), so one that has to open its own needs the capital
+// that was not there.
+func openingASentence(name string) string {
+	if name == "" {
+		return name
+	}
+	first, width := utf8.DecodeRuneInString(name)
+	return string(unicode.ToUpper(first)) + name[width:]
 }
 
 // inWords joins names the way a sentence does.
