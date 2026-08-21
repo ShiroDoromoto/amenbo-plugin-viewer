@@ -1,0 +1,233 @@
+package main
+
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"strings"
+	"unicode/utf8"
+)
+
+// Which places this plugin may carry to.
+//
+// **The declaration is an upper bound, not a switch.** What the user ticks is the set of places
+// this is allowed to use; whether anything reaches one of them is still the place's own answer —
+// the iCloud folder exists only once the app has been opened on a phone, and the Cloudflare one
+// only once `setup` has stood it up. What carries is the product of the two.
+//
+// A plain on/off would let the settings say "on" over a place that is not there, and the user
+// could not put that right: the folder is made by the OS, on a trigger this plugin cannot pull.
+// Read as a bound, the declaration can only take a place away, so the two can never disagree.
+
+// routesDeclared is how many of the places the user may tick, in the order they read them. The
+// values are the names the routes answer to, which is also what they are remembered under.
+var routesDeclared = []string{routeICloud, routeCloudflare}
+
+// routeStanding is one route and what stands between it and carrying: whether the user's
+// declaration reaches it, and whether the place it needs is there.
+type routeStanding struct {
+	// called is the route in the words the answer names it with.
+	called string
+	// declared says the user's tick reaches this route.
+	declared bool
+	// open is the route when the place it needs is there, and nil when it is not.
+	open route
+	// missing is what the place is waiting for, when it is not there.
+	missing string
+	// stalled says the place itself is there and the send still cannot use it. A place that is
+	// merely not set up yet is not stalled — it is a waiting install.
+	stalled bool
+}
+
+// carrying says whether records are reaching this place right now.
+func (s routeStanding) carrying() bool { return s.declared && s.open != nil }
+
+// routesStanding is where every route stands: what the declaration allows, and what is actually
+// there. It is the one reading of that question — the send takes the routes that are carrying,
+// and `check` says the same thing in words, so the two cannot drift.
+func routesStanding(in input) []routeStanding {
+	allowed := routesAllowed(in)
+	where := make([]routeStanding, 0, len(routesDeclared))
+
+	there := routeStanding{called: "the iCloud folder", declared: allowed[routeICloud]}
+	if folder, err := dropFor(); err == nil {
+		there.open = folder
+	} else {
+		there.missing = "open Amenbo Viewer on a phone once, and it appears"
+	}
+	where = append(where, there)
+
+	worker := routeStanding{called: "your Cloudflare Worker", declared: allowed[routeCloudflare]}
+	switch shop, err := storeFor(in); {
+	case err != nil:
+		worker.missing = fmt.Sprintf("run `%s setup`", pluginName)
+	default:
+		// The key is what the Worker route is allowed to send with, and only it: the folder is
+		// this machine's own. A route standing without one is worth saying — the send goes on to
+		// the other one, and silence here would read as the Worker being up to date.
+		seal, err := newSealer(secret(envEncryptionKey))
+		if err != nil {
+			worker.missing, worker.stalled = fmt.Sprintf("it is standing, but %s", err), true
+		} else {
+			shop.seal = seal
+			worker.open = shop
+		}
+	}
+	where = append(where, worker)
+
+	return where
+}
+
+// routesAllowed reads the declaration into the set of routes it reaches.
+//
+// **The empty answer is "none", and a missing one is "everywhere".** Amenbo fills a setting nobody
+// has touched in from the manifest's default, so the key arrives on every send — which is what
+// makes the empty string mean something rather than nothing: it is how ticking every place off
+// reaches here. A key that is not there at all is a different fact, an Amenbo older than the
+// setting, and a plugin must not go quiet under one.
+func routesAllowed(in input) map[string]bool {
+	declared, said := in.declared(configRoutes)
+	if !said {
+		allowed := make(map[string]bool, len(routesDeclared))
+		for _, name := range routesDeclared {
+			allowed[name] = true
+		}
+		return allowed
+	}
+	allowed := map[string]bool{}
+	for _, name := range strings.Split(declared, ",") {
+		if name = strings.TrimSpace(name); name != "" {
+			allowed[name] = true
+		}
+	}
+	return allowed
+}
+
+// routesFor names every route that is carrying. None is not a failure: a plugin that is installed
+// and enabled, with no Worker stood up and no folder yet, is waiting rather than broken — and so
+// is one whose every place has been ticked off.
+func routesFor(in input) []route {
+	var open []route
+	for _, where := range routesStanding(in) {
+		if where.carrying() {
+			open = append(open, where.open)
+			continue
+		}
+		// A place that is ticked, and there, and still cannot be carried to is worth a line: the
+		// send goes on to the other one, and silence would read as this one being up to date. A
+		// place that is simply not set up yet is not that — it is a waiting install, and saying
+		// so on every write would fill the log with a line nobody asked for.
+		if where.declared && where.stalled {
+			logf("%s: nothing is reaching %s — %s", pluginName, where.called, where.missing)
+		}
+	}
+	return open
+}
+
+// checkAnswerBytes is as long as the settings screen's one line may be. It is a line in a form,
+// not a report: past this it is not read, it is scrolled.
+const checkAnswerBytes = 200
+
+// check is what the settings screen raises to ask the one question a form full of readonly boxes
+// cannot answer: **is anything actually reaching a phone right now?**
+//
+// The three boxes being filled says only that a Worker was stood up once. The folder being ticked
+// says only that it is allowed. What a person wants is the product, and the message is the one
+// line that gives it.
+//
+// **`ok` is not that answer.** Amenbo puts this question at the door: a check that says no is a
+// check refusing the settings, and the plugin cannot be enabled. Carrying nowhere is not a wrong
+// setting — a fresh install carries nowhere by definition, and the folder it will use appears
+// only after the app has been opened on a phone, which nobody can do from a plugin that will not
+// enable. Ticking every place off is not a wrong setting either; it is a pause, asked for. So
+// `ok` says only what it can honestly say no to: a place that is ticked, and standing, and whose
+// settings still cannot be carried with.
+//
+// **It reads nothing over the network.** The question is about this machine's own two answers —
+// what is declared, and what is there — and a check that could hang on a network is one the form
+// waits on.
+func check(in input, _ []string) error {
+	where := routesStanding(in)
+	usable := true
+	for _, one := range where {
+		usable = usable && !(one.declared && one.stalled)
+	}
+	return json.NewEncoder(out).Encode(map[string]any{
+		"v":       contractVersion,
+		"ok":      usable,
+		"message": whatIsReaching(where),
+	})
+}
+
+// whatIsReaching is that line: where records are reaching, and — for a place that is ticked and
+// not there — what it is waiting for.
+//
+// A place nobody ticked is not mentioned. It was turned off on purpose, and a form that repeats
+// every choice back reads as a list of faults.
+func whatIsReaching(where []routeStanding) string {
+	var reaching, waiting []string
+	for _, one := range where {
+		switch {
+		case one.carrying():
+			reaching = append(reaching, one.called)
+		case one.declared:
+			waiting = append(waiting, one.called+" — "+one.missing)
+		}
+	}
+
+	said := "Carrying to " + inWords(reaching) + "."
+	if len(reaching) == 0 {
+		if len(waiting) == 0 {
+			return `Carrying nowhere: no place is ticked under "Where to carry".`
+		}
+		said = "Carrying nowhere."
+	}
+	if len(waiting) > 0 {
+		// The waiting ones each carry a clause of their own, so they are separated rather than
+		// joined into a sentence — an "and" between two dashed clauses reads as one long one.
+		said += " Waiting on " + strings.Join(waiting, "; ") + "."
+	}
+	return trimmedToTheLine(said)
+}
+
+// inWords joins names the way a sentence does.
+func inWords(names []string) string {
+	switch len(names) {
+	case 0:
+		return "nowhere"
+	case 1:
+		return names[0]
+	}
+	return strings.Join(names[:len(names)-1], ", ") + " and " + names[len(names)-1]
+}
+
+// trimmedToTheLine keeps the answer to what the form will show, cutting on a rune so a cut never
+// lands inside a character.
+func trimmedToTheLine(said string) string {
+	if len(said) <= checkAnswerBytes {
+		return said
+	}
+	cut := checkAnswerBytes - len("…")
+	for cut > 0 && !utf8.RuneStart(said[cut]) {
+		cut--
+	}
+	return said[:cut] + "…"
+}
+
+// nothingIsReaching says why a send had nowhere to go, which is two different facts wearing one
+// face: nothing is set up yet, or everything that is set up has been ticked off.
+//
+// **The second is not a fault**, and a sentence sending someone to `setup` over a choice they
+// made on purpose would have them undo it looking for a problem that is not there.
+func nothingIsReaching(in input) error {
+	for _, where := range routesStanding(in) {
+		if where.declared {
+			return errNoRoute
+		}
+	}
+	return errNothingTicked
+}
+
+// errNothingTicked is every place having been ticked off. The plugin stays enabled and carries
+// nowhere, which is what a pause is — and what it leaves behind differs from disabling the plugin.
+var errNothingTicked = errors.New(`no place is ticked under "Where to carry", so nothing is being carried — tick one to start again`)

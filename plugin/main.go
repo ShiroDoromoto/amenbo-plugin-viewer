@@ -49,15 +49,18 @@ const contractVersion = 1
 // built, the manifest names the thing that is installed.
 const pluginName = "viewer"
 
-// The settings this plugin keeps. **There is nothing for the user to fill in**: all three are
-// what `setup` generates and writes back. Two of them are declared secret, so Amenbo hands those
-// over in the environment rather than in the `config` object on stdin — which is why those two
-// are spelled twice, once as the key `setup` writes them under and once as the variable they come
+// The settings this plugin keeps. **One of them is the user's, and three are not**: the three the
+// Cloudflare route needs are what `setup` generates and writes back, and `routes` is the only
+// answer a person is asked for — which places this may carry to, read as a bound rather than a
+// switch (see `routes.go`). Two of the three are declared secret, so Amenbo hands those over in
+// the environment rather than in the `config` object on stdin — which is why those two are
+// spelled twice, once as the key `setup` writes them under and once as the variable they come
 // back in.
 //
-// The mac route has no setting at all — it writes into the app's own container, and the
-// directory being there is what turns it on.
+// Neither route has a setting saying *where*: the mac one writes into the app's own container,
+// and the Cloudflare one into the endpoint `setup` deployed.
 const (
+	configRoutes        = "routes"
 	configWorkerURL     = "worker_url"
 	configAuthToken     = "auth_token"
 	configEncryptionKey = "encryption_key"
@@ -112,8 +115,20 @@ type input struct {
 // setting reads one non-secret setting as text. A value that is not a string is not one this
 // plugin can use, and reads as absent rather than being coerced.
 func (in input) setting(key string) string {
-	text, _ := in.Config[key].(string)
-	return strings.TrimSpace(text)
+	text, _ := in.declared(key)
+	return text
+}
+
+// declared reads one non-secret setting and says whether Amenbo sent it at all.
+//
+// **Empty and absent are different answers**, and one setting turns on the difference: a set of
+// candidates with every one of them ticked off arrives as an empty string, while a key Amenbo
+// never sent is one this build knows about and that Amenbo does not. Reading them as the same
+// thing makes "none of them" mean "all of them".
+func (in input) declared(key string) (string, bool) {
+	value, sent := in.Config[key]
+	text, isText := value.(string)
+	return strings.TrimSpace(text), sent && isText
 }
 
 // secret reads one of the settings Amenbo declares secret. Those never reach the document on
@@ -170,6 +185,8 @@ func run(in input, args []string) int {
 		return do(setup(in, args[1:]))
 	case "push":
 		return do(push(in, args[1:]))
+	case "check":
+		return do(check(in, args[1:]))
 	case "qr":
 		return do(qr(in, args[1:]))
 	case "phones":
@@ -236,6 +253,7 @@ Usage (through Amenbo, from the project the plugin is enabled for):
                                       'setup' needs already ticked
   amenbo plugin run %s setup     stand up the Worker and its database in your own account
                                       --account <id>  when your token reaches more than one
+  amenbo plugin run %s check     where records are reaching right now, in one line
   amenbo plugin run %s push      carry what has not reached the phone yet, by hand
   amenbo plugin run %s qr        pair one phone: issue its read token and put it on screen
                                       --label <name>  what to call it, since cutting it off
@@ -258,8 +276,16 @@ which is what tells it the phone is now behind. It carries what moved on its own
 for what was left behind — a send that failed while the network was down, or a phone that has
 fallen behind for a reason nobody can see.
 
-Settings — **none of them is yours to fill in.** 'setup' writes all three:
-  %s       the endpoint it deployed
+Settings — **one of them is yours, and three are not.**
+
+  %s          which of the two places above this may carry to. It can only take one away:
+                  a place you tick still has to exist before anything reaches it, so ticking
+                  one never puts the settings at odds with what is actually there. Tick none
+                  and the plugin stays on and carries nowhere. 'check' says where it is
+                  reaching right now
+
+'setup' writes the other three, and there is nothing to type in any of them:
+  %s      the endpoint it deployed
   %s      the token it generated (secret)
   %s  the key it generated (secret). It reaches the phone by QR, never by network
 
@@ -270,6 +296,6 @@ read by the camera and never goes over the network, which is what keeps the key 
 
 The iCloud folder needs none of that: it holds one file per record, the folder itself is what the
 phone reads, and a record you delete here is a file that goes away.`,
-		pluginName, pluginName, pluginName, pluginName, pluginName, pluginName, pluginName,
-		configWorkerURL, configAuthToken, configEncryptionKey)
+		pluginName, pluginName, pluginName, pluginName, pluginName, pluginName, pluginName, pluginName,
+		configRoutes, configWorkerURL, configAuthToken, configEncryptionKey)
 }

@@ -21,6 +21,7 @@ type manifest struct {
 	Events   []string         `json:"events"`
 	Config   []field          `json:"config"`
 	Settings struct {
+		Check   string   `json:"check"`
 		Actions []action `json:"actions"`
 	} `json:"settings"`
 	Agent struct {
@@ -32,10 +33,20 @@ type manifest struct {
 }
 
 type field struct {
-	Key      string `json:"key"`
-	Label    string `json:"label"`
-	Secret   bool   `json:"secret"`
-	Readonly bool   `json:"readonly"`
+	Key      string   `json:"key"`
+	Label    string   `json:"label"`
+	Secret   bool     `json:"secret"`
+	Readonly bool     `json:"readonly"`
+	Type     string   `json:"type"`
+	Options  []option `json:"options"`
+	Default  string   `json:"default"`
+}
+
+// option is one of the candidates a setting offers. The value is what reaches the plugin, so it
+// is the half that has to agree with the code.
+type option struct {
+	Value string `json:"value"`
+	Label string `json:"label"`
 }
 
 // action is one button the settings screen offers, and what it asks for before pressing it. The
@@ -252,16 +263,25 @@ func TestTheOpenSettingTheCodeReadsIsDeclaredOpen(t *testing.T) {
 	}
 }
 
-// **None of the three saved settings is the user's to type.** `setup` generates all of them and
-// writes them back through `plugin config set`, so a box offered for any one of them is a box
-// whose only use is to break a working route. Declaring them readonly is what takes the box and
-// the clear button off the form; the write-back path is untouched by it.
-func TestNothingTheUserIsShownIsTheirsToFillIn(t *testing.T) {
+// **The three the Cloudflare route needs are not the user's to type.** `setup` generates all of
+// them and writes them back through `plugin config set`, so a box offered for any one of them is
+// a box whose only use is to break a working route. Declaring them readonly is what takes the box
+// and the clear button off the form; the write-back path is untouched by it.
+//
+// **`routes` is the one answer a person is asked for**, so it is the one that must not be
+// readonly — a bound nobody can move is not a bound.
+func TestOnlyTheChoiceIsTheUsersToMake(t *testing.T) {
 	declared := read(t).Config
 	if len(declared) == 0 {
 		t.Fatal("the manifest declares no settings at all")
 	}
 	for _, one := range declared {
+		if one.Key == configRoutes {
+			if one.Readonly {
+				t.Errorf("%s is the one thing the user chooses, and the form offers no way to change it", one.Key)
+			}
+			continue
+		}
 		if !one.Readonly {
 			t.Errorf("%s is offered as a box to type in, and setup is what writes it", one.Key)
 		}
@@ -399,5 +419,49 @@ func TestEveryAssetQuotesOneRelease(t *testing.T) {
 
 	if len(releases) > 1 {
 		t.Errorf("the assets are spread over %d releases: %v", len(releases), releases)
+	}
+}
+
+// **The line the settings screen asks for has to be a command the binary knows**, the same as a
+// button — and it is asked without anybody pressing anything, so a name that drifted would show
+// as a form that has stopped answering rather than as an error somebody set off.
+func TestTheLineTheSettingsScreenAsksForIsDispatched(t *testing.T) {
+	asked := read(t).Settings.Check
+
+	if asked == "" {
+		t.Fatal("the settings screen asks nothing, so a form of readonly boxes says nothing about whether anything is reaching")
+	}
+	nothingOpens(t)
+	var code int
+	capture(t, func() { code = run(input{}, strings.Fields(asked)) })
+
+	if code == 2 {
+		t.Errorf("%q is what the form asks and the binary does not know it", asked)
+	}
+}
+
+// **The values the form offers are the names the code carries to.** They travel through a settings
+// file and back, so a value renamed on one side and not the other reads as a place nobody ticked —
+// and what stops is the carrying, silently.
+func TestTheChoicesOfferedAreThePlacesTheCodeKnows(t *testing.T) {
+	declared := setting(t, configRoutes)
+
+	if declared.Type != "multi" {
+		t.Errorf("%s is declared %q, and it is a set of places rather than a line of text", configRoutes, declared.Type)
+	}
+	offered := make([]string, len(declared.Options))
+	for at, one := range declared.Options {
+		offered[at] = one.Value
+		if one.Label == "" {
+			t.Errorf("%q is offered with nothing written beside it", one.Value)
+		}
+	}
+	if strings.Join(offered, ",") != strings.Join(routesDeclared, ",") {
+		t.Errorf("the form offers %v and the code carries to %v", offered, routesDeclared)
+	}
+	// The default is what a plugin nobody has been to the settings screen for carries with, so it
+	// has to be every place — the bound only ever takes one away.
+	if declared.Default != strings.Join(routesDeclared, ",") {
+		t.Errorf("the default is %q, and a plugin that was never configured would carry to less than everywhere", declared.Default)
 	}
 }
