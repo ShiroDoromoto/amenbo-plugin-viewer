@@ -206,3 +206,109 @@ func TestAFileAppearsOnlyOnceAllOfItIsThere(t *testing.T) {
 		}
 	}
 }
+
+// iCloud writes into this folder too, and what it writes when two machines wrote at once is a
+// copy under a number. Nothing on either end reads those names, so a send says it found them —
+// the copy is the only place the lost write still exists.
+func TestASendSaysWhatICloudLeftBeside(t *testing.T) {
+	where := standingDrop(t)
+	if err := os.MkdirAll(filepath.Join(where.dir, "records 2", "task"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	for _, at := range []string{"meta 2.json", filepath.Join("records 2", "task", "12.json")} {
+		if err := os.WriteFile(filepath.Join(where.dir, at), []byte(`{}`), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	_, said := capture(t, func() {
+		if err := where.place(placement{SpecV: specVersion, Version: 1, Records: []outgoing{placed("task/1")}}); err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	for _, want := range []string{"meta 2.json", "records 2"} {
+		if !strings.Contains(said, want) {
+			t.Errorf("the copy %q went unmentioned: %q", want, said)
+		}
+	}
+	if strings.Contains(said, "records 2/task/12.json") {
+		t.Errorf("a copied folder was named file by file: %q", said)
+	}
+}
+
+// The copies are left where they are. Reading one is the only way to see which write was lost,
+// so a send that took them away would be taking the evidence with them.
+func TestTheCopiesBesideTheDropAreLeftAlone(t *testing.T) {
+	where := standingDrop(t)
+	if err := os.WriteFile(filepath.Join(where.dir, "meta 2.json"), []byte(`{}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	capture(t, func() {
+		if err := where.replace(placement{SpecV: specVersion, Version: 1, Records: []outgoing{placed("task/1")}}); err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	if _, err := os.Stat(filepath.Join(where.dir, "meta 2.json")); err != nil {
+		t.Errorf("the copy was cleared away: %v", err)
+	}
+}
+
+// A copy under `records/` is the one exception: the phone reads that tree, and a copy in it
+// arrives as a record filed under a key naming nothing. It is named first and swept after.
+func TestACopyAmongTheRecordsIsNamedBeforeItIsSwept(t *testing.T) {
+	where := standingDrop(t)
+	if err := where.place(placement{SpecV: specVersion, Version: 1, Records: []outgoing{placed("task/1")}}); err != nil {
+		t.Fatal(err)
+	}
+	theCopy := filepath.Join(where.dir, "records", "task", "1 2.json")
+	if err := os.WriteFile(theCopy, []byte(`{}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	_, said := capture(t, func() {
+		if err := where.replace(placement{SpecV: specVersion, Version: 2, Records: []outgoing{placed("task/1")}}); err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	if !strings.Contains(said, "records/task/1 2.json") {
+		t.Errorf("the copy was swept without a word: %q", said)
+	}
+	if _, err := os.Stat(theCopy); err == nil {
+		t.Error("a copy the phone would read as a record was left among the records")
+	}
+}
+
+// A drop iCloud has not touched says nothing. The line is for a folder written from two places,
+// and one on every send would be a line nobody could act on.
+func TestADropWithNoCopiesSaysNothing(t *testing.T) {
+	where := standingDrop(t)
+
+	_, said := capture(t, func() {
+		if err := where.place(placement{SpecV: specVersion, Version: 1, Records: []outgoing{placed("task/1")}}); err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	if said != "" {
+		t.Errorf("an untouched drop said %q", said)
+	}
+}
+
+// What tells a copy from a name this route wrote: iCloud counts from 2 after a space, and every
+// name written here is a bare word or a number.
+func TestOnlyACountedNameReadsAsACopy(t *testing.T) {
+	for _, name := range []string{"meta 2.json", "records 2", "1 2.json", "meta 10.json", "records 2 2"} {
+		if !isConflictCopy(name) {
+			t.Errorf("%q was not read as a copy", name)
+		}
+	}
+	for _, name := range []string{"meta.json", "records", "12.json", "task_comment", " 2.json", "meta 0.json", "meta 1.json", "meta x.json", ".DS_Store"} {
+		if isConflictCopy(name) {
+			t.Errorf("%q was read as a copy", name)
+		}
+	}
+}
