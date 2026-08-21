@@ -25,13 +25,13 @@ test: manifest
 
 # The manifest is checked against the same rules Amenbo enforces at the install door, so a
 # manifest that would be refused there is refused here first. It needs no store and no binding,
-# but it does need Amenbo on the PATH — a machine without it skips the check rather than failing
+# but it does need amenbo on the PATH — a machine without it skips the check rather than failing
 # the build over a tool that is not this repository's to require.
 manifest:
-	@if command -v Amenbo >/dev/null 2>&1; then \
+	@if command -v amenbo >/dev/null 2>&1; then \
 		amenbo --actor ai plugin validate dev/manifest.json; \
 	else \
-		echo "manifest: Amenbo is not on the PATH — skipping the catalog check"; \
+		echo "manifest: amenbo is not on the PATH — skipping the catalog check"; \
 	fi
 
 # Hand-install into an Amenbo base dir — the author's own loop, before there is a release to

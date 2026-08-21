@@ -18,7 +18,11 @@ import (
 // **No --actor is passed.** Amenbo puts the plugin's own reach in the environment when it fires
 // it, and that reach *is* the facet. Claiming to be the person, or their AI, would be untrue and
 // would also narrow the window to a single project.
-const amenboProgram = "Amenbo"
+//
+// **The name is the command as it is typed, lowercase.** PATH lookup is case-sensitive on Linux,
+// so a capitalised spelling here resolves nowhere there while macOS and Windows fold the case and
+// carry on — which makes it a break only the platform nobody develops on ever reports.
+const amenboProgram = "amenbo"
 
 // errSyncGap is Amenbo saying the cursor has fallen out of the stretch the ledger still speaks
 // for. It is not a failure to report — it is the signal to stop reading changes and place the
