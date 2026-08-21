@@ -156,7 +156,7 @@ func TestEveryButtonTheSettingsScreenOffersIsDispatched(t *testing.T) {
 // does — one spelling on both sides, or the button hands the token over into a variable nothing
 // reads and `setup` goes looking for a terminal that a settings screen does not have.
 func TestTheAskedTokenReachesTheCodeUnderTheNameItsKeyBecomes(t *testing.T) {
-	asked := whatSetupAsksFor(t)
+	asked := whatIsAskedFor(t, "setup")
 
 	if len(asked) != 1 || asked[0].Key != askAPIToken {
 		t.Fatalf("setup asks for %v, and the code reads %q", asked, askAPIToken)
@@ -172,31 +172,53 @@ func TestTheAskedTokenReachesTheCodeUnderTheNameItsKeyBecomes(t *testing.T) {
 	}
 }
 
+// The phone's name reaches the run under the name its declared key becomes, the same way the API
+// token does — and unlike it, the box is open: what is typed there is the name the person will be
+// looking for when they cut this phone off, so hiding it hides the one thing to remember.
+func TestTheAskedLabelReachesTheCodeUnderTheNameItsKeyBecomes(t *testing.T) {
+	asked := whatIsAskedFor(t, "qr")
+
+	if len(asked) != 1 || asked[0].Key != askLabel {
+		t.Fatalf("qr asks for %v, and the code reads %q", asked, askLabel)
+	}
+	if asked[0].Secret {
+		t.Error("the phone's name is declared secret, so nobody could read back what they had typed")
+	}
+	if asked[0].Label == "" {
+		t.Error("the box has no label, so nobody knows what to type into it")
+	}
+	if want := "AMENBO_ASK_" + strings.ToUpper(asked[0].Key); want != envAskLabel {
+		t.Errorf("the answer reaches the plugin as %q, and it is read from %q", want, envAskLabel)
+	}
+}
+
 // **What is asked for is not one of the saved settings.** The whole worth of asking is that the
 // answer is used once and kept nowhere, so a key that collided with a declared setting would put
 // a Cloudflare API token — the one credential here that can build in someone's account — into the
 // three values `setup` writes back and leaves behind.
-func TestWhatSetupAsksForIsKeptNowhere(t *testing.T) {
+func TestWhatTheButtonsAskForIsKeptNowhere(t *testing.T) {
 	declared := read(t).Config
 
-	for _, asked := range whatSetupAsksFor(t) {
-		for _, saved := range declared {
-			if asked.Key == saved.Key {
-				t.Errorf("%q is asked for at the button and saved as a setting", asked.Key)
+	for _, offered := range read(t).Settings.Actions {
+		for _, asked := range offered.Ask {
+			for _, saved := range declared {
+				if asked.Key == saved.Key {
+					t.Errorf("%q is asked for at the %q button and saved as a setting", asked.Key, offered.Cmd)
+				}
 			}
 		}
 	}
 }
 
-// whatSetupAsksFor is the boxes the settings screen puts up before it runs `setup`.
-func whatSetupAsksFor(t *testing.T) []field {
+// whatIsAskedFor is the boxes the settings screen puts up before it runs one of its buttons.
+func whatIsAskedFor(t *testing.T, cmd string) []field {
 	t.Helper()
 	for _, offered := range read(t).Settings.Actions {
-		if offered.Cmd == "setup" {
+		if offered.Cmd == cmd {
 			return offered.Ask
 		}
 	}
-	t.Fatal("the settings screen offers no button that runs setup")
+	t.Fatalf("the settings screen offers no button that runs %s", cmd)
 	return nil
 }
 
