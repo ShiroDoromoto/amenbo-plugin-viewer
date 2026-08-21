@@ -24,10 +24,9 @@ Serve Amenbo in funzione su un Mac, su Windows o su Linux, con il plugin viewer 
 
 COME ARRIVA
 
-- Mac e iPhone: attraverso il tuo iCloud. Sul telefono non c'è niente da impostare.
-- Con un account Cloudflare, su entrambi i telefoni: il PC consegna il backlog a un worker che è tuo, e il telefono va a prenderlo. Per accoppiarli, inquadra con la fotocamera il codice sullo schermo del PC.
+Il PC consegna il backlog a un worker che è tuo, sul tuo account Cloudflare, e il telefono va a prenderlo. Per accoppiarli, inquadra con la fotocamera il codice sullo schermo del PC. Su entrambi i telefoni allo stesso modo.
 
-Nessuna delle due strade passa da un nostro server, e non c'è alcun account da creare.
+La strada non passa da nessun nostro server, e non c'è alcun account nostro da creare.
 
 CIFRATO, E ANCORA TUO
 
@@ -48,10 +47,8 @@ Nessuna pubblicità. Nessun tracciamento. Nessun account.
 
 ## release_notes
 
-Su iPhone la via iCloud ora si può spegnere.
+La via di iCloud non c'è più. Ogni telefono ora legge da un worker sul tuo account Cloudflare.
 
-- Spegni «Ricevi da iCloud» nelle impostazioni, e riaccendilo nello stesso posto
-- Icona e schermata di avvio ridisegnate dal nuovo segno; quella di avvio si rovescia tra chiaro e scuro
-- Il PC che rimette tutto il backlog ora si legge come un'attesa, non come qualcosa di illeggibile
-- Se la copia sul PC è stata rifatta da zero, l'app lo dice prima di andare avanti
-- Di ciò che arriva si leggono solo i nomi scritti dal contratto
+- Se il tuo Mac scriveva via iCloud, prepara il worker sul PC: lo fa il plugin, tu incolli un token una volta sola
+- Quello che è già arrivato resta leggibile, e l'app dice chiaramente quando non arriverà altro
+- L'app non chiede più niente a iCloud

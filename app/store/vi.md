@@ -24,10 +24,9 @@ Bạn cần có Amenbo đang chạy trên Mac, Windows hoặc Linux, với phầ
 
 NỘI DUNG ĐẾN BẰNG ĐƯỜNG NÀO
 
-- Mac và iPhone: qua chính iCloud của bạn. Trên điện thoại không phải cài đặt gì.
-- Có tài khoản Cloudflare thì cả hai loại điện thoại: máy tính giao sổ việc cho một worker của chính bạn, còn điện thoại đến lấy. Muốn ghép đôi, hãy hướng máy ảnh vào mã hiện trên màn hình máy tính.
+Máy tính giao sổ việc cho một worker của chính bạn, chạy trên tài khoản Cloudflare của bạn, còn điện thoại đến lấy. Muốn ghép đôi, hãy hướng máy ảnh vào mã hiện trên màn hình máy tính. Cả hai loại điện thoại đều như nhau.
 
-Cả hai đường đều không đi qua máy chủ nào của chúng tôi, và không có tài khoản nào phải tạo.
+Đường này không đi qua máy chủ nào của chúng tôi, và không có tài khoản nào của chúng tôi phải tạo.
 
 ĐÃ MÃ HOÁ, VÀ VẪN LÀ CỦA BẠN
 
@@ -48,10 +47,8 @@ Không quảng cáo. Không theo dõi. Không tài khoản.
 
 ## release_notes
 
-Trên iPhone, đường qua iCloud giờ có thể tắt.
+Đường qua iCloud đã bỏ. Giờ mọi điện thoại đều đọc từ một worker trên tài khoản Cloudflare của chính bạn.
 
-- Tắt "Nhận từ iCloud" trong cài đặt, và bật lại ngay tại đó
-- Biểu tượng và màn hình mở đầu được vẽ lại từ dấu mới; màn hình mở đầu lật giữa sáng và tối
-- Máy tính đặt lại toàn bộ danh sách việc nay hiện là đang chờ, chứ không phải không đọc được
-- Nếu bản sao ở máy tính đã dựng lại từ đầu, ứng dụng báo trước khi đọc tiếp
-- Trong những gì tới, chỉ đọc những tên mà giao ước viết ra
+- Nếu máy Mac của bạn vẫn gửi qua iCloud, hãy dựng worker ở máy tính: phần mở rộng làm hết, bạn chỉ dán một mã một lần
+- Những gì đã tới điện thoại vẫn đọc được, và ứng dụng nói rõ khi sẽ không còn gì tới nữa
+- Ứng dụng không còn đòi iCloud nữa

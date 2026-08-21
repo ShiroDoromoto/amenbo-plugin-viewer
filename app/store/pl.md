@@ -24,10 +24,9 @@ Potrzebny jest działający Amenbo na Macu, Windowsie albo Linuksie, z wtyczką 
 
 JAK TO DOCIERA
 
-- Mac i iPhone: przez twój własny iCloud. Po stronie telefonu nie ma nic do ustawiania.
-- Z kontem Cloudflare, na obu telefonach: komputer oddaje backlog workerowi, który należy do ciebie, a telefon po niego przychodzi. Aby je sparować, skieruj aparat na kod na ekranie komputera.
+Komputer oddaje backlog workerowi, który należy do ciebie, na twoim własnym koncie Cloudflare, a telefon po niego przychodzi. Aby je sparować, skieruj aparat na kod na ekranie komputera. Na obu telefonach tak samo.
 
-Żadna z tych dróg nie prowadzi przez nasz serwer i nie ma konta do założenia.
+Ta droga nie prowadzi przez żaden nasz serwer i nie ma u nas konta do założenia.
 
 ZASZYFROWANE I DALEJ TWOJE
 
@@ -48,10 +47,8 @@ Bez reklam. Bez śledzenia. Bez konta.
 
 ## release_notes
 
-Na iPhonie drogę przez iCloud można teraz wyłączyć.
+Droga przez iCloud zniknęła. Każdy telefon czyta teraz z workera na twoim własnym koncie Cloudflare.
 
-- Wyłącz „Odbieraj z iCloud” w ustawieniach i włącz z powrotem w tym samym miejscu
-- Ikona i ekran startowy przerysowane z nowego znaku; ekran odwraca się między jasnym a ciemnym
-- To, że komputer układa cały backlog od nowa, czyta się jako czekanie, a nie jako coś nieczytelnego
-- Jeśli kopia na komputerze została zbudowana od nowa, aplikacja powie o tym przed dalszym czytaniem
-- Czytane są tylko te nazwy, które pisze umowa
+- Jeśli twój Mac pisał przez iCloud, przygotuj workera na komputerze: robi to wtyczka, ty raz wklejasz jeden token
+- To, co już dotarło, nadal da się czytać, a aplikacja wyraźnie mówi, kiedy nic więcej nie przyjdzie
+- Aplikacja w ogóle nie prosi już o iCloud

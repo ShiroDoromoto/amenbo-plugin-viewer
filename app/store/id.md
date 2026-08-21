@@ -24,10 +24,9 @@ Syaratnya Amenbo berjalan di Mac, Windows, atau Linux, dengan plugin viewer terp
 
 BAGAIMANA ISINYA SAMPAI
 
-- Mac dan iPhone: lewat iCloud Anda sendiri. Di ponsel tidak ada yang perlu diatur.
-- Dengan akun Cloudflare, di kedua ponsel: PC menitipkan backlog ke worker milik Anda, dan ponsel yang menjemputnya. Untuk memasangkan, arahkan kamera ke kode di layar PC.
+PC menitipkan backlog ke worker milik Anda sendiri, di akun Cloudflare Anda, dan ponsel yang menjemputnya. Untuk memasangkan, arahkan kamera ke kode di layar PC. Di kedua ponsel sama saja.
 
-Kedua jalan itu tidak melewati server kami, dan tidak ada akun yang harus dibuat.
+Jalan itu tidak melewati server kami, dan tidak ada akun kami yang harus dibuat.
 
 TERENKRIPSI, DAN TETAP MILIK ANDA
 
@@ -48,10 +47,8 @@ Tanpa iklan. Tanpa pelacakan. Tanpa akun.
 
 ## release_notes
 
-Di iPhone, jalur iCloud kini bisa dimatikan.
+Jalur iCloud sudah tidak ada. Setiap ponsel kini membaca dari worker di akun Cloudflare Anda sendiri.
 
-- Matikan "Terima dari iCloud" di pengaturan, dan nyalakan lagi di tempat yang sama
-- Ikon dan layar pembuka digambar ulang dari tanda baru; layar pembuka berbalik antara terang dan gelap
-- PC yang menaruh ulang seluruh daftar kerja kini terbaca sebagai menunggu, bukan sebagai yang tak terbaca
-- Kalau salinan di PC dibangun ulang dari nol, kamu diberi tahu sebelum membaca lebih jauh
-- Hanya nama yang ditulis kontrak yang dibaca
+- Kalau Mac Anda menulis lewat iCloud, siapkan worker di PC: plugin yang mengerjakannya, Anda cukup menempel satu token sekali
+- Yang sudah sampai di ponsel tetap bisa dibaca, dan aplikasi mengatakan dengan jelas kalau tidak ada lagi yang datang
+- Aplikasi tidak lagi meminta iCloud sama sekali
