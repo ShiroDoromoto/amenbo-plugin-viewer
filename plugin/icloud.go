@@ -26,6 +26,30 @@ import (
 // on disk. No team id goes in front of it.
 const icloudContainer = "iCloud~work~amenbo~viewer"
 
+// The drop is counted from a home directory, and **which home that is depends on the store the
+// plugin was fired for**. Amenbo names that store in the environment when it launches a plugin,
+// the same way git hands a hook its `GIT_DIR`, so a run for a throwaway store can be told apart
+// from a run for the store the user actually works in — and only the second one has any business
+// writing into the container the phone reads.
+//
+// A throwaway store is not written off, it is written **beside**: the drop moves under the base
+// directory the store itself sits in, which is the same place a hand-run loop already points
+// `HOME` at. The route stays whole, so the work that is verified against it is verified for real
+// — what changes is that forgetting to point it away no longer lands a rehearsal on somebody's
+// phone. It is a fence and not the destination: a folder outside iCloud cannot say whether the
+// phone would have read it.
+
+// envAmenboHome is where Amenbo writes the base directory of the store it is running.
+const envAmenboHome = "AMENBO_HOME"
+
+// amenboAppData is the directory Amenbo keeps a store in when nobody has pointed it elsewhere —
+// its bundle id, under the user's application support. A store there is the user's own.
+const amenboAppData = "work.amenbo.amenbo"
+
+// besideTheStore is the folder a throwaway store's drop is counted from, next to the store file.
+// It stands for the machine that store is pretending to be.
+const besideTheStore = "machine"
+
 // icloudDrop is the directory a mac writes into, or "" where there is no such thing — every OS
 // but macOS, and a machine whose home directory cannot be found.
 func icloudDrop() string {
@@ -36,7 +60,43 @@ func icloudDrop() string {
 	if err != nil {
 		return ""
 	}
-	return icloudDropIn(home)
+	return icloudDropIn(dropHome(home, os.Getenv(envAmenboHome)))
+}
+
+// dropHome is the home directory the drop is counted from: the user's own when the store is the
+// one they work in, and a folder beside the store when it is anywhere else.
+//
+// **An unnamed store is the user's own.** The variable is Amenbo's to fill in, and a build that
+// does not fill it in leaves this exactly where it has always been rather than diverting the one
+// route that reaches a phone.
+func dropHome(home, store string) string {
+	if store == "" || sameDirectory(store, defaultStoreIn(home)) {
+		return home
+	}
+	return filepath.Join(store, besideTheStore)
+}
+
+// defaultStoreIn is where Amenbo keeps its store under a given home directory, on macOS.
+func defaultStoreIn(home string) string {
+	return filepath.Join(home, "Library", "Application Support", amenboAppData)
+}
+
+// sameDirectory says whether two paths name one directory. The spelling is compared first, and
+// the resolved path only when that disagrees — a home reached through a symlink is the same home,
+// and reading it as a different one would divert the user's own store into a corner of itself.
+func sameDirectory(one, other string) bool {
+	if filepath.Clean(one) == filepath.Clean(other) {
+		return true
+	}
+	resolvedOne, err := filepath.EvalSymlinks(one)
+	if err != nil {
+		return false
+	}
+	resolvedOther, err := filepath.EvalSymlinks(other)
+	if err != nil {
+		return false
+	}
+	return resolvedOne == resolvedOther
 }
 
 // icloudDropIn is where the drop sits under a given home directory.
