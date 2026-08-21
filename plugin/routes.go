@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"unicode"
 	"unicode/utf8"
 )
 
@@ -27,14 +26,17 @@ var routesDeclared = []string{routeICloud, routeCloudflare}
 // routeStanding is one route and what stands between it and carrying: whether the user's
 // declaration reaches it, and whether the place it needs is there.
 type routeStanding struct {
-	// called is the route in the words the answer names it with.
-	called string
+	// called is the route in the words the answer names it with — the phrase rather than the
+	// sentence, since the same standing is read out on two faces and only one of them is
+	// translated.
+	called phrase
 	// declared says the user's tick reaches this route.
 	declared bool
 	// open is the route when the place it needs is there, and nil when it is not.
 	open route
-	// missing is what the place is waiting for, when it is not there.
-	missing string
+	// missing is what the place is waiting for, when it is not there. It is a phrase and what
+	// fills it in, worded by whoever is about to show it.
+	missing said
 	// stalled says the place itself is there and the send still cannot use it. A place that is
 	// merely not set up yet is not stalled — it is a waiting install.
 	stalled bool
@@ -42,6 +44,14 @@ type routeStanding struct {
 	// same fact as a place that has not appeared yet: one is waited for, and the other never
 	// comes.
 	notHere bool
+}
+
+// said is one sentence that has not been worded yet: the phrase, and the values that go into it.
+// A standing is read out on two faces — the settings screen in the user's own language, and the
+// execution log in English — so what is carried here is what both of them word from.
+type said struct {
+	key  phrase
+	args []any
 }
 
 // carrying says whether records are reaching this place right now.
@@ -54,7 +64,7 @@ func routesStanding(in input) []routeStanding {
 	allowed := routesAllowed(in)
 	where := make([]routeStanding, 0, len(routesDeclared))
 
-	there := routeStanding{called: "the iCloud folder", declared: allowed[routeICloud]}
+	there := routeStanding{called: phICloudFolder, declared: allowed[routeICloud]}
 	switch folder, err := dropFor(); {
 	case err == nil:
 		there.open = folder
@@ -73,21 +83,29 @@ func routesStanding(in input) []routeStanding {
 		// The address rides in brackets rather than after a dash, and what it displaces is
 		// "and it appears": the clause already opens with "Waiting on the iCloud folder", so
 		// what appears was said, and the line has a budget the address spends most of.
-		there.missing = "open Amenbo Viewer (" + appStoreLink + ") on a phone once"
+		there.missing = said{key: phOpenTheAppOnce, args: []any{appStoreLink}}
 	}
 	where = append(where, there)
 
-	worker := routeStanding{called: "your Cloudflare Worker", declared: allowed[routeCloudflare]}
+	worker := routeStanding{called: phCloudflareWorker, declared: allowed[routeCloudflare]}
 	switch shop, err := storeFor(in); {
 	case err != nil:
-		worker.missing = fmt.Sprintf("run `%s setup`", pluginName)
+		worker.missing = said{key: phStandTheWorkerUp, args: []any{pluginName}}
 	default:
 		// The key is what the Worker route is allowed to send with, and only it: the folder is
 		// this machine's own. A route standing without one is worth saying — the send goes on to
 		// the other one, and silence here would read as the Worker being up to date.
 		seal, err := newSealer(secret(envEncryptionKey))
 		if err != nil {
-			worker.missing, worker.stalled = fmt.Sprintf("it is standing, but %s", err), true
+			// **Two sentences for four errors.** What a reader of the settings screen can do
+			// about it is the same either way — run `setup` — and the line has 200 bytes to
+			// say it in; how the key was wrong is the execution log's to carry, where `push`
+			// reports it whole.
+			wrong := phStandingBadKey
+			if errors.Is(err, errNoKey) {
+				wrong = phStandingWithNoKey
+			}
+			worker.missing, worker.stalled = said{key: wrong}, true
 		} else {
 			shop.seal = seal
 			worker.open = shop
@@ -138,7 +156,10 @@ func routesFor(in input) []route {
 		// place that is simply not set up yet is not that — it is a waiting install, and saying
 		// so on every write would fill the log with a line nobody asked for.
 		if where.declared && where.stalled {
-			logf("%s: nothing is reaching %s — %s", pluginName, where.called, where.missing)
+			// The execution log, read by whoever is working out why a phone is behind: English,
+			// like every other line the observation face leaves.
+			logf("%s: nothing is reaching %s — %s", pluginName,
+				english.say(where.called), english.say(where.missing.key, where.missing.args...))
 		}
 	}
 	return open
@@ -175,7 +196,7 @@ func check(in input, _ []string) error {
 	return json.NewEncoder(out).Encode(map[string]any{
 		"v":       contractVersion,
 		"ok":      usable,
-		"message": whatIsReaching(where),
+		"message": whatIsReaching(screen, where),
 	})
 }
 
@@ -184,34 +205,34 @@ func check(in input, _ []string) error {
 //
 // A place nobody ticked is not mentioned. It was turned off on purpose, and a form that repeats
 // every choice back reads as a list of faults.
-func whatIsReaching(where []routeStanding) string {
+func whatIsReaching(words wording, where []routeStanding) string {
 	var reaching, waiting, absent []string
 	for _, one := range where {
 		switch {
 		case one.carrying():
-			reaching = append(reaching, one.called)
+			reaching = append(reaching, words.say(one.called))
 		case !one.declared:
 			// Turned off on purpose, and not mentioned: a form that reads every choice back
 			// sounds like a list of faults. Being left out of the line is how it reads as off,
 			// which is the one of the three states that needs no words.
 		case one.notHere:
-			absent = append(absent, one.called)
+			absent = append(absent, words.say(one.called))
 		default:
-			waiting = append(waiting, one.called+" — "+one.missing)
+			waiting = append(waiting, words.say(one.called)+" — "+words.say(one.missing.key, one.missing.args...))
 		}
 	}
 
-	said := "Carrying to " + inWords(reaching) + "."
+	line := words.say(phCarryingTo, inWords(words, reaching))
 	if len(reaching) == 0 {
 		if len(waiting) == 0 && len(absent) == 0 {
-			return `Carrying nowhere: no place is ticked under "Where to carry".`
+			return words.say(phNothingIsTicked)
 		}
-		said = "Carrying nowhere."
+		line = words.say(phCarryingNowhere)
 	}
 	if len(waiting) > 0 {
 		// The waiting ones each carry a clause of their own, so they are separated rather than
 		// joined into a sentence — an "and" between two dashed clauses reads as one long one.
-		said += " Waiting on " + strings.Join(waiting, "; ") + "."
+		line += words.say(phWaitingOn, strings.Join(waiting, "; "))
 	}
 	if len(absent) > 0 {
 		// **Not the same words as waiting.** Waiting is a place that will appear; this is one
@@ -219,31 +240,20 @@ func whatIsReaching(where []routeStanding) string {
 		//
 		// One place can be absent and no more — the Cloudflare route is every OS's — so this is
 		// written in the singular.
-		said += " " + openingASentence(inWords(absent)) + " is a mac's own, and this machine has no such place."
+		line += words.say(phNoSuchPlaceHere, inWords(words, absent))
 	}
-	return trimmedToTheLine(said)
-}
-
-// openingASentence puts a name at the start of one. The names are written to sit inside a
-// sentence ("carrying to the iCloud folder"), so one that has to open its own needs the capital
-// that was not there.
-func openingASentence(name string) string {
-	if name == "" {
-		return name
-	}
-	first, width := utf8.DecodeRuneInString(name)
-	return string(unicode.ToUpper(first)) + name[width:]
+	return trimmedToTheLine(line)
 }
 
 // inWords joins names the way a sentence does.
-func inWords(names []string) string {
+func inWords(words wording, names []string) string {
 	switch len(names) {
 	case 0:
-		return "nowhere"
+		return words.say(phNowhere)
 	case 1:
 		return names[0]
 	}
-	return strings.Join(names[:len(names)-1], ", ") + " and " + names[len(names)-1]
+	return strings.Join(names[:len(names)-1], words.say(phComma)) + words.say(phAnd) + names[len(names)-1]
 }
 
 // trimmedToTheLine keeps the answer to what the form will show, cutting on a rune so a cut never

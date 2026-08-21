@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -211,4 +212,36 @@ func rowID(raw json.RawMessage) (int64, error) {
 		return 0, errors.New("a row came back with no id to file it under")
 	}
 	return *named.ID, nil
+}
+
+// languageInTheStore is the language the user reads Amenbo in — `amenbo config --json`, the same
+// road as everything else here and the same declared reach.
+//
+// **The plugin keeps no language setting of its own.** The user answered this once, in the place
+// they already answer it, and a second box on the settings screen could only disagree with the
+// first.
+//
+// A store that will not answer costs the sentences their language and nothing else: the fallback
+// comes back, the call carries on, and the settings screen shows English rather than nothing. An
+// answer that came back empty is the same case by another road — a setting cleared to nothing is
+// not a language — so it falls back too, and quietly.
+var languageInTheStore = func() string {
+	command := exec.Command(amenboProgram, "config", "--json")
+	var answer bytes.Buffer
+	command.Stdout, command.Stderr = &answer, io.Discard
+	if command.Run() != nil {
+		return fallbackLanguage
+	}
+	var said struct {
+		Settings struct {
+			Language string `json:"language"`
+		} `json:"settings"`
+	}
+	if json.Unmarshal(answer.Bytes(), &said) != nil {
+		return fallbackLanguage
+	}
+	if language := strings.TrimSpace(said.Settings.Language); language != "" {
+		return language
+	}
+	return fallbackLanguage
 }

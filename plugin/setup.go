@@ -103,13 +103,13 @@ func setup(_ input, args []string) error {
 	if err != nil {
 		return err
 	}
-	logf("%s: building in account %s", pluginName, where)
+	logf("%s: %s", pluginName, say(phBuildingInAccount, where))
 
 	database, fresh, err := air.theDatabase(where, setupName)
 	if err != nil {
 		return err
 	}
-	logf("%s: database %s (%s)", pluginName, setupName, describe(fresh))
+	logf("%s: %s", pluginName, describe(setupName, fresh))
 	if err := layTheSchemaDown(air, where, database, fresh); err != nil {
 		return err
 	}
@@ -126,12 +126,11 @@ func setup(_ input, args []string) error {
 	if err := air.deploy(where, setupName, workerScript, database, writeToken); err != nil {
 		return err
 	}
-	logf("%s: Worker %s deployed", pluginName, setupName)
+	logf("%s: %s", pluginName, say(phWorkerDeployed, setupName))
 
 	subdomain, err := air.theSubdomain(where)
 	if errors.Is(err, errNoSubdomain) {
-		return fmt.Errorf("the Worker is deployed, but this account has no workers.dev name for it to answer on yet."+
-			" Choose one at https://dash.cloudflare.com/%s/workers/subdomain and run setup again", where)
+		return refuse(phNoWorkersDevName, "https://dash.cloudflare.com/"+where+"/workers/subdomain")
 	}
 	if err != nil {
 		return err
@@ -174,14 +173,13 @@ func setup(_ input, args []string) error {
 		return err
 	}
 
-	logf("%s: the Cloudflare route is up at %s", pluginName, endpoint)
+	logf("%s: %s", pluginName, say(phTheRouteIsUp, endpoint))
 	if keptKey {
-		logf("%s: the encryption key already in the settings was kept, so the phones paired with it still read.", pluginName)
+		logf("%s: %s", pluginName, say(phTheKeyWasKept))
 	} else {
-		logf("%s: a new encryption key was generated — pair a phone with `amenbo plugin run %s qr`.", pluginName, pluginName)
+		logf("%s: %s", pluginName, say(phANewKeyWasGenerated, pluginName))
 	}
-	logf("%s: the Worker and the database are yours. Uninstalling this plugin leaves them where they are;\n"+
-		"  delete them in the Cloudflare dashboard when you want them gone.", pluginName)
+	logf("%s: %s", pluginName, say(phTheWorkerIsYours))
 
 	return json.NewEncoder(out).Encode(map[string]any{
 		"url":      endpoint,
@@ -200,11 +198,11 @@ func endpointOn(subdomain string) string {
 	return fmt.Sprintf("https://%s.%s.workers.dev", setupName, subdomain)
 }
 
-func describe(fresh bool) string {
+func describe(name string, fresh bool) string {
 	if fresh {
-		return "created"
+		return say(phDatabaseCreated, name)
 	}
-	return "already there"
+	return say(phDatabaseAlreadyThere, name)
 }
 
 func kept(everything bool) string {
@@ -265,7 +263,7 @@ The token is used once, to stand the Worker and its database up, and is not kept
 	}
 	token := strings.TrimSpace(string(raw))
 	if token == "" {
-		return "", errors.New("no token was pasted")
+		return "", refuse(phNoTokenWasPasted)
 	}
 	return token, nil
 }
@@ -288,13 +286,13 @@ func token(_ input, _ []string) error {
 	// itself is the answer there — someone over SSH pastes it into the browser they are sitting
 	// in front of.
 	if !thereIsAScreen() {
-		logf("%s: there is no screen here to open it on. The token page is at %s", pluginName, link)
+		logf("%s: %s", pluginName, say(phNoScreenForTheTokenPage, link))
 		return nil
 	}
 	if err := openInTheSystem(link); err != nil {
-		return fmt.Errorf("the token page could not be opened (%w) — it is at %s", err, link)
+		return refuse(phTokenPageNotOpened, err, link)
 	}
-	logf("%s: the token page is open, with the permissions it needs already ticked. Press Continue to summary, then Create Token, and paste what it shows you into the box behind the setup button.", pluginName)
+	logf("%s: %s", pluginName, say(phTokenPageIsOpen))
 	return nil
 }
 
@@ -367,7 +365,7 @@ func awaitTheWorker(endpoint string) error {
 			case http.StatusUnauthorized:
 				return nil
 			case http.StatusServiceUnavailable:
-				return errors.New("the Worker is answering but has no write token set, which is a deploy that did not fully land — run setup again")
+				return refuse(phWorkerHasNoWriteToken)
 			}
 			last = fmt.Errorf("%s answered %d, where a caller with no token should be turned away with 401", endpoint, answer.StatusCode)
 		} else {
@@ -377,5 +375,5 @@ func awaitTheWorker(endpoint string) error {
 			time.Sleep(checkPause)
 		}
 	}
-	return fmt.Errorf("everything was created, but the endpoint is not answering the way it should yet: %w", last)
+	return refuse(phEndpointNotAnsweringYet, last)
 }

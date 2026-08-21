@@ -145,7 +145,7 @@ func (s sky) theAccount(chosen string) (string, error) {
 		return "", err
 	}
 	if len(accounts) == 0 {
-		return "", errors.New("this token reaches no Cloudflare account — it may be missing the Account Settings (read) permission")
+		return "", refuse(phTokenReachesNoAccount)
 	}
 	if chosen != "" {
 		for _, account := range accounts {
