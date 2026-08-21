@@ -118,6 +118,11 @@ npm run dev        # ローカル。.dev.vars.example を .dev.vars に写す
 表の変更は `migrations/` へ足す。テストは**デプロイが当てるのと同じ移行**を読んで当てるので、
 通らない移行は誰かのアカウントではなくここで落ちる。
 
+**当たったかどうかを持つのはデータベース自身**——`d1_migrations` の1行が「この移行は当てた」で、
+表と名前は wrangler のもの。`wrangler d1 migrations apply` も、テストの `applyD1Migrations` も、
+プラグインの `setup` も、**同じ表へ同じ名前**（ファイル名そのまま）を書く。台帳を自前で持つと、
+どちらも正しいまま食い違える。
+
 `npm run deploy` は手で触るとき用。ルートの `Makefile` からは届かない位置に置いてある。
 
 CI（[`.github/workflows/ci.yml`](../.github/workflows/ci.yml)）の `worker` ジョブが回すのは
@@ -128,7 +133,10 @@ push すると赤くなる形ができる。`deploy --dry-run` は組めるか�
 
 利用者のアカウントへ立てるのはプラグインで、利用者の PC に Node は無い。だから
 **ここをビルドしたものがプラグインのバイナリに入る**。`make build` も `make test` も
-`plugin/worker.js`（esbuild が吐いた本体）と `plugin/schema.sql`（`migrations/` を連ねたもの）を
+`plugin/worker.js`（esbuild が吐いた本体）と `plugin/migrations/`（`migrations/` の写し）を
 焼き直すので、`src/` や `migrations/` を触ったら**一緒にコミットする**。
+
+**移行は1ファイルずつ、名前そのままで写す。** その名前が台帳へ書かれる名前なので、
+連ねて1本にすると「どこまで当てたか」を言えるものが無くなる。
 
 **この2つは生成物。手で書き換えない。**
