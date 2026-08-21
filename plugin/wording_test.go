@@ -43,8 +43,7 @@ var everyPhrase = []phrase{
 	phCloudflareWorker, phStandTheWorkerUp,
 	phStandingWithNoKey, phStandingBadKey, phCarryingTo, phCarryingNowhere,
 	phNothingIsTicked, phWaitingOn, phNowhere, phAnd, phComma,
-	phNothingToDrawOn, phCodeNotDrawn, phPointTheCamera,
-	phImageNotOpened, phCodeLeftWithKey, phCodeLeftBehind, phCodeIsOnScreen,
+	phCodeNotDrawn, phPointTheCamera, phReadThisWithTheCamera,
 	phNoScreenForTheTokenPage, phTokenPageNotOpened, phTokenPageIsOpen,
 	phBuildingInAccount, phDatabaseCreated, phDatabaseAlreadyThere, phWorkerDeployed,
 	phNoWorkersDevName, phTheRouteIsUp, phTheKeyWasKept, phANewKeyWasGenerated,
@@ -154,7 +153,7 @@ func TestAButtonAnswersInTheStoresLanguage(t *testing.T) {
 			return fmt.Errorf("a test reached for the machine's screen with %q", target)
 		}
 	})
-	onlyAScreen(t)
+	inATerminal(t)
 
 	_, said := capture(t, func() {
 		if err := token(input{}, nil); err != nil {

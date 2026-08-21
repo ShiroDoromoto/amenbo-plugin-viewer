@@ -59,15 +59,11 @@ const (
 	phComma             phrase = "comma"
 
 	// `app` — putting the App Store page in front of a camera.
-	phNothingToDrawOn phrase = "nothing_to_draw_on"
-	phCodeNotDrawn    phrase = "code_not_drawn"
-	phPointTheCamera  phrase = "point_the_camera"
+	phCodeNotDrawn   phrase = "code_not_drawn"
+	phPointTheCamera phrase = "point_the_camera"
 
-	// Showing a code, which `app` and `qr` both do.
-	phImageNotOpened  phrase = "image_not_opened"
-	phCodeLeftWithKey phrase = "code_left_with_key"
-	phCodeLeftBehind  phrase = "code_left_behind"
-	phCodeIsOnScreen  phrase = "code_is_on_screen"
+	// The line drawn beside a code on the settings screen, which `app` and `qr` both put there.
+	phReadThisWithTheCamera phrase = "read_this_with_the_camera"
 
 	// `token` — opening Cloudflare's token page.
 	phNoScreenForTheTokenPage phrase = "no_screen_for_the_token_page"
