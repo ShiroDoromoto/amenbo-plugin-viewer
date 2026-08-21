@@ -235,18 +235,37 @@ func push(in input, _ []string) error {
 	return nil
 }
 
+// theRoutesFromHere is the part of the usage that differs by machine: a mac has two roads to a
+// phone and everything else has one.
+//
+// **A road this machine does not have is not worth a line.** The iCloud folder is a mac's own app
+// container, so on anything else the paragraph describing it is a paragraph about somebody else's
+// computer — printed first, above the one road the reader can actually take.
+func theRoutesFromHere() string {
+	if icloudIsARoadHere() {
+		return `Two routes carry the same records:
+
+  mac      the app's own iCloud folder. Nothing to set up, no account, no key to hand over.
+           It turns itself on once you have opened the app on your phone — that is what makes
+           the folder exist, and until then there is nothing to do here.
+  anywhere your own Cloudflare Worker, over HTTPS. 'setup' stands it up in your account.`
+	}
+	return `One route carries the records from this machine:
+
+  your own Cloudflare Worker, over HTTPS. 'setup' stands it up in your account.
+
+(There is a second one, the app's own iCloud folder, and it is a mac's: no other OS has an app
+container for the phone to read. Nothing here has to be turned off for it — a place this machine
+does not have is a place nothing is carried to.)`
+}
+
 func usage() {
 	logf(`%s — Amenbo's official plugin: read your backlog on your phone
 
 The plugin encrypts your backlog a record at a time and carries it to a place YOU own. Amenbo
 Viewer on the phone reads it there. Nothing is hosted by anyone else, and nothing is written back.
 
-Two routes carry the same records:
-
-  mac      the app's own iCloud folder. Nothing to set up, no account, no key to hand over.
-           It turns itself on once you have opened the app on your phone — that is what makes
-           the folder exist, and until then there is nothing to do here.
-  anywhere your own Cloudflare Worker, over HTTPS. 'setup' stands it up in your account.
+%s
 
 Usage (through Amenbo, from the project the plugin is enabled for):
   amenbo plugin run %s token     open Cloudflare's token screen, with the permissions
@@ -278,7 +297,7 @@ fallen behind for a reason nobody can see.
 
 Settings — **one of them is yours, and three are not.**
 
-  %s          which of the two places above this may carry to. It can only take one away:
+  %s          which of the places above this may carry to. It can only take one away:
                   a place you tick still has to exist before anything reaches it, so ticking
                   one never puts the settings at odds with what is actually there. Tick none
                   and the plugin stays on and carries nowhere. 'check' says where it is
@@ -296,6 +315,7 @@ read by the camera and never goes over the network, which is what keeps the key 
 
 The iCloud folder needs none of that: it holds one file per record, the folder itself is what the
 phone reads, and a record you delete here is a file that goes away.`,
-		pluginName, pluginName, pluginName, pluginName, pluginName, pluginName, pluginName, pluginName,
+		pluginName, theRoutesFromHere(),
+		pluginName, pluginName, pluginName, pluginName, pluginName, pluginName, pluginName,
 		configRoutes, configWorkerURL, configAuthToken, configEncryptionKey)
 }
