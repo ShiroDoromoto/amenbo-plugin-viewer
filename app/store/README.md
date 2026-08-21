@@ -42,5 +42,6 @@ App Store と Google Play へ出す文を、**言語ごとに1ファイル**で�
 `graphics/` は画面ではない画。**Play が要る 1024×500 の横長の1枚**（`make -C app feature-graphic`）と、
 **Play が並べる 512×512 のアイコン**（`dart run tool/gen_brand_assets.dart`——端末のアイコンと
 同じ座標から焼く。手で描かない）。どちらも19言語で同じものを貼る。
+**ストアへ送るのは `uv run app/tool/release/play.py graphics`**——焼き直しただけではストアは古いまま。
 横長の1枚の**寸法と透明の有無は `test/store_copy_test.dart` が見ている**——欄の字数と同じで、
 コンソールで断られてからでは遅い。
