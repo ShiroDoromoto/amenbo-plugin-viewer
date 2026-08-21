@@ -165,6 +165,7 @@ class PlaceStanding {
   const PlaceStanding({
     required this.specVersion,
     required this.seq,
+    this.placedFrom = 0,
     this.version,
     this.updatedAt,
   });
@@ -174,6 +175,15 @@ class PlaceStanding {
   /// How far the order has got. The device compares this with its own cursor to know whether
   /// there is anything to fetch — one small answer, so it can be asked often.
   final int seq;
+
+  /// Where the placement standing at the place began — the point the order had reached the moment
+  /// everything there was written again from nothing.
+  ///
+  /// A cursor that has not passed it points at rows that were all made again, so what this device
+  /// holds is not the beginning of what is there now. Zero is a place that has never been placed
+  /// again, and it is also what an older place — one deployed before this number existed — leaves
+  /// out of its answer; both mean there is nothing here to be behind.
+  final int placedFrom;
 
   /// Amenbo's own version, or null when nothing has ever been placed.
   final int? version;
@@ -245,10 +255,14 @@ class CloudflareIntake {
 
     var since = store.seq;
     var startedOver = false;
-    // The order never rewinds, so a place standing behind this device's cursor is not the place
+    // Two ways the same cheap answer says this device's copy is not the beginning of what is
+    // there now. The order never rewinds, so a place standing behind this cursor is not the place
     // that cursor was counted against — a store rebuilt under a device still paired with the old
-    // one. Reading on from here would hand it other records under numbers it recognises.
-    if (standing.seq < since) {
+    // one; reading on from here would hand it other records under numbers it recognises. And a
+    // cursor the standing placement began at or above holds only rows that placement wrote again,
+    // with whatever was deleted in between in neither the copy nor what is coming. Either way the
+    // copy goes. Asking first is what spares the round the refusal `/records` would answer with.
+    if (standing.seq < since || (since > 0 && since <= standing.placedFrom)) {
       store.wipe();
       since = 0;
       startedOver = true;
@@ -313,9 +327,11 @@ class CloudflareIntake {
     if (seq is! int) {
       throw const IntakeException(IntakeFailure.unreadable, at: _meta);
     }
+    final placedFrom = answered['placed_from'];
     return PlaceStanding(
       specVersion: specVersion,
       seq: seq,
+      placedFrom: placedFrom is int ? placedFrom : 0,
       version: answered['version'] as int?,
       updatedAt: answered['updated_at'] as String?,
     );
