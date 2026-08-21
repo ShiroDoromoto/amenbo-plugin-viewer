@@ -24,6 +24,7 @@ Future<SettingsController> pumpSettings(
   WidgetTester tester, {
   SettingsKeep? keep,
   ConnectionFacts? connection,
+  bool hasICloud = false,
 }) async {
   final settings = SettingsController(keep ?? UnkeptSettings());
   await tester.pumpWidget(
@@ -34,6 +35,7 @@ Future<SettingsController> pumpSettings(
         settings: settings,
         connection: connection ?? FakeFacts(_facts),
         appName: AmenboViewerApp.title,
+        hasICloud: hasICloud,
       ),
     ),
   );
@@ -59,11 +61,54 @@ void main() {
     for (final one in Appearance.values) {
       expect(find.text(appearanceWords(words, one)), findsOneWidget);
     }
-    // Everything a person can decide here is a radio in one of those two groups, plus the two
-    // ways out. Anything else on this screen would be the app's shape handed over.
-    expect(find.byType(Switch), findsNothing);
+    // Everything a person can decide here is a radio in one of those two groups, plus the one
+    // switch a phone with a container gets and the two ways out. Anything else on this screen
+    // would be the app's shape handed over.
     expect(find.byType(Slider), findsNothing);
     expect(find.byType(TextField), findsNothing);
+  });
+
+  testWidgets('a phone with no folder to read is not offered one', (
+    tester,
+  ) async {
+    await pumpSettings(tester);
+
+    // Android. A switch over a route that does not exist is a switch that lies about what
+    // turning it on would do.
+    expect(find.byType(Switch), findsNothing);
+    expect(find.text(words.takeFromICloud), findsNothing);
+  });
+
+  testWidgets('the iCloud route can be switched off, and back on', (
+    tester,
+  ) async {
+    final keep = UnkeptSettings();
+    final settings = await pumpSettings(tester, keep: keep, hasICloud: true);
+
+    await tester.tap(find.text(words.takeFromICloud));
+    await tester.pumpAndSettle();
+
+    expect(settings.value.iCloud, TakeFromICloud.off);
+    // On the device before it is announced, the same as every other choice here.
+    expect(keep.read(MetaKey.iCloud), TakeFromICloud.off.stored);
+
+    await tester.tap(find.text(words.takeFromICloud));
+    await tester.pumpAndSettle();
+
+    expect(settings.value.iCloud, TakeFromICloud.on);
+  });
+
+  testWidgets('the switch shows what is chosen, not what was tapped', (
+    tester,
+  ) async {
+    final keep = UnkeptSettings()
+      ..write(MetaKey.iCloud, TakeFromICloud.off.stored);
+    await pumpSettings(tester, keep: keep, hasICloud: true);
+
+    expect(
+      tester.widget<SwitchListTile>(find.byType(SwitchListTile)).value,
+      isFalse,
+    );
   });
 
   testWidgets('there is no interval to set', (tester) async {

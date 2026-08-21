@@ -98,6 +98,9 @@
   "fileSizeMegabytes": "{megabytes} MB",
 
   "settingsTitle": "Cài đặt",
+  "routeHeading": "Đường",
+  "takeFromICloud": "Nhận từ iCloud",
+  "takeFromICloudNote": "Những gì máy Mac để trong iCloud sẽ được đọc trên máy này. Tắt đi thì máy này thôi đi lấy.",
   "refreshHeading": "Đi lấy",
   "appearanceHeading": "Giao diện",
   "refreshNote": "Tự động nghĩa là khi mở ứng dụng và khi bạn quay lại nó. Nó không bao giờ chạy nền.",
@@ -113,6 +116,7 @@
   "thisPhone": "Máy này",
   "thisPhoneDetail": "Tên để ngắt máy này, ở phía máy tính.",
   "factRoute": "Đường",
+  "routeStopped": "Đã tắt trong cài đặt. Từ đây không nhận gì cả.",
   "factICloud": "iCloud",
   "iCloudSignedIn": "Đã đăng nhập",
   "iCloudNotAvailable": "Không dùng được trên máy này",
@@ -128,7 +132,7 @@
   "erase": "Xoá bản sao trên máy này",
   "eraseDetail": "Xoá danh sách việc giữ ở đây và khoá mở nó. Trên máy tính không có gì thay đổi.",
   "eraseQuestion": "Xoá bản sao trên máy này?",
-  "eraseDialogDetail": "Danh sách việc giữ trên máy này và khoá mở nó sẽ bị xoá. Trên máy tính của bạn không có gì thay đổi, và bạn có thể ghép nối lại bất cứ lúc nào.",
+  "eraseDialogDetail": "Danh sách việc giữ trên máy này và khoá mở nó sẽ bị xoá, và máy này sẽ thôi nhận gì nữa. Trên máy tính của bạn không có gì thay đổi, và bạn có thể bắt đầu lại bất cứ lúc nào.",
   "keepIt": "Giữ lại",
   "eraseConfirm": "Xoá",
 

@@ -38,6 +38,17 @@ function placement(version: number, records: unknown[]): string {
 	return JSON.stringify({ spec_v: 1, version, records });
 }
 
+/** One part of a turn the PC is sending in more than one request. */
+function sendingPart(
+	path: "/records" | "/reset",
+	version: number,
+	part: number,
+	parts: number,
+	records: unknown[],
+): Promise<Response> {
+	return signed(path, { method: "PUT", body: JSON.stringify({ spec_v: 1, version, part, parts, records }) });
+}
+
 /** One record sealed on the PC, as it travels. */
 function sealed(k: string): Record<string, string> {
 	return { k, op: "put", n: `nonce-for-${k}`, c: `ciphertext-for-${k}` };
@@ -64,7 +75,7 @@ async function reading(path: string): Promise<Response> {
 beforeEach(async () => {
 	await env.RECORDS.exec("DELETE FROM tokens");
 	await env.RECORDS.exec("DELETE FROM records");
-	await env.RECORDS.exec("UPDATE store SET version = NULL, updated_at = NULL, seq = 0 WHERE id = 1");
+	await env.RECORDS.exec("UPDATE store SET version = NULL, updated_at = NULL, seq = 0, replacing = 0 WHERE id = 1");
 });
 
 describe("the gate", () => {
@@ -519,6 +530,92 @@ describe("placing the whole store again", () => {
 
 		const { results } = await env.RECORDS.prepare("SELECT k FROM records").all();
 		expect(results).toEqual([{ k: "task/2" }]);
+	});
+});
+
+describe("sending one turn in more than one request", () => {
+	// The later parts carry the same version as the first, and a store that wrote the version down
+	// on the first would read every one of them as a repeat and throw them away — leaving a phone
+	// the first five hundred records of a backlog and the version saying that is all of it.
+	it("takes every part rather than reading the later ones as a repeat", async () => {
+		await sendingPart("/records", 12345, 1, 2, [sealed("task/1")]);
+
+		await sendingPart("/records", 12345, 2, 2, [sealed("task/2")]);
+
+		const { results } = await env.RECORDS.prepare("SELECT k FROM records ORDER BY seq").all();
+		expect(results).toEqual([{ k: "task/1" }, { k: "task/2" }]);
+	});
+
+	// The version is what a phone reads to know what it is looking at, so a turn that has not
+	// finished arriving must not be named by it.
+	it("writes the version down only once the last part has landed", async () => {
+		await sendingPart("/records", 12345, 1, 2, [sealed("task/1")]);
+		expect(await reading("/meta").then((it) => it.json())).toMatchObject({ version: null, seq: 1 });
+
+		await sendingPart("/records", 12345, 2, 2, [sealed("task/2")]);
+
+		expect(await reading("/meta").then((it) => it.json())).toMatchObject({ version: 12345, seq: 2 });
+	});
+
+	// Only the first part empties. A later one emptying again would leave the store holding
+	// whichever part happened to arrive last, and nothing else.
+	it("empties on the first part of a replacement and not on the ones after it", async () => {
+		await sending("/records", 1, [sealed("task/old")]);
+
+		await sendingPart("/reset", 2, 1, 2, [sealed("task/1")]);
+		await sendingPart("/reset", 2, 2, 2, [sealed("task/2")]);
+
+		const { results } = await env.RECORDS.prepare("SELECT k FROM records ORDER BY seq").all();
+		expect(results).toEqual([{ k: "task/1" }, { k: "task/2" }]);
+	});
+
+	// Emptying first is what makes the middle of a replacement a lie: what is here is a fraction of
+	// the backlog, and a phone cannot tell that from a backlog that really did shrink to a fraction.
+	it.each([["/records?since=0"], ["/meta"]])("closes %s while a replacement is half placed", async (path) => {
+		await sendingPart("/reset", 2, 1, 2, [sealed("task/1")]);
+
+		const response = await reading(path);
+
+		expect(response.status).toBe(503);
+		expect(response.headers.get("Retry-After")).toBe("5");
+	});
+
+	it("opens the reading doors again once the last part has landed", async () => {
+		await sendingPart("/reset", 2, 1, 2, [sealed("task/1")]);
+
+		await sendingPart("/reset", 2, 2, 2, [sealed("task/2")]);
+
+		const answered = (await reading("/records?since=0").then((it) => it.json())) as { records: unknown[] };
+		expect(answered.records).toEqual([sealed("task/1"), sealed("task/2")]);
+	});
+
+	// A replacement nobody finished has left a partial store behind, and only another whole
+	// placement can put that right. Records laid on top of it would make it look whole again.
+	it("keeps them closed for a placement that only adds", async () => {
+		await sendingPart("/reset", 2, 1, 2, [sealed("task/1")]);
+
+		await sending("/records", 3, [sealed("task/2")]);
+
+		expect(await reading("/meta").then((it) => it.status)).toBe(503);
+	});
+
+	// One request is one whole turn, which is what every send was before there were parts at all.
+	it("takes a body that says nothing about parts as the whole of a turn", async () => {
+		await sending("/reset", 2, [sealed("task/1")]);
+
+		expect(await reading("/meta").then((it) => it.json())).toMatchObject({ version: 2, seq: 1 });
+	});
+
+	it.each([
+		["a part that is not a number", JSON.stringify({ spec_v: 1, version: 1, part: "1", parts: 2, records: [] })],
+		["a part before the first", JSON.stringify({ spec_v: 1, version: 1, part: 0, parts: 2, records: [] })],
+		["a part past the last", JSON.stringify({ spec_v: 1, version: 1, part: 3, parts: 2, records: [] })],
+		["a turn of no parts at all", JSON.stringify({ spec_v: 1, version: 1, part: 1, parts: 0, records: [] })],
+		["a count of parts that is not whole", JSON.stringify({ spec_v: 1, version: 1, part: 1, parts: 1.5, records: [] })],
+	])("refuses %s", async (_what, body) => {
+		const response = await signed("/records", { method: "PUT", body });
+
+		expect(response.status).toBe(400);
 	});
 });
 

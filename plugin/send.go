@@ -34,6 +34,15 @@ const specVersion = 1
 // most, and a page is 500.
 const idsPerRead = 500
 
+// recordsPerWrite is how many records one write to the Worker may carry. It is the Worker's own
+// limit, kept here so that too much is split before it is sent rather than refused at the door —
+// a `413` is nothing the send can do anything with once the bytes are already on the wire.
+//
+// **The two ends have to agree on this number.** They are built together and deployed together
+// (the Worker's script is baked into this binary), so the place to keep them level is the gate,
+// which sends a body of exactly this size and reads the refusal back.
+const recordsPerWrite = 500
+
 // sendTimeout bounds one call to the store. A hook nobody is waiting on must still end: Amenbo
 // fires the plugin per write, so one call left hanging on a network that is not answering would
 // be joined by the next write's, and the next.
@@ -68,9 +77,16 @@ type outgoing struct {
 
 // placement is the body of a send. The version travels with it so the store can recognise a
 // repeat of what it already holds, and refuse an ordering that went backwards.
+//
+// A send that does not fit in one request is split, and `Part` of `Parts` is how the store is told
+// which piece of one turn it is holding — which part empties, which part settles the version, and
+// which parts are neither. They are only filled in by the route that has a limit; the folder is
+// handed the whole of a turn at once and has no use for them.
 type placement struct {
 	SpecV   int        `json:"spec_v"`
 	Version int64      `json:"version"`
+	Part    int        `json:"part,omitempty"`
+	Parts   int        `json:"parts,omitempty"`
 	Records []outgoing `json:"records"`
 }
 
@@ -292,23 +308,51 @@ func (s store) String() string { return "the Cloudflare Worker" }
 func (s store) holdsNothing() bool { return false }
 
 // place puts what moved into the store.
-func (s store) place(body placement) error {
-	sealed, err := s.sealed(body)
-	if err != nil {
-		return err
-	}
-	_, err = s.put("/records", sealed)
-	return err
-}
+func (s store) place(body placement) error { return s.putInParts("/records", body) }
 
 // replace empties the store and places everything.
-func (s store) replace(body placement) error {
+func (s store) replace(body placement) error { return s.putInParts("/reset", body) }
+
+// putInParts sends one turn, in as many requests as it takes.
+//
+// **One turn, however many requests.** The store is told how many parts are coming and which one
+// each is, so it knows which part empties and which part settles the version — and so a turn that
+// stops half way is one the store can tell from a finished one, rather than one it has already
+// written the version of.
+//
+// A turn carrying nothing is still a turn: a whole placement of an empty store is what says the
+// store holds nothing, and skipping the request would leave whatever is there standing.
+//
+// **A part that fails stops the rest.** What has landed stays landed, which is why nothing is
+// remembered until the whole turn is through — the next turn sends the same records again, and a
+// replacement re-empties before it does.
+func (s store) putInParts(path string, body placement) error {
 	sealed, err := s.sealed(body)
 	if err != nil {
 		return err
 	}
-	_, err = s.put("/reset", sealed)
-	return err
+	parts := inParts(sealed.Records, recordsPerWrite)
+	for at, records := range parts {
+		part := sealed
+		part.Part, part.Parts, part.Records = at+1, len(parts), records
+		if _, err := s.put(path, part); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// inParts cuts a turn's records into the pieces one request each may carry. An empty turn comes
+// back as one empty piece, because a turn is a thing to send whether or not it carries anything.
+func inParts(records []outgoing, most int) [][]outgoing {
+	if len(records) == 0 {
+		return [][]outgoing{{}}
+	}
+	parts := make([][]outgoing, 0, (len(records)+most-1)/most)
+	for start := 0; start < len(records); start += most {
+		parts = append(parts, records[start:min(start+most, len(records))])
+	}
+	return parts
 }
 
 // sealed puts every row in this body into an envelope, which is what makes it fit to leave the
@@ -426,9 +470,25 @@ func carry(in input, force bool) (int, error) {
 
 	placed, cursor, err := carryWhole(routes, *version)
 	if err != nil {
+		forgetWhatWasNotPlaced()
 		return 0, err
 	}
 	return placed, writeState(state{Version: *version, Cursor: cursor})
+}
+
+// forgetWhatWasNotPlaced throws away the memory of an older send, after a whole placement failed.
+//
+// **A whole placement stops part way through the store, not before it.** A route emptied and
+// half filled is a place holding part of a backlog, and what was remembered from before points at
+// a cursor much further on — so the next turn would carry what moved since then and lay it on top,
+// leaving the missing middle missing for good.
+//
+// Forgetting puts the next turn back where a first run is: it places the whole store again, which
+// is the only thing that puts a half-placed one right. It costs one large send and no correctness.
+func forgetWhatWasNotPlaced() {
+	if err := forgetState(); err != nil {
+		logf("%s: %s", pluginName, err)
+	}
 }
 
 // anyRouteHoldsNothing says whether one of the open routes is starting from nothing.

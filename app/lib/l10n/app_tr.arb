@@ -98,6 +98,9 @@
   "fileSizeMegabytes": "{megabytes} MB",
 
   "settingsTitle": "Ayarlar",
+  "routeHeading": "Yol",
+  "takeFromICloud": "iCloud'dan al",
+  "takeFromICloudNote": "Mac'in iCloud'a bıraktığı şey bu telefonda okunur. Kapatırsan bu telefon gidip bakmayı bırakır.",
   "refreshHeading": "Gidip bakma",
   "appearanceHeading": "Görünüm",
   "refreshNote": "Otomatik demek, uygulama açıldığında ve ona geri dönüldüğünde demek. Arka planda hiçbir zaman çalışmaz.",
@@ -113,6 +116,7 @@
   "thisPhone": "Bu telefon",
   "thisPhoneDetail": "Bu telefonu bilgisayardan keserken kullanacağın ad.",
   "factRoute": "Yol",
+  "routeStopped": "Ayarlarda kapatıldı. Buradan bir şey alınmıyor.",
   "factICloud": "iCloud",
   "iCloudSignedIn": "Giriş yapıldı",
   "iCloudNotAvailable": "Bu telefonda kullanılamıyor",
@@ -128,7 +132,7 @@
   "erase": "Bu telefondaki kopyayı sil",
   "eraseDetail": "Burada tutulan iş listesini ve onu açan anahtarı siler. Bilgisayarda hiçbir şey değişmez.",
   "eraseQuestion": "Bu telefondaki kopya silinsin mi?",
-  "eraseDialogDetail": "Bu telefonda tutulan iş listesi ve onu açan anahtar silinir. Bilgisayarında hiçbir şey değişmez, istediğin zaman yeniden eşleyebilirsin.",
+  "eraseDialogDetail": "Bu telefonda tutulan iş listesi ve onu açan anahtar silinir, bu telefon da bir şey almayı bırakır. Bilgisayarında hiçbir şey değişmez, istediğin zaman yeniden başlayabilirsin.",
   "keepIt": "Kalsın",
   "eraseConfirm": "Sil",
 

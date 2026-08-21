@@ -98,6 +98,9 @@
   "fileSizeMegabytes": "{megabytes} MB",
 
   "settingsTitle": "Impostazioni",
+  "routeHeading": "Via",
+  "takeFromICloud": "Ricevi da iCloud",
+  "takeFromICloudNote": "Quello che il Mac lascia in iCloud viene letto su questo telefono. Se lo spegni, questo telefono non va più a vedere.",
   "refreshHeading": "Vai a vedere",
   "appearanceHeading": "Aspetto",
   "refreshNote": "Automaticamente vuol dire all'apertura dell'app e quando ci torni. In background non gira mai niente.",
@@ -113,6 +116,7 @@
   "thisPhone": "Questo telefono",
   "thisPhoneDetail": "Il nome con cui staccare questo telefono, dal PC.",
   "factRoute": "Via",
+  "routeStopped": "Spento nelle impostazioni. Da qui non si riceve niente.",
   "factICloud": "iCloud",
   "iCloudSignedIn": "Accesso eseguito",
   "iCloudNotAvailable": "Non disponibile su questo telefono",
@@ -128,7 +132,7 @@
   "erase": "Cancella la copia su questo telefono",
   "eraseDetail": "Rimuove il backlog tenuto qui e la chiave che lo apre. Sul PC non cambia niente.",
   "eraseQuestion": "Cancellare la copia su questo telefono?",
-  "eraseDialogDetail": "Vengono rimossi il backlog tenuto su questo telefono e la chiave che lo apre. Sul tuo PC non cambia niente, e puoi riassociare quando vuoi.",
+  "eraseDialogDetail": "Vengono rimossi il backlog tenuto su questo telefono e la chiave che lo apre, e questo telefono smette di ricevere. Sul tuo PC non cambia niente, e puoi ricominciare quando vuoi.",
   "keepIt": "Tienila",
   "eraseConfirm": "Cancella",
 

@@ -12,6 +12,7 @@ library;
 import 'icloud_container.dart';
 import 'l10n/words.dart';
 import 'pairing_store.dart';
+import 'settings.dart';
 import 'store/backlog_store.dart';
 
 /// Which of the two ways a snapshot reaches this phone.
@@ -68,10 +69,17 @@ class Connection {
     this.label,
     this.host,
     this.iCloudAvailable,
+    this.taking = true,
     this.lastTaken = const LastTaken(),
   });
 
   final ConnectionRoute route;
+
+  /// Whether the route named above is one this phone is still taking from. False only where the
+  /// person switched the iCloud route off: what runs is the declaration and the container
+  /// together, so a route the person has said no to is not where anything is coming from, and a
+  /// screen that named it anyway would be answering with half the product.
+  final bool taking;
 
   /// What the PC calls this phone. It is the name a read token is cut off by, so showing it is
   /// what lets the person match the phone in their hand against the rows on the PC. Null off the
@@ -98,7 +106,8 @@ abstract interface class ConnectionFacts {
   /// Reads the connection as it stands. Called when the screen opens and again after pairing.
   Future<Connection> read();
 
-  /// Drops what this device holds: the decrypted rows, and the key that opens them.
+  /// Drops what this device holds: the decrypted rows, the key that opens them, and — on a phone
+  /// that could read the folder — the route that would put them back.
   ///
   /// Nothing is said to the place — it belongs to the person, not to this phone, and the PC goes
   /// on writing to it. What this undoes is only this phone having a copy.
@@ -109,11 +118,17 @@ abstract interface class ConnectionFacts {
 class PhoneConnection implements ConnectionFacts {
   const PhoneConnection({
     required this.store,
+    required this.settings,
     this.pairings = const PairingStore(),
     this.hasICloud = false,
   });
 
   final BacklogStore store;
+
+  /// Read for nothing and written to once: erasing this phone's copy takes the iCloud route down
+  /// with it. The Cloudflare route ends by itself when the pairing goes.
+  final SettingsController settings;
+
   final PairingStore pairings;
 
   /// Whether this build is running somewhere with an iCloud container — iOS. Passed in rather
@@ -136,9 +151,16 @@ class PhoneConnection implements ConnectionFacts {
         lastTaken: lastTaken,
       );
     }
+    final taking = settings.value.iCloud.isOn;
     return Connection(
       route: ConnectionRoute.iCloud,
-      iCloudAvailable: hasICloud && (await ICloudContainer.status()).available,
+      // Not asked while nobody is taking from it, and not answered either: whether iCloud is
+      // signed in says nothing about a route that is switched off, and "not available on this
+      // phone" would be read as the reason nothing is arriving.
+      iCloudAvailable: taking
+          ? hasICloud && (await ICloudContainer.status()).available
+          : null,
+      taking: taking,
       lastTaken: lastTaken,
     );
   }
@@ -147,5 +169,10 @@ class PhoneConnection implements ConnectionFacts {
   Future<void> erase() async {
     await pairings.forget();
     store.wipe();
+    // A pairing is thrown away with the rows, and that is the end of the Cloudflare route. The
+    // iCloud route was never given anything to throw away — the folder is the Mac's, and the
+    // phone reads it for having been opened once — so without this the rows would be back on the
+    // next launch, which is the person watching what they erased come straight back.
+    if (hasICloud) settings.setICloud(TakeFromICloud.off);
   }
 }
