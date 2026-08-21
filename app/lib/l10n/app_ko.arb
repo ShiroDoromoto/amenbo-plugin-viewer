@@ -98,6 +98,9 @@
   "fileSizeMegabytes": "{megabytes} MB",
 
   "settingsTitle": "설정",
+  "routeHeading": "경로",
+  "takeFromICloud": "iCloud에서 받기",
+  "takeFromICloudNote": "Mac이 iCloud에 둔 것을 이 휴대폰에서 읽습니다. 끄면 이 휴대폰은 가져오지 않습니다.",
   "refreshHeading": "가져오기",
   "appearanceHeading": "모양",
   "refreshNote": "자동은 앱을 열 때와 앱으로 돌아올 때를 말합니다. 백그라운드에서는 절대 돌지 않습니다.",
@@ -113,6 +116,7 @@
   "thisPhone": "이 휴대폰",
   "thisPhoneDetail": "PC에서 이 휴대폰을 끊을 때 쓰는 이름입니다.",
   "factRoute": "경로",
+  "routeStopped": "설정에서 꺼 두었습니다. 여기서는 아무것도 받지 않습니다.",
   "factICloud": "iCloud",
   "iCloudSignedIn": "로그인됨",
   "iCloudNotAvailable": "이 휴대폰에서는 쓸 수 없습니다",
@@ -128,7 +132,7 @@
   "erase": "이 휴대폰의 사본 지우기",
   "eraseDetail": "여기에 둔 백로그와 그것을 여는 키를 지웁니다. PC 쪽은 그대로입니다.",
   "eraseQuestion": "이 휴대폰의 사본을 지울까요?",
-  "eraseDialogDetail": "이 휴대폰에 둔 백로그와 그것을 여는 키를 지웁니다. PC 쪽은 그대로이고, 언제든 다시 페어링할 수 있습니다.",
+  "eraseDialogDetail": "이 휴대폰에 둔 백로그와 그것을 여는 키를 지우고, 이후로는 아무것도 받지 않습니다. PC 쪽은 그대로이고, 언제든 다시 시작할 수 있습니다.",
   "keepIt": "그대로 두기",
   "eraseConfirm": "지우기",
 

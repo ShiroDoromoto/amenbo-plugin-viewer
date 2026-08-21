@@ -98,6 +98,9 @@
   "fileSizeMegabytes": "{megabytes} MB",
 
   "settingsTitle": "Ustawienia",
+  "routeHeading": "Droga",
+  "takeFromICloud": "Odbieraj z iCloud",
+  "takeFromICloudNote": "To, co Mac zostawia w iCloud, jest czytane na tym telefonie. Wyłączone — telefon przestaje pobierać.",
   "refreshHeading": "Pobieranie",
   "appearanceHeading": "Wygląd",
   "refreshNote": "Automatycznie znaczy przy otwarciu aplikacji i przy powrocie do niej. W tle nic nigdy nie działa.",
@@ -113,6 +116,7 @@
   "thisPhone": "Ten telefon",
   "thisPhoneDetail": "Nazwa, pod którą odetniesz ten telefon na komputerze.",
   "factRoute": "Droga",
+  "routeStopped": "Wyłączone w ustawieniach. Stąd nic nie jest pobierane.",
   "factICloud": "iCloud",
   "iCloudSignedIn": "Zalogowano",
   "iCloudNotAvailable": "Niedostępne na tym telefonie",
@@ -128,7 +132,7 @@
   "erase": "Usuń kopię z tego telefonu",
   "eraseDetail": "Usuwa trzymany tutaj backlog i klucz, który go otwiera. Na komputerze nic się nie zmienia.",
   "eraseQuestion": "Usunąć kopię z tego telefonu?",
-  "eraseDialogDetail": "Backlog trzymany na tym telefonie i klucz, który go otwiera, zostaną usunięte. Na twoim komputerze nic się nie zmieni, a sparować możesz w każdej chwili.",
+  "eraseDialogDetail": "Backlog trzymany na tym telefonie i klucz, który go otwiera, zostaną usunięte, a telefon przestanie cokolwiek odbierać. Na twoim komputerze nic się nie zmieni, a zacząć od nowa możesz w każdej chwili.",
   "keepIt": "Zostaw",
   "eraseConfirm": "Usuń",
 

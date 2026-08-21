@@ -40,6 +40,10 @@ const _iCloud = Connection(
   iCloudAvailable: false,
 );
 
+/// The same phone, with the route switched off — the one state where naming the route is not
+/// enough on its own.
+const _iCloudStopped = Connection(route: ConnectionRoute.iCloud, taking: false);
+
 Future<bool?> pumpConnection(WidgetTester tester, ConnectionFacts facts) async {
   bool? popped;
   await tester.pumpWidget(
@@ -183,5 +187,17 @@ void main() {
 
     // The reason for the camera, before the camera — the scanning screen's own rule.
     expect(find.text(words.pairHeading), findsOneWidget);
+  });
+
+  testWidgets('a route that was switched off says so under its name', (
+    tester,
+  ) async {
+    await pumpConnection(tester, FakeFacts(_iCloudStopped));
+
+    expect(find.text(words.routeICloud), findsOneWidget);
+    // Otherwise the screen names a place while nothing is coming from it.
+    expect(find.text(words.routeStopped), findsOneWidget);
+    // And it does not answer for iCloud, which is not why anything stopped.
+    expect(find.text(words.iCloudNotAvailable), findsNothing);
   });
 }

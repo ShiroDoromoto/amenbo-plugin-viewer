@@ -98,6 +98,9 @@
   "fileSizeMegabytes": "{megabytes} MB",
 
   "settingsTitle": "Ajustes",
+  "routeHeading": "Vía",
+  "takeFromICloud": "Recibir desde iCloud",
+  "takeFromICloudNote": "Lo que el Mac deja en iCloud se lee en este teléfono. Si lo apagas, este teléfono deja de ir a mirar.",
   "refreshHeading": "Ir a mirar",
   "appearanceHeading": "Apariencia",
   "refreshNote": "Automáticamente significa al abrir la app y al volver a ella. Nunca funciona en segundo plano.",
@@ -113,6 +116,7 @@
   "thisPhone": "Este teléfono",
   "thisPhoneDetail": "El nombre con el que cortar este teléfono desde el PC.",
   "factRoute": "Vía",
+  "routeStopped": "Apagado en los ajustes. De aquí no se recibe nada.",
   "factICloud": "iCloud",
   "iCloudSignedIn": "Sesión iniciada",
   "iCloudNotAvailable": "No disponible en este teléfono",
@@ -128,7 +132,7 @@
   "erase": "Borrar la copia de este teléfono",
   "eraseDetail": "Quita el backlog guardado aquí y la clave que lo abre. En el PC no cambia nada.",
   "eraseQuestion": "¿Borrar la copia de este teléfono?",
-  "eraseDialogDetail": "Se quitan el backlog guardado en este teléfono y la clave que lo abre. En tu PC no cambia nada, y puedes emparejar de nuevo cuando quieras.",
+  "eraseDialogDetail": "Se quitan el backlog guardado en este teléfono y la clave que lo abre, y este teléfono deja de recibir nada. En tu PC no cambia nada, y puedes empezar de nuevo cuando quieras.",
   "keepIt": "Conservarla",
   "eraseConfirm": "Borrar",
 

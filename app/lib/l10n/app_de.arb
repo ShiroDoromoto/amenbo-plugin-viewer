@@ -98,6 +98,9 @@
   "fileSizeMegabytes": "{megabytes} MB",
 
   "settingsTitle": "Einstellungen",
+  "routeHeading": "Weg",
+  "takeFromICloud": "Aus iCloud übernehmen",
+  "takeFromICloudNote": "Was der Mac in iCloud ablegt, wird auf diesem Telefon gelesen. Ausgeschaltet ruft dieses Telefon nichts mehr ab.",
   "refreshHeading": "Abrufen",
   "appearanceHeading": "Darstellung",
   "refreshNote": "Automatisch heißt: beim Öffnen der App und bei der Rückkehr zu ihr. Im Hintergrund läuft nie etwas.",
@@ -113,6 +116,7 @@
   "thisPhone": "Dieses Telefon",
   "thisPhoneDetail": "Der Name, unter dem du dieses Telefon am PC abmeldest.",
   "factRoute": "Weg",
+  "routeStopped": "In den Einstellungen ausgeschaltet. Von hier wird nichts übernommen.",
   "factICloud": "iCloud",
   "iCloudSignedIn": "Angemeldet",
   "iCloudNotAvailable": "Auf diesem Telefon nicht verfügbar",
@@ -128,7 +132,7 @@
   "erase": "Kopie auf diesem Telefon löschen",
   "eraseDetail": "Entfernt das hier abgelegte Backlog und den Schlüssel, der es öffnet. Am PC ändert sich nichts.",
   "eraseQuestion": "Kopie auf diesem Telefon löschen?",
-  "eraseDialogDetail": "Das auf diesem Telefon abgelegte Backlog und der Schlüssel, der es öffnet, werden entfernt. An deinem PC ändert sich nichts, und du kannst jederzeit neu koppeln.",
+  "eraseDialogDetail": "Das auf diesem Telefon abgelegte Backlog und der Schlüssel, der es öffnet, werden entfernt, und dieses Telefon übernimmt nichts mehr. An deinem PC ändert sich nichts, und du kannst jederzeit neu anfangen.",
   "keepIt": "Behalten",
   "eraseConfirm": "Löschen",
 
