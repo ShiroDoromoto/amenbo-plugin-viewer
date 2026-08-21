@@ -352,9 +352,9 @@ func codeForATest(t *testing.T) *qrcode.Code {
 func watchTheViewer(t *testing.T) *string {
 	t.Helper()
 	var opened string
-	was := openInTheViewer
-	openInTheViewer = func(path string) error { opened = path; return nil }
-	t.Cleanup(func() { openInTheViewer = was })
+	was := openInTheSystem
+	openInTheSystem = func(target string) error { opened = target; return nil }
+	t.Cleanup(func() { openInTheSystem = was })
 	return &opened
 }
 

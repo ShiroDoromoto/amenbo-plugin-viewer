@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -508,6 +509,97 @@ func TestAWorkerWithNoWriteTokenIsNotReportedAsUp(t *testing.T) {
 	} else if !strings.Contains(err.Error(), "write token") {
 		t.Errorf("the reason is not the one that is true: %v", err)
 	}
+}
+
+// The button hands the browser the same link `setup` would have printed. Anything else on it —
+// a bare token page, a link that lost its permissions — puts the user in front of Cloudflare's
+// several dozen permission groups, which is the one judgement this plugin promises never to ask
+// for.
+func TestTheButtonOpensTheLinkWithThePermissionsOnIt(t *testing.T) {
+	opened, _, err := pressed(t, onAScreen, opensFine)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if opened != tokenLink() {
+		t.Errorf("the button opened %q, and the link is %q", opened, tokenLink())
+	}
+}
+
+// **A page that would not open still has to say where it was.** The link is the whole point of
+// the press, and a failure that swallowed it would leave the user with no terminal — the only
+// user this button exists for — with nowhere to go.
+func TestAPageThatWillNotOpenStillSaysWhereItIs(t *testing.T) {
+	refused := errors.New("no opener here")
+
+	_, _, err := pressed(t, onAScreen, func(string) error { return refused })
+
+	if err == nil {
+		t.Fatal("a page that never opened was reported as opened")
+	}
+	if !strings.Contains(err.Error(), tokenLink()) {
+		t.Errorf("the link is not in what the user is told: %v", err)
+	}
+	if !errors.Is(err, refused) {
+		t.Errorf("why it would not open is lost: %v", err)
+	}
+}
+
+// A machine with no screen is not a failure to report: nothing there could have opened the page,
+// and the person pressing this from an SSH session has a browser in front of them elsewhere. So
+// the link is written out instead, and the run ends as a run that did what it could.
+func TestAMachineWithNoScreenIsGivenTheLinkInsteadOfAPage(t *testing.T) {
+	opened, stderr, err := pressed(t, withNoScreen, opensFine)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if opened != "" {
+		t.Errorf("a page was handed to an opener with nowhere to put it: %q", opened)
+	}
+	if !strings.Contains(stderr, tokenLink()) {
+		t.Errorf("the link the user has to go to by hand was not written out: %q", stderr)
+	}
+}
+
+// Nothing is asked and nothing is saved, so the press leaves the settings exactly as it found
+// them. The token itself is pasted into the next button, and this one never sees it.
+func TestTheButtonWritesNothingBack(t *testing.T) {
+	stdout, stderr := capture(t, func() {
+		was, wasScreen := openInTheSystem, thereIsAScreen
+		openInTheSystem, thereIsAScreen = opensFine, onAScreen
+		defer func() { openInTheSystem, thereIsAScreen = was, wasScreen }()
+		if err := token(input{}, nil); err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	if strings.TrimSpace(stdout) != "" {
+		t.Errorf("the button returned %q, and a page being opened has no return value", stdout)
+	}
+	if strings.Contains(stderr, envAskAPIToken) || strings.Contains(stderr, envCloudflareToken) {
+		t.Errorf("the press went looking for a token, and it has none of its own to want: %q", stderr)
+	}
+}
+
+// The two screens a press can happen on, named rather than spelled out at each call.
+var (
+	onAScreen    = func() bool { return true }
+	withNoScreen = func() bool { return false }
+	opensFine    = func(string) error { return nil }
+)
+
+// pressed runs the button as the settings screen would, with the machine's screen and its opener
+// both stood in for, and answers with what was opened, what the user was told, and the verdict.
+func pressed(t *testing.T, screen func() bool, open func(string) error) (opened, stderr string, err error) {
+	t.Helper()
+	wasOpen, wasScreen := openInTheSystem, thereIsAScreen
+	openInTheSystem = func(target string) error { opened = target; return open(target) }
+	thereIsAScreen = screen
+	t.Cleanup(func() { openInTheSystem, thereIsAScreen = wasOpen, wasScreen })
+
+	_, stderr = capture(t, func() { err = token(input{}, nil) })
+	return opened, stderr, err
 }
 
 // The link is the whole of what the user is asked to judge — which is nothing, as long as it

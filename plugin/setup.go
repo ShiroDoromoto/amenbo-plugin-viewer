@@ -297,6 +297,34 @@ The token is used once, to stand the Worker and its database up, and is not kept
 	return token, nil
 }
 
+// token puts Cloudflare's token screen on screen, with the permissions `setup` needs already
+// ticked, and ends there. It asks nothing, keeps nothing, and writes nothing back — what happens
+// on that page is the user making a token, which they then paste into the box behind the setup
+// button.
+//
+// **It is a button of its own because the link had nowhere else to be shown.** `setup` prints it
+// to the terminal, and only on the run where nothing was pasted — so the user who came to the
+// settings screen, with a token box in front of them and no terminal at all, is the one who
+// never sees it. The screen draws labels and help as plain text, so the link
+// cannot be written into the form either. A button that opens the page is what is left.
+func token(_ input, _ []string) error {
+	link := tokenLink()
+
+	// A machine with no screen has nothing to open a page on, and handing the run to an opener
+	// that has nowhere to put it would fail for a reason the user can do nothing about. The link
+	// itself is the answer there — someone over SSH pastes it into the browser they are sitting
+	// in front of.
+	if !thereIsAScreen() {
+		logf("%s: there is no screen here to open it on. The token page is at %s", pluginName, link)
+		return nil
+	}
+	if err := openInTheSystem(link); err != nil {
+		return fmt.Errorf("the token page could not be opened (%w) — it is at %s", err, link)
+	}
+	logf("%s: the token page is open, with the permissions it needs already ticked. Press Continue to summary, then Create Token, and paste what it shows you into the box behind the setup button.", pluginName)
+	return nil
+}
+
 // tokenLink opens Cloudflare's token screen with this plugin's permissions already chosen.
 //
 // **The account form of the link, not the user form.** A user-token link
