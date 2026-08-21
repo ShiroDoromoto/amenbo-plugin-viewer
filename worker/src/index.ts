@@ -75,6 +75,10 @@ const PER_PAGE = 200;
  *
  * The point is that too much is refused at the door with a sentence saying so, rather than
  * failing somewhere inside the database where the sender learns only that it did not work.
+ *
+ * A backlog outgrows this the moment it is placed whole, so the refusal is not the end of the
+ * road: a sender that has more than this splits it into parts and says which one each is — see
+ * `place`.
  */
 const PER_WRITE = 500;
 
@@ -219,12 +223,36 @@ interface Standing {
 	version: number | null;
 	seq: number;
 	updated_at: string | null;
+	/** 1 while a replacement is half placed — see `halfReplaced`. */
+	replacing: number;
 }
 
 /** Reads that row. It is there from the first migration, so there is no "no store yet" to handle. */
 async function standing(env: Env): Promise<Standing> {
-	const row = await env.RECORDS.prepare("SELECT version, seq, updated_at FROM store WHERE id = 1").first<Standing>();
+	const row = await env.RECORDS.prepare(
+		"SELECT version, seq, updated_at, replacing FROM store WHERE id = 1",
+	).first<Standing>();
 	return row!;
+}
+
+/**
+ * The refusal for a store that is mid-replacement.
+ *
+ * `PUT /reset` empties the records before it takes the first part of the whole store, so between
+ * that and the last part landing, what is here is a fraction of the backlog. A phone cannot tell
+ * that fraction from a backlog that really did shrink — it would write it down, see nothing more
+ * to fetch, and call itself level with a store it holds a tenth of.
+ *
+ * So both reading doors close for the length of the placement, and say when to come back. It is a
+ * few seconds on an ordinary backlog, and the only alternative is answering with something untrue.
+ */
+function halfReplaced(): Response {
+	return problem(
+		503,
+		"the whole of this store is being placed again, and what is here is part of it" +
+			" — this door answers once the last part has landed",
+		{ "Retry-After": "5" },
+	);
 }
 
 /**
@@ -236,6 +264,9 @@ async function standing(env: Env): Promise<Standing> {
  */
 async function meta(env: Env): Promise<Response> {
 	const now = await standing(env);
+	if (now.replacing) {
+		return halfReplaced();
+	}
 	return Response.json({ spec_v: SPEC_V, version: now.version, seq: now.seq, updated_at: now.updated_at });
 }
 
@@ -272,6 +303,9 @@ async function read(env: Env, url: URL): Promise<Response> {
 	const since = Number(asked);
 
 	const now = await standing(env);
+	if (now.replacing) {
+		return halfReplaced();
+	}
 	if (since > now.seq) {
 		return problem(
 			409,
@@ -333,6 +367,29 @@ interface Offered {
  * rather than moving every one of them to the front of the order for nothing. `/reset` is the
  * repair path and always does the work — the version is what a phone reads, so a store that
  * somehow disagrees with it has to be able to be put right.
+ *
+ * ## More than one request's worth
+ *
+ * One write takes `PER_WRITE` records, and a backlog outgrows that the first time it is placed
+ * whole. So a body says which part of a turn it is: `{"part":2,"parts":5}`, both defaulting to 1,
+ * and the same version travels on every part.
+ *
+ * Three things follow, and each of them is what keeps a phone from reading half a turn as a whole
+ * one:
+ *
+ * - **Only the first part empties.** A later part emptying again would leave the store holding
+ *   whichever part arrived last, and nothing else.
+ * - **Only the last part settles the turn**: the version and the time are written by that part
+ *   alone, so a turn cut short leaves a store still naming the version it really holds, and the
+ *   next turn is not mistaken for a repeat of it.
+ * - **A replacement closes the reading doors** while it is in flight (see `halfReplaced`), because
+ *   emptying first is what makes the middle of one a lie. A placement that only adds needs no such
+ *   thing: what has landed of it is a true prefix of what is coming, and a phone reading that is
+ *   behind rather than wrong.
+ *
+ * **A placement that adds never lowers that flag**, so a replacement nobody finished leaves the
+ * doors closed until another whole placement puts the store right — which is what the sender
+ * reaches for when a whole placement of its own did not land.
  */
 async function place(env: Env, request: Request, placing: Placing): Promise<Response> {
 	let asked: unknown;
@@ -341,13 +398,29 @@ async function place(env: Env, request: Request, placing: Placing): Promise<Resp
 	} catch {
 		return problem(400, "the body has to be a JSON object");
 	}
-	const { spec_v, version, records } = (asked ?? {}) as { spec_v?: unknown; version?: unknown; records?: unknown };
+	const { spec_v, version, part, parts, records } = (asked ?? {}) as {
+		spec_v?: unknown;
+		version?: unknown;
+		part?: unknown;
+		parts?: unknown;
+		records?: unknown;
+	};
 
 	if (spec_v !== SPEC_V) {
 		return problem(400, `this Worker reads spec_v ${SPEC_V}, and was sent ${JSON.stringify(spec_v) ?? "nothing"}`);
 	}
 	if (typeof version !== "number" || !Number.isSafeInteger(version)) {
 		return problem(400, "version has to be a whole number — the backlog's own version, so a repeat can be recognised");
+	}
+	// A body that says nothing about parts is one whole turn, which is what every send was before
+	// there were parts at all.
+	const of = parts === undefined ? 1 : parts;
+	const at = part === undefined ? 1 : part;
+	if (typeof of !== "number" || !Number.isSafeInteger(of) || of < 1) {
+		return problem(400, "parts has to be a whole number of 1 or more — how many requests this turn is being sent in");
+	}
+	if (typeof at !== "number" || !Number.isSafeInteger(at) || at < 1 || at > of) {
+		return problem(400, `part has to be a whole number from 1 to ${of} — which of this turn's requests this is`);
 	}
 	if (!Array.isArray(records)) {
 		return problem(400, "records has to be a list, empty or otherwise");
@@ -368,9 +441,13 @@ async function place(env: Env, request: Request, placing: Placing): Promise<Resp
 	}
 
 	const now = await standing(env);
+	// The version is written by the last part alone, so this recognises a turn that finished and
+	// never a turn that is still arriving.
 	if (placing === "add" && now.version === version) {
 		return Response.json({ seq: now.seq });
 	}
+	const first = at === 1;
+	const last = at === of;
 
 	// Every statement in one batch, so a write either lands whole or not at all: half a turn in
 	// the table would be a phone reading records the version says nothing about.
@@ -385,13 +462,23 @@ async function place(env: Env, request: Request, placing: Placing): Promise<Resp
 			" seq = excluded.seq, op = excluded.op, nonce = excluded.nonce, ciphertext = excluded.ciphertext",
 	);
 	const statements = [
-		...(placing === "replace" ? [env.RECORDS.prepare("DELETE FROM records")] : []),
-		...carrying.map((record, at) => upsert.bind(record.k, at + 1, record.op, record.nonce, record.ciphertext)),
-		env.RECORDS.prepare("UPDATE store SET seq = seq + ?, version = ?, updated_at = ? WHERE id = 1").bind(
-			carrying.length,
-			version,
-			new Date().toISOString(),
-		),
+		// Only the first part empties: the ones after it are the rest of the same store, and
+		// emptying again would leave the store holding whichever part arrived last.
+		...(placing === "replace" && first ? [env.RECORDS.prepare("DELETE FROM records")] : []),
+		...(placing === "replace" && first && !last
+			? [env.RECORDS.prepare("UPDATE store SET replacing = 1 WHERE id = 1")]
+			: []),
+		...carrying.map((record, offset) => upsert.bind(record.k, offset + 1, record.op, record.nonce, record.ciphertext)),
+		env.RECORDS.prepare("UPDATE store SET seq = seq + ? WHERE id = 1").bind(carrying.length),
+		...(last
+			? [
+					env.RECORDS.prepare(
+						placing === "replace"
+							? "UPDATE store SET version = ?, updated_at = ?, replacing = 0 WHERE id = 1"
+							: "UPDATE store SET version = ?, updated_at = ? WHERE id = 1",
+					).bind(version, new Date().toISOString()),
+				]
+			: []),
 		env.RECORDS.prepare("SELECT seq FROM store WHERE id = 1"),
 	];
 	let done: D1Result<{ seq: number }>[];

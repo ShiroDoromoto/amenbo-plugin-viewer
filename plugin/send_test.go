@@ -346,3 +346,141 @@ func TestATrailingSlashOnTheUrlIsNotCarriedIntoThePath(t *testing.T) {
 		t.Errorf("url = %q", where.url)
 	}
 }
+
+// A turn that outgrows one request is what a whole placement of any real backlog is, so the send
+// has to split it rather than hand the door more than it takes and read back a 413 it can do
+// nothing with.
+func TestATurnTooBigForOneRequestIsSentInParts(t *testing.T) {
+	var seen []placement
+	answering := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body placement
+		json.NewDecoder(r.Body).Decode(&body)
+		seen = append(seen, body)
+		w.Write([]byte(`{"seq":0}`))
+	}))
+	defer answering.Close()
+
+	records := make([]outgoing, recordsPerWrite+1)
+	for at := range records {
+		records[at] = outgoing{Key: recordKey("task", int64(at)), Op: opDeleted}
+	}
+	where := store{url: answering.URL, token: "a-throwaway-token", seal: sealerForTest(t)}
+
+	if err := where.place(placement{SpecV: specVersion, Version: 12345, Records: records}); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(seen) != 2 {
+		t.Fatalf("%d request(s) for %d records, want two", len(seen), len(records))
+	}
+	if got := len(seen[0].Records); got != recordsPerWrite {
+		t.Errorf("the first part carried %d records, want a full %d", got, recordsPerWrite)
+	}
+	if got := len(seen[1].Records); got != 1 {
+		t.Errorf("the last part carried %d records, want the one left over", got)
+	}
+	for at, part := range seen {
+		if part.Part != at+1 || part.Parts != len(seen) {
+			t.Errorf("part %d of %d says it is %d of %d", at+1, len(seen), part.Part, part.Parts)
+		}
+		// The version travels on every part: the store writes it down on the last one, and reads
+		// a turn carrying a different one as a different turn.
+		if part.Version != 12345 || part.SpecV != specVersion {
+			t.Errorf("part %d = %+v, want the turn's own version and contract", at+1, part)
+		}
+	}
+}
+
+// The store does not have to know how a turn was split to answer for it: a turn small enough for
+// one request is one part of one, and says so rather than saying nothing.
+func TestATurnThatFitsIsOnePartOfOne(t *testing.T) {
+	var seen placement
+	answering := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		json.NewDecoder(r.Body).Decode(&seen)
+		w.Write([]byte(`{"seq":1}`))
+	}))
+	defer answering.Close()
+
+	where := store{url: answering.URL, token: "a-throwaway-token", seal: sealerForTest(t)}
+
+	if err := where.place(placement{SpecV: specVersion, Version: 1, Records: []outgoing{{Key: "task/1", Op: opDeleted}}}); err != nil {
+		t.Fatal(err)
+	}
+
+	if seen.Part != 1 || seen.Parts != 1 {
+		t.Errorf("a turn that fits said it was part %d of %d", seen.Part, seen.Parts)
+	}
+}
+
+// A whole placement of a store that holds nothing is what says the store holds nothing. Sending
+// no request at all would leave whatever is there standing, and the phone reading it.
+func TestAWholePlacementOfNothingIsStillSent(t *testing.T) {
+	var paths []string
+	answering := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		paths = append(paths, r.URL.Path)
+		w.Write([]byte(`{"seq":0}`))
+	}))
+	defer answering.Close()
+
+	where := store{url: answering.URL, token: "a-throwaway-token", seal: sealerForTest(t)}
+
+	if err := where.replace(placement{SpecV: specVersion, Version: 1}); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(paths) != 1 || paths[0] != "/reset" {
+		t.Errorf("an empty whole placement sent %v, want the one request that empties", paths)
+	}
+}
+
+// What has landed stays landed, and the parts after the one that failed are not sent on top of a
+// door that is not taking them.
+func TestAPartThatFailsStopsTheRestOfTheTurn(t *testing.T) {
+	taken := 0
+	refusing := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		taken++
+		if taken == 1 {
+			w.Write([]byte(`{"seq":500}`))
+			return
+		}
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer refusing.Close()
+
+	records := make([]outgoing, recordsPerWrite*2+1)
+	for at := range records {
+		records[at] = outgoing{Key: recordKey("task", int64(at)), Op: opDeleted}
+	}
+	where := store{url: refusing.URL, token: "a-throwaway-token", seal: sealerForTest(t)}
+
+	err := where.place(placement{SpecV: specVersion, Version: 1, Records: records})
+
+	if err == nil {
+		t.Fatal("a turn whose second part was refused read as a successful one")
+	}
+	if taken != 2 {
+		t.Errorf("%d part(s) were sent, want the send to stop at the one that failed", taken)
+	}
+}
+
+// A whole placement stops part way through the store, not before it: the routes hold part of a
+// backlog, and the cursor remembered from an older send points far beyond the hole. Carrying what
+// moved since then would lay this week's edits on top of a store missing its middle, so what a
+// failed whole placement leaves behind is nothing — which is the state a first run is in, and a
+// first run places the whole store again.
+func TestAWholePlacementThatFailedLeavesNothingRemembered(t *testing.T) {
+	remembering(t)
+	if err := writeState(state{Version: 12345, Cursor: 42}); err != nil {
+		t.Fatal(err)
+	}
+
+	forgetWhatWasNotPlaced()
+
+	remembered, found, err := readState()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if found {
+		t.Errorf("a failed whole placement left %+v behind, and the next turn would carry only what moved", remembered)
+	}
+}

@@ -89,12 +89,25 @@ async function sha256(text) {
 }
 __name(sha256, "sha256");
 async function standing(env) {
-  const row = await env.RECORDS.prepare("SELECT version, seq, updated_at FROM store WHERE id = 1").first();
+  const row = await env.RECORDS.prepare(
+    "SELECT version, seq, updated_at, replacing FROM store WHERE id = 1"
+  ).first();
   return row;
 }
 __name(standing, "standing");
+function halfReplaced() {
+  return problem(
+    503,
+    "the whole of this store is being placed again, and what is here is part of it \u2014 this door answers once the last part has landed",
+    { "Retry-After": "5" }
+  );
+}
+__name(halfReplaced, "halfReplaced");
 async function meta(env) {
   const now = await standing(env);
+  if (now.replacing) {
+    return halfReplaced();
+  }
   return Response.json({ spec_v: SPEC_V, version: now.version, seq: now.seq, updated_at: now.updated_at });
 }
 __name(meta, "meta");
@@ -105,6 +118,9 @@ async function read(env, url) {
   }
   const since = Number(asked);
   const now = await standing(env);
+  if (now.replacing) {
+    return halfReplaced();
+  }
   if (since > now.seq) {
     return problem(
       409,
@@ -139,12 +155,20 @@ async function place(env, request, placing) {
   } catch {
     return problem(400, "the body has to be a JSON object");
   }
-  const { spec_v, version, records } = asked ?? {};
+  const { spec_v, version, part, parts, records } = asked ?? {};
   if (spec_v !== SPEC_V) {
     return problem(400, `this Worker reads spec_v ${SPEC_V}, and was sent ${JSON.stringify(spec_v) ?? "nothing"}`);
   }
   if (typeof version !== "number" || !Number.isSafeInteger(version)) {
     return problem(400, "version has to be a whole number \u2014 the backlog's own version, so a repeat can be recognised");
+  }
+  const of = parts === void 0 ? 1 : parts;
+  const at = part === void 0 ? 1 : part;
+  if (typeof of !== "number" || !Number.isSafeInteger(of) || of < 1) {
+    return problem(400, "parts has to be a whole number of 1 or more \u2014 how many requests this turn is being sent in");
+  }
+  if (typeof at !== "number" || !Number.isSafeInteger(at) || at < 1 || at > of) {
+    return problem(400, `part has to be a whole number from 1 to ${of} \u2014 which of this turn's requests this is`);
   }
   if (!Array.isArray(records)) {
     return problem(400, "records has to be a list, empty or otherwise");
@@ -167,17 +191,23 @@ async function place(env, request, placing) {
   if (placing === "add" && now.version === version) {
     return Response.json({ seq: now.seq });
   }
+  const first = at === 1;
+  const last = at === of;
   const upsert = env.RECORDS.prepare(
     "INSERT INTO records (k, seq, op, nonce, ciphertext) VALUES (?, (SELECT seq FROM store WHERE id = 1) + ?, ?, ?, ?) ON CONFLICT (k) DO UPDATE SET seq = excluded.seq, op = excluded.op, nonce = excluded.nonce, ciphertext = excluded.ciphertext"
   );
   const statements = [
-    ...placing === "replace" ? [env.RECORDS.prepare("DELETE FROM records")] : [],
-    ...carrying.map((record, at) => upsert.bind(record.k, at + 1, record.op, record.nonce, record.ciphertext)),
-    env.RECORDS.prepare("UPDATE store SET seq = seq + ?, version = ?, updated_at = ? WHERE id = 1").bind(
-      carrying.length,
-      version,
-      (/* @__PURE__ */ new Date()).toISOString()
-    ),
+    // Only the first part empties: the ones after it are the rest of the same store, and
+    // emptying again would leave the store holding whichever part arrived last.
+    ...placing === "replace" && first ? [env.RECORDS.prepare("DELETE FROM records")] : [],
+    ...placing === "replace" && first && !last ? [env.RECORDS.prepare("UPDATE store SET replacing = 1 WHERE id = 1")] : [],
+    ...carrying.map((record, offset) => upsert.bind(record.k, offset + 1, record.op, record.nonce, record.ciphertext)),
+    env.RECORDS.prepare("UPDATE store SET seq = seq + ? WHERE id = 1").bind(carrying.length),
+    ...last ? [
+      env.RECORDS.prepare(
+        placing === "replace" ? "UPDATE store SET version = ?, updated_at = ?, replacing = 0 WHERE id = 1" : "UPDATE store SET version = ?, updated_at = ? WHERE id = 1"
+      ).bind(version, (/* @__PURE__ */ new Date()).toISOString())
+    ] : [],
     env.RECORDS.prepare("SELECT seq FROM store WHERE id = 1")
   ];
   let done;
