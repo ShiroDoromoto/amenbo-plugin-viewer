@@ -256,28 +256,6 @@ type route interface {
 	replace(placement) error
 }
 
-// routesFor names every route that is open. None is not a failure: a plugin that is installed and
-// enabled, with no Worker stood up and no folder yet, is waiting rather than broken.
-func routesFor(in input) []route {
-	var open []route
-	if there, err := dropFor(); err == nil {
-		open = append(open, there)
-	}
-	if where, err := storeFor(in); err == nil {
-		// The key is what the Worker route is allowed to send with, and only it: the folder is
-		// this machine's own. A route standing without one is worth a line — the send goes on to
-		// the other one, and silence here would read as the Worker being up to date.
-		seal, err := newSealer(secret(envEncryptionKey))
-		if err != nil {
-			logf("%s: the Cloudflare route is standing but nothing can be sent to it — %s", pluginName, err)
-		} else {
-			where.seal = seal
-			open = append(open, where)
-		}
-	}
-	return open
-}
-
 // store is the place the records are put: the user's own Worker, the token that opens its writing
 // door, and the key nothing there is written without.
 type store struct {
@@ -432,7 +410,7 @@ func theLedger() ledger {
 func carry(in input, force bool) (int, error) {
 	routes := routesFor(in)
 	if len(routes) == 0 {
-		return 0, errNoRoute
+		return 0, nothingIsReaching(in)
 	}
 	version := in.Version
 	if version == nil {
