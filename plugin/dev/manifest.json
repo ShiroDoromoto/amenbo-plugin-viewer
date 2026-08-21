@@ -3,7 +3,11 @@
   "desc": "Read your backlog on your phone, from a place you own",
   "author": "Amenbo",
   "repo": "ShiroDoromoto/amenbo-plugin-viewer",
-  "os": ["macos", "windows", "linux"],
+  "os": [
+    "macos",
+    "windows",
+    "linux"
+  ],
   "category": "integration",
   "scope": "machine",
   "assets": {
@@ -36,6 +40,24 @@
   "min_amenbo": "13.0.0",
   "config": [
     {
+      "key": "routes",
+      "label": "Where to carry",
+      "help": "Which places this may carry to. It can only take places away: a place you tick still needs to exist before anything reaches it — the iCloud folder appears once you have opened Amenbo Viewer on a phone, and the Cloudflare one is what setup stands up. Ticking none is an answer and it is honoured: the plugin stays enabled and carries nowhere.",
+      "type": "multi",
+      "options": [
+        {
+          "value": "icloud",
+          "label": "The app's own iCloud folder"
+        },
+        {
+          "value": "cloudflare",
+          "label": "Your own Cloudflare Worker"
+        }
+      ],
+      "default": "icloud,cloudflare",
+      "required": false
+    },
+    {
       "key": "worker_url",
       "label": "Your Cloudflare Worker's URL",
       "help": "setup writes this when it stands the Worker up. There is nothing to type.",
@@ -60,6 +82,7 @@
     }
   ],
   "settings": {
+    "check": "check",
     "actions": [
       {
         "cmd": "token",
@@ -128,6 +151,10 @@
       {
         "cmd": "qr",
         "does": "Pairs one phone: issues a read token, registers its hash, puts endpoint/token/key/name on a QR the camera reads, off the network. --label or the settings screen box names it; --terminal draws it here"
+      },
+      {
+        "cmd": "check",
+        "does": "Says where records are reaching right now — the places ticked under 'Where to carry' that also exist. Reads nothing over the network; the settings screen raises it, and a terminal may too"
       }
     ]
   }
