@@ -90,7 +90,7 @@ async function sha256(text) {
 __name(sha256, "sha256");
 async function standing(env) {
   const row = await env.RECORDS.prepare(
-    "SELECT version, seq, updated_at, replacing FROM store WHERE id = 1"
+    "SELECT version, seq, updated_at, replacing, placed_from FROM store WHERE id = 1"
   ).first();
   return row;
 }
@@ -108,7 +108,13 @@ async function meta(env) {
   if (now.replacing) {
     return halfReplaced();
   }
-  return Response.json({ spec_v: SPEC_V, version: now.version, seq: now.seq, updated_at: now.updated_at });
+  return Response.json({
+    spec_v: SPEC_V,
+    version: now.version,
+    seq: now.seq,
+    updated_at: now.updated_at,
+    placed_from: now.placed_from
+  });
 }
 __name(meta, "meta");
 async function read(env, url) {
@@ -125,6 +131,12 @@ async function read(env, url) {
     return problem(
       409,
       `the order here has reached ${now.seq}, and you asked to read on from ${since} \u2014 this store is not the one that cursor came from, so read again from the beginning`
+    );
+  }
+  if (since > 0 && since <= now.placed_from) {
+    return problem(
+      409,
+      `the whole of this store was placed again above ${now.placed_from}, and you asked to read on from ${since} \u2014 everything you have from before that has been made again, so throw it away and read from the beginning`
     );
   }
   const { results } = await env.RECORDS.prepare(
@@ -199,7 +211,13 @@ async function place(env, request, placing) {
   const statements = [
     // Only the first part empties: the ones after it are the rest of the same store, and
     // emptying again would leave the store holding whichever part arrived last.
-    ...placing === "replace" && first ? [env.RECORDS.prepare("DELETE FROM records")] : [],
+    ...placing === "replace" && first ? [
+      env.RECORDS.prepare("DELETE FROM records"),
+      // Where this placement begins, taken before the rows it places move the order
+      // on. It is written with the emptying rather than after it, so there is no
+      // moment where the records are gone and nothing says they were.
+      env.RECORDS.prepare("UPDATE store SET placed_from = seq WHERE id = 1")
+    ] : [],
     ...placing === "replace" && first && !last ? [env.RECORDS.prepare("UPDATE store SET replacing = 1 WHERE id = 1")] : [],
     ...carrying.map((record, offset) => upsert.bind(record.k, offset + 1, record.op, record.nonce, record.ciphertext)),
     env.RECORDS.prepare("UPDATE store SET seq = seq + ? WHERE id = 1").bind(carrying.length),

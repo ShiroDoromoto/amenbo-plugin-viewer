@@ -75,7 +75,7 @@ async function reading(path: string): Promise<Response> {
 beforeEach(async () => {
 	await env.RECORDS.exec("DELETE FROM tokens");
 	await env.RECORDS.exec("DELETE FROM records");
-	await env.RECORDS.exec("UPDATE store SET version = NULL, updated_at = NULL, seq = 0, replacing = 0 WHERE id = 1");
+	await env.RECORDS.exec("UPDATE store SET version = NULL, updated_at = NULL, seq = 0, replacing = 0, placed_from = 0 WHERE id = 1");
 });
 
 describe("the gate", () => {
@@ -477,7 +477,7 @@ describe("where the store stands", () => {
 	it("says nothing has landed yet, rather than nothing at all", async () => {
 		const answered = await reading("/meta").then((it) => it.json());
 
-		expect(answered).toEqual({ spec_v: 1, version: null, seq: 0, updated_at: null });
+		expect(answered).toEqual({ spec_v: 1, version: null, seq: 0, updated_at: null, placed_from: 0 });
 	});
 
 	it("says the version and how far the order has got", async () => {
@@ -512,13 +512,48 @@ describe("placing the whole store again", () => {
 
 	// A phone that was level before a reset is behind after one, and what it is behind by is the
 	// whole store — which is exactly what it has to be handed.
-	it("leaves a phone that was level with everything to read", async () => {
+	// A phone that was level before the reset is not read on from: everything it holds was made
+	// again under other numbers, and a record deleted before the reset is in neither the placement
+	// nor a row saying it went. Sent back to the beginning, it gets the whole placement.
+	it("sends a phone that was level back to the beginning, and has it all waiting there", async () => {
 		await sending("/records", 1, [sealed("task/1")]);
 
 		await sending("/reset", 2, [sealed("task/1"), sealed("task/2")]);
 
-		const answered = (await reading("/records?since=1").then((it) => it.json())) as { records: unknown[] };
+		expect((await reading("/records?since=1")).status).toBe(409);
+		const answered = (await reading("/records?since=0").then((it) => it.json())) as { records: unknown[] };
 		expect(answered.records).toEqual([sealed("task/1"), sealed("task/2")]);
+	});
+
+	// The failure the whole of this exists for. Without it the phone reads on from 1, is handed
+	// only the placement, and keeps `task/1` — which the backlog no longer has — for good.
+	it("does not let a phone keep a record that went while it was away", async () => {
+		await sending("/records", 1, [sealed("task/1")]);
+		// Deleted while the phone is away, then lost with every other row when the reset empties.
+		await sending("/records", 2, [{ k: "task/1", op: "del" }]);
+		await sending("/reset", 3, [sealed("task/2")]);
+
+		expect((await reading("/records?since=1")).status).toBe(409);
+		const answered = (await reading("/records?since=0").then((it) => it.json())) as { records: unknown[] };
+		expect(answered.records).toEqual([sealed("task/2")]);
+	});
+
+	// A phone reading inside the placement is not sent back: what it holds is the front of this
+	// placement rather than of the one before it, so it is behind and not wrong.
+	it("lets a phone that is partway through the placement read on", async () => {
+		await sending("/records", 1, [sealed("task/1")]);
+		await sending("/reset", 2, [sealed("task/2"), sealed("task/3")]);
+
+		const answered = (await reading("/records?since=2").then((it) => it.json())) as { records: unknown[] };
+		expect(answered.records).toEqual([sealed("task/3")]);
+	});
+
+	it("says where the placement began, so a phone can tell before it asks", async () => {
+		await sending("/records", 1, [sealed("task/1")]);
+
+		await sending("/reset", 2, [sealed("task/2")]);
+
+		expect(await reading("/meta").then((it) => it.json())).toMatchObject({ placed_from: 1, seq: 2 });
 	});
 
 	// A reset is the repair path — a sender reaches for it when it has lost track of what the
