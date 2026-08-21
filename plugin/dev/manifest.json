@@ -37,20 +37,26 @@
   "config": [
     {
       "key": "worker_url",
-      "label": "Your Cloudflare Worker's URL (filled in by setup)",
-      "required": false
+      "label": "Your Cloudflare Worker's URL",
+      "help": "setup writes this when it stands the Worker up. There is nothing to type.",
+      "required": false,
+      "readonly": true
     },
     {
       "key": "auth_token",
-      "label": "Token the Worker lets writes in with (filled in by setup)",
+      "label": "Token the Worker lets writes in with",
+      "help": "setup generates this. There is nothing to type.",
       "secret": true,
-      "required": false
+      "required": false,
+      "readonly": true
     },
     {
       "key": "encryption_key",
-      "label": "Key the records are encrypted with (filled in by setup)",
+      "label": "Key the records are encrypted with",
+      "help": "setup generates this. There is nothing to type - the phone is given it by the QR, never over the network.",
       "secret": true,
-      "required": false
+      "required": false,
+      "readonly": true
     }
   ],
   "settings": {

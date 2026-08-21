@@ -32,9 +32,10 @@ type manifest struct {
 }
 
 type field struct {
-	Key    string `json:"key"`
-	Label  string `json:"label"`
-	Secret bool   `json:"secret"`
+	Key      string `json:"key"`
+	Label    string `json:"label"`
+	Secret   bool   `json:"secret"`
+	Readonly bool   `json:"readonly"`
 }
 
 // action is one button the settings screen offers, and what it asks for before pressing it. The
@@ -210,6 +211,22 @@ func TestTheOpenSettingTheCodeReadsIsDeclaredOpen(t *testing.T) {
 	}
 	if declared.Label == "" {
 		t.Errorf("%s has nothing for the user to read", configWorkerURL)
+	}
+}
+
+// **None of the three saved settings is the user's to type.** `setup` generates all of them and
+// writes them back through `plugin config set`, so a box offered for any one of them is a box
+// whose only use is to break a working route. Declaring them readonly is what takes the box and
+// the clear button off the form; the write-back path is untouched by it.
+func TestNothingTheUserIsShownIsTheirsToFillIn(t *testing.T) {
+	declared := read(t).Config
+	if len(declared) == 0 {
+		t.Fatal("the manifest declares no settings at all")
+	}
+	for _, one := range declared {
+		if !one.Readonly {
+			t.Errorf("%s is offered as a box to type in, and setup is what writes it", one.Key)
+		}
 	}
 }
 
