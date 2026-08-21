@@ -166,7 +166,11 @@ func setup(_ input, args []string) error {
 	// remembers sending to the last one. Forgetting here is what makes the next send place the
 	// whole store rather than the next edit alone — and it is the only place it can be settled,
 	// since the write token is refused at the store's reading door.
-	if err := forgetState(); err != nil {
+	//
+	// **This route and no other.** Standing a Worker up says nothing about the folder on this
+	// machine, and forgetting that too would cost it a whole placement for something that did
+	// not happen to it.
+	if err := forgetRoute(routeCloudflare); err != nil {
 		return err
 	}
 

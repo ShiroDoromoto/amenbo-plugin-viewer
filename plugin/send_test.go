@@ -295,10 +295,11 @@ func TestASilentRefusalIsStillOne(t *testing.T) {
 // refusing is a route that takes nothing, so what a send does with a route that failed can be
 // exercised without standing either real one up.
 type refusing struct {
-	name string
+	called string
 }
 
-func (r refusing) String() string          { return r.name }
+func (r refusing) name() string            { return r.called }
+func (r refusing) String() string          { return r.called }
 func (r refusing) holdsNothing() bool      { return false }
 func (r refusing) place(placement) error   { return errors.New("it did not take it") }
 func (r refusing) replace(placement) error { return errors.New("it did not take it") }
@@ -307,13 +308,13 @@ func (r refusing) replace(placement) error { return errors.New("it did not take 
 // a phone reading one of them is not waiting on the other. What comes back names every route that
 // did not take the records, because a line naming one of two would send the user to the wrong end.
 func TestARouteThatFailsDoesNotStopTheOthers(t *testing.T) {
-	taken := 0
-	taking := stub{took: func() { taken++ }}
+	taking := &stub{called: "a place that takes anything"}
+	routes := []route{refusing{called: "the first place"}, taking, refusing{called: "the second place"}}
 
-	err := carryTo([]route{refusing{name: "the first place"}, taking, refusing{name: "the second place"}}, placement{}, false)
+	_, _, err := carryTurn(routes, 2, false, levelAt(1, 7, routes...), oneChange(t))
 
-	if taken != 1 {
-		t.Error("a route in between two that failed was never carried to")
+	if taking.placed != 1 {
+		t.Errorf("a route in between two that failed was carried to %d time(s)", taking.placed)
 	}
 	if err == nil {
 		t.Fatal("routes that took nothing read as a send that landed")
@@ -323,15 +324,49 @@ func TestARouteThatFailsDoesNotStopTheOthers(t *testing.T) {
 	}
 }
 
-// stub is a route that takes whatever it is given.
+// stub is a route that takes whatever it is given, and counts what it was handed.
 type stub struct {
-	took func()
+	called   string
+	empty    bool
+	placed   int
+	replaced int
 }
 
-func (s stub) String() string          { return "a place that takes anything" }
-func (s stub) holdsNothing() bool      { return false }
-func (s stub) place(placement) error   { s.took(); return nil }
-func (s stub) replace(placement) error { s.took(); return nil }
+func (s *stub) name() string          { return s.called }
+func (s *stub) String() string        { return s.called }
+func (s *stub) holdsNothing() bool    { return s.empty }
+func (s *stub) place(placement) error { s.placed++; return nil }
+func (s *stub) replace(placement) error {
+	s.replaced++
+	return nil
+}
+
+// levelAt is a memory that has every named route reading on from the same place.
+func levelAt(version, cursor int64, routes ...route) state {
+	left := state{Routes: map[string]carried{}}
+	for _, where := range routes {
+		left.Routes[where.name()] = carried{Version: version, Cursor: cursor}
+	}
+	return left
+}
+
+// oneChange is a ledger holding one record that moved, and a whole picture holding the same one.
+func oneChange(t *testing.T) ledger {
+	t.Helper()
+	return ledger{
+		changed: func(cursor int64) ([]change, int64, error) {
+			return []change{{Dataset: "task", RecordID: 1, Op: "update"}}, cursor + 1, nil
+		},
+		rows: func(_ string, _ []int64) ([]json.RawMessage, error) {
+			return []json.RawMessage{json.RawMessage(`{"id":1}`)}, nil
+		},
+		whole: func() (window, error) {
+			picture := window{Tables: map[string][]json.RawMessage{"task": {json.RawMessage(`{"id":1}`)}}}
+			picture.Header.Cursor = 99
+			return picture, nil
+		},
+	}
+}
 
 // The trailing slash a user leaves on a pasted URL must not become a doubled one in the path.
 func TestATrailingSlashOnTheUrlIsNotCarriedIntoThePath(t *testing.T) {
@@ -469,18 +504,170 @@ func TestAPartThatFailsStopsTheRestOfTheTurn(t *testing.T) {
 // failed whole placement leaves behind is nothing — which is the state a first run is in, and a
 // first run places the whole store again.
 func TestAWholePlacementThatFailedLeavesNothingRemembered(t *testing.T) {
-	remembering(t)
-	if err := writeState(state{Version: 12345, Cursor: 42}); err != nil {
-		t.Fatal(err)
+	failing := refusing{called: "a place that will not take it"}
+	beside := &stub{called: "a place that takes anything"}
+	routes := []route{failing, beside}
+
+	_, settled, err := carryTurn(routes, 2, false, state{Routes: map[string]carried{
+		failing.name(): {Version: 1, Cursor: 7},
+		beside.name():  {Version: 1, Cursor: 7},
+	}}, gapping(t))
+
+	if err == nil {
+		t.Fatal("a whole placement that was refused read as one that landed")
 	}
+	if _, remembered := settled.Routes[failing.name()]; remembered {
+		t.Error("a route left holding part of a backlog kept its place, and the next turn would carry only what moved")
+	}
+	if left := settled.Routes[beside.name()]; left.Cursor != 99 {
+		t.Errorf("the route beside it was left at %+v, want the whole picture's own cursor", left)
+	}
+}
 
-	forgetWhatWasNotPlaced()
+// gapping is a ledger that no longer reaches back to where the routes left off, which is what
+// sends a turn to the whole picture instead.
+func gapping(t *testing.T) ledger {
+	t.Helper()
+	from := oneChange(t)
+	from.changed = func(int64) ([]change, int64, error) { return nil, 0, errSyncGap }
+	return from
+}
 
-	remembered, found, err := readState()
+// asking is a ledger that remembers which stretches it was asked for, so a turn can be checked
+// for reading one stretch once however many routes are waiting on it.
+func asking(t *testing.T, asked *[]int64) ledger {
+	t.Helper()
+	from := oneChange(t)
+	from.changed = func(cursor int64) ([]change, int64, error) {
+		*asked = append(*asked, cursor)
+		return []change{{Dataset: "task", RecordID: 1, Op: "update"}}, cursor + 1, nil
+	}
+	return from
+}
+
+// The whole point of keeping a place per route: a route that will not take anything must not hold
+// the one beside it where it stands. A user whose Worker is gone still has a folder that takes
+// every record, and its memory has to move with it.
+func TestARouteThatFailsKeepsItsPlaceAndTheOthersMoveOn(t *testing.T) {
+	failing := refusing{called: "cloudflare"}
+	beside := &stub{called: "icloud"}
+	routes := []route{failing, beside}
+
+	_, settled, err := carryTurn(routes, 2, false, levelAt(1, 7, routes...), oneChange(t))
+
+	if err == nil {
+		t.Fatal("a route that took nothing read as a send that landed")
+	}
+	if left := settled.Routes["cloudflare"]; left.Cursor != 7 || left.Version != 1 {
+		t.Errorf("the route that failed was left at %+v, want the place it already had", left)
+	}
+	if left := settled.Routes["icloud"]; left.Cursor != 8 || left.Version != 2 {
+		t.Errorf("the route that took it was left at %+v, want it moved on", left)
+	}
+}
+
+// And on the turn after that, the two are reading from different places — which is the state the
+// old one-cursor-for-everything memory could not hold at all.
+func TestTwoRoutesThatHaveDriftedApartAreEachReadFromWhereTheyAre(t *testing.T) {
+	var asked []int64
+	behind := &stub{called: "cloudflare"}
+	ahead := &stub{called: "icloud"}
+
+	_, settled, err := carryTurn([]route{behind, ahead}, 3, false, state{Routes: map[string]carried{
+		"cloudflare": {Version: 1, Cursor: 7},
+		"icloud":     {Version: 2, Cursor: 8},
+	}}, asking(t, &asked))
+
 	if err != nil {
 		t.Fatal(err)
 	}
-	if found {
-		t.Errorf("a failed whole placement left %+v behind, and the next turn would carry only what moved", remembered)
+	if len(asked) != 2 || asked[0] != 7 || asked[1] != 8 {
+		t.Errorf("the ledger was asked for %v, want each route's own stretch, in order", asked)
+	}
+	if settled.Routes["cloudflare"].Cursor != 8 || settled.Routes["icloud"].Cursor != 9 {
+		t.Errorf("settled at %+v", settled.Routes)
+	}
+}
+
+// Two routes standing in the same place is the ordinary case, and it costs one read, not two —
+// reading the ledger is the expensive half of a turn and the hook fires on every write.
+func TestOneStretchIsReadOnceHoweverManyRoutesAreWaitingOnIt(t *testing.T) {
+	var asked []int64
+	first := &stub{called: "cloudflare"}
+	second := &stub{called: "icloud"}
+	routes := []route{first, second}
+
+	placed, _, err := carryTurn(routes, 2, false, levelAt(1, 7, routes...), asking(t, &asked))
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(asked) != 1 {
+		t.Errorf("the ledger was asked %d times for one stretch: %v", len(asked), asked)
+	}
+	if first.placed != 1 || second.placed != 1 {
+		t.Errorf("placed %d and %d times", first.placed, second.placed)
+	}
+	// What is reported is what moved, not what moved times the number of places it went.
+	if placed != 1 {
+		t.Errorf("one record carried to two routes was reported as %d", placed)
+	}
+}
+
+// A route that has just appeared is placed whole while the one beside it takes only what moved.
+// The folder comes into being when the user first opens the app on their phone, which can be any
+// number of sends after this plugin started counting.
+func TestARouteThatHoldsNothingIsPlacedWholeWhileTheOtherTakesTheDifference(t *testing.T) {
+	fresh := &stub{called: "icloud", empty: true}
+	going := &stub{called: "cloudflare"}
+	routes := []route{fresh, going}
+
+	_, settled, err := carryTurn(routes, 2, false, levelAt(1, 7, routes...), oneChange(t))
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fresh.replaced != 1 || fresh.placed != 0 {
+		t.Errorf("the route holding nothing was replaced %d and placed to %d times", fresh.replaced, fresh.placed)
+	}
+	if going.placed != 1 || going.replaced != 0 {
+		t.Errorf("the route already going was placed to %d and replaced %d times", going.placed, going.replaced)
+	}
+	if settled.Routes["icloud"].Cursor != 99 {
+		t.Errorf("the whole placement was remembered at %+v, want the picture's own cursor", settled.Routes["icloud"])
+	}
+	if settled.Routes["cloudflare"].Cursor != 8 {
+		t.Errorf("the difference was remembered at %+v", settled.Routes["cloudflare"])
+	}
+}
+
+// A route already level with the version is not read for and not written to. Saying so costs
+// nothing, and the hook fires on every write.
+func TestARouteThatIsLevelIsLeftAlone(t *testing.T) {
+	var asked []int64
+	level := &stub{called: "icloud"}
+
+	placed, _, err := carryTurn([]route{level}, 1, false, levelAt(1, 7, level), asking(t, &asked))
+
+	if err != nil || placed != 0 {
+		t.Fatalf("placed %d, err %v", placed, err)
+	}
+	if len(asked) != 0 || level.placed != 0 {
+		t.Errorf("a level route cost %v reads and %d sends", asked, level.placed)
+	}
+}
+
+// Asked out loud, a level route is read for anyway — that is what `push` is: the way to shift
+// something the version guard cannot see.
+func TestALevelRouteIsCarriedToWhenItIsAskedForOutLoud(t *testing.T) {
+	level := &stub{called: "icloud"}
+
+	placed, _, err := carryTurn([]route{level}, 1, true, levelAt(1, 7, level), oneChange(t))
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	if placed != 1 || level.placed != 1 {
+		t.Errorf("push placed %d record(s) over %d send(s)", placed, level.placed)
 	}
 }
