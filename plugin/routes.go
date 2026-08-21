@@ -11,17 +11,19 @@ import (
 // Which places this plugin may carry to.
 //
 // **The declaration is an upper bound, not a switch.** What the user ticks is the set of places
-// this is allowed to use; whether anything reaches one of them is still the place's own answer —
-// the iCloud folder exists only once the app has been opened on a phone, and the Cloudflare one
-// only once `setup` has stood it up. What carries is the product of the two.
+// this is allowed to use; whether anything reaches one is still the place's own answer — the
+// Cloudflare route exists only once `setup` has stood it up. What carries is the product of the
+// two, so the declaration can only ever take a place away and the two can never disagree.
 //
-// A plain on/off would let the settings say "on" over a place that is not there, and the user
-// could not put that right: the folder is made by the OS, on a trigger this plugin cannot pull.
-// Read as a bound, the declaration can only take a place away, so the two can never disagree.
+// **There is one place.** There were two, and the other was a folder iCloud carried for us —
+// which it did without ever saying whether it had. A route that gives no answer cannot be one a
+// cursor moves over, so it went (see plugin/README.md). What is left of the shape is the ticking
+// itself: it is how someone pauses this without disabling the plugin, and that is not the same
+// act — disabling takes the settings with it.
 
 // routesDeclared is how many of the places the user may tick, in the order they read them. The
 // values are the names the routes answer to, which is also what they are remembered under.
-var routesDeclared = []string{routeICloud, routeCloudflare}
+var routesDeclared = []string{routeCloudflare}
 
 // routeStanding is one route and what stands between it and carrying: whether the user's
 // declaration reaches it, and whether the place it needs is there.
@@ -40,10 +42,6 @@ type routeStanding struct {
 	// stalled says the place itself is there and the send still cannot use it. A place that is
 	// merely not set up yet is not stalled — it is a waiting install.
 	stalled bool
-	// notHere says this machine has no such place at all, whatever anybody ticks. It is not the
-	// same fact as a place that has not appeared yet: one is waited for, and the other never
-	// comes.
-	notHere bool
 }
 
 // said is one sentence that has not been worded yet: the phrase, and the values that go into it.
@@ -63,29 +61,6 @@ func (s routeStanding) carrying() bool { return s.declared && s.open != nil }
 func routesStanding(in input) []routeStanding {
 	allowed := routesAllowed(in)
 	where := make([]routeStanding, 0, len(routesDeclared))
-
-	there := routeStanding{called: phICloudFolder, declared: allowed[routeICloud]}
-	switch folder, err := dropFor(); {
-	case err == nil:
-		there.open = folder
-	case !icloudIsARoadHere():
-		// The candidates are the same list on every OS, so this is a place a Windows user can
-		// tick. Nothing breaks when they do — it simply never carries — and being told so is the
-		// difference between a choice that did nothing and a choice that did nothing visibly.
-		there.notHere = true
-	default:
-		// **Where to get it, not only what to do with it.** This is the one line the settings
-		// screen shows about a route nobody has yet, and telling someone to open an app they
-		// have never heard of sends them looking for it with nothing to look for. The address
-		// is what answers on both faces — the screen has the button beside it, and a terminal
-		// has neither.
-		//
-		// The address rides in brackets rather than after a dash, and what it displaces is
-		// "and it appears": the clause already opens with "Waiting on the iCloud folder", so
-		// what appears was said, and the line has a budget the address spends most of.
-		there.missing = said{key: phOpenTheAppOnce, args: []any{appStoreLink}}
-	}
-	where = append(where, there)
 
 	worker := routeStanding{called: phCloudflareWorker, declared: allowed[routeCloudflare]}
 	switch shop, err := storeFor(in); {
@@ -206,7 +181,7 @@ func check(in input, _ []string) error {
 // A place nobody ticked is not mentioned. It was turned off on purpose, and a form that repeats
 // every choice back reads as a list of faults.
 func whatIsReaching(words wording, where []routeStanding) string {
-	var reaching, waiting, absent []string
+	var reaching, waiting []string
 	for _, one := range where {
 		switch {
 		case one.carrying():
@@ -215,8 +190,6 @@ func whatIsReaching(words wording, where []routeStanding) string {
 			// Turned off on purpose, and not mentioned: a form that reads every choice back
 			// sounds like a list of faults. Being left out of the line is how it reads as off,
 			// which is the one of the three states that needs no words.
-		case one.notHere:
-			absent = append(absent, words.say(one.called))
 		default:
 			waiting = append(waiting, words.say(one.called)+" — "+words.say(one.missing.key, one.missing.args...))
 		}
@@ -224,7 +197,7 @@ func whatIsReaching(words wording, where []routeStanding) string {
 
 	line := words.say(phCarryingTo, inWords(words, reaching))
 	if len(reaching) == 0 {
-		if len(waiting) == 0 && len(absent) == 0 {
+		if len(waiting) == 0 {
 			return words.say(phNothingIsTicked)
 		}
 		line = words.say(phCarryingNowhere)
@@ -233,14 +206,6 @@ func whatIsReaching(words wording, where []routeStanding) string {
 		// The waiting ones each carry a clause of their own, so they are separated rather than
 		// joined into a sentence — an "and" between two dashed clauses reads as one long one.
 		line += words.say(phWaitingOn, strings.Join(waiting, "; "))
-	}
-	if len(absent) > 0 {
-		// **Not the same words as waiting.** Waiting is a place that will appear; this is one
-		// that will not, so a sentence about what to do next would be a sentence about nothing.
-		//
-		// One place can be absent and no more — the Cloudflare route is every OS's — so this is
-		// written in the singular.
-		line += words.say(phNoSuchPlaceHere, inWords(words, absent))
 	}
 	return trimmedToTheLine(line)
 }
@@ -283,24 +248,12 @@ func nothingIsReaching(in input) error {
 	return errNothingTicked
 }
 
-// theWayInFromHere is what to do about having nowhere to carry to, on the machine this is running
-// on.
-//
-// **Only the roads this machine has.** The iCloud folder is a mac's app container and nothing
-// else has one, so telling a Windows user to open the app on an iPhone and wait for a folder
-// names a road that will never appear for them — and it is the first thing they read, ahead of
-// the one road they do have.
+// theWayInFromHere is what to do about having nowhere to carry to.
 func theWayInFromHere() string {
-	if icloudIsARoadHere() {
-		return fmt.Sprintf("run `%s setup` for the Cloudflare route,"+
-			" or open Amenbo Viewer once on a phone for this mac's iCloud folder to appear"+
-			" — the app is at %s", pluginName, appStoreLink)
-	}
-	// **The app is named here too, on the machine that has only the one road.** What is a mac's
-	// own is the folder, not the phone: whichever route carries, the thing that reads at the far
-	// end is the same app, and a reader told to stand a Worker up still has to get it.
+	// **The app is named here as well as the Worker.** Standing the route up is half of it; the
+	// thing that reads at the far end is the app, and a reader who has only done the half they
+	// were told about has nowhere for the records to be read.
 	return fmt.Sprintf("run `%s setup` to stand the Cloudflare route up"+
-		" (the other one, the app's iCloud folder, is a mac's own — this machine has no such thing)"+
 		" — the app the phone reads with is at %s", pluginName, appStoreLink)
 }
 

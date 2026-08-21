@@ -42,19 +42,15 @@
     {
       "key": "routes",
       "label": "Where to carry",
-      "help": "Which places this may carry to. It can only take places away: a place you tick still needs to exist before anything reaches it — the iCloud folder appears once you have opened Amenbo Viewer on a phone (the \"Get the app on your phone\" button puts its App Store page on a code), and the Cloudflare one is what setup stands up. Ticking none is an answer and it is honoured: the plugin stays enabled and carries nowhere.",
+      "help": "Whether this may carry to your Cloudflare Worker. It can only take the place away: ticking it still needs the Worker to exist before anything reaches it, and setup is what stands one up. Ticking nothing is an answer and it is honoured: the plugin stays enabled and carries nowhere.",
       "type": "multi",
       "options": [
-        {
-          "value": "icloud",
-          "label": "The app's own iCloud folder"
-        },
         {
           "value": "cloudflare",
           "label": "Your own Cloudflare Worker"
         }
       ],
-      "default": "icloud,cloudflare",
+      "default": "cloudflare",
       "required": false
     },
     {

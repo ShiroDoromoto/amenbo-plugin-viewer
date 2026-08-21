@@ -46,9 +46,7 @@ type phrase string
 const (
 	// What `check` answers with — the places, what each is waiting for, and the sentence they
 	// are set into.
-	phICloudFolder      phrase = "icloud_folder"
 	phCloudflareWorker  phrase = "cloudflare_worker"
-	phOpenTheAppOnce    phrase = "open_the_app_once"
 	phStandTheWorkerUp  phrase = "stand_the_worker_up"
 	phStandingWithNoKey phrase = "standing_with_no_key"
 	phStandingBadKey    phrase = "standing_bad_key"
@@ -56,7 +54,6 @@ const (
 	phCarryingNowhere   phrase = "carrying_nowhere"
 	phNothingIsTicked   phrase = "nothing_is_ticked"
 	phWaitingOn         phrase = "waiting_on"
-	phNoSuchPlaceHere   phrase = "no_such_place_here"
 	phNowhere           phrase = "nowhere"
 	phAnd               phrase = "and"
 	phComma             phrase = "comma"

@@ -10,12 +10,12 @@ import (
 // What the plugin remembers between runs: how far each route was left. Two integers per route,
 // and neither of them means anything without the other.
 //
-// **It is per route because the routes fail apart.** A user whose Worker is gone — the account
-// closed, the script deleted — still has an iCloud folder that takes every record it is handed.
-// One memory for both would mean the dead route holds the live one's place: the folder is written
-// on every turn and the memory never moves, so the next turn carries the same stretch again, and
-// the one after that carries a longer one. Nothing about that is visible — the hook is fired and
-// forgotten, so the only place it shows is a log nobody has reason to open.
+// **It is per route because routes fail apart.** There is one today and there were two, and what
+// the shape is for is the case where one of them will not take anything while the next does: a
+// single memory for all of them would let the dead one hold the live one's place, so the next turn
+// carries the same stretch again and the one after that carries a longer one. Nothing about that
+// is visible — the hook is fired and forgotten, so the only place it shows is a log nobody has
+// reason to open.
 //
 // It lives in the plugin's own directory rather than in Amenbo's settings. Settings are what the
 // user fills in, and this is bookkeeping nobody types — putting it there would show them a
@@ -30,8 +30,11 @@ const stateName = "sync-state.json"
 // The names the routes are remembered under. They are written into a file that outlives the
 // process, so they are spelled once here rather than at each route — a route renamed in two
 // places and not the third would silently start again from nothing.
+//
+// **A name this build does not know is left where it lies.** A file written when there were two
+// routes still names the other one; nothing looks it up, so it costs a few bytes and no
+// correctness, and rewriting the file to drop it would be a migration for nothing.
 const (
-	routeICloud     = "icloud"
 	routeCloudflare = "cloudflare"
 )
 

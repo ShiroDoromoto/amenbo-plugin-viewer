@@ -2,8 +2,6 @@ package main
 
 import (
 	"encoding/base64"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -14,29 +12,11 @@ func fired(event string, settings map[string]any) input {
 	return input{V: contractVersion, Event: event, ID: 42, Actor: "ai", Config: settings}
 }
 
-// withICloud answers for the mac route, whose real drop is a directory no test may create: the
-// route is stood up somewhere a test is allowed to write, or pointed at a path with nothing at
-// it. It hands back the drop either way.
-func withICloud(t *testing.T, live bool) string {
-	t.Helper()
-	drop := filepath.Join(t.TempDir(), "Documents")
-	if live {
-		if err := os.MkdirAll(drop, 0o700); err != nil {
-			t.Fatal(err)
-		}
-	}
-	was := icloudDropPath
-	icloudDropPath = func() string { return drop }
-	t.Cleanup(func() { icloudDropPath = was })
-	return drop
-}
-
 // A send that got nowhere is the state the user most needs written down: a route IS open, so the
 // phone falls further behind with every write.
 func TestTheHookSaysWhatStoppedTheSend(t *testing.T) {
 	t.Setenv(envAuthToken, "a-throwaway-token")
 	t.Setenv(envEncryptionKey, "")
-	withICloud(t, false)
 
 	stdout, stderr := capture(t, func() {
 		hook(fired("task.done", map[string]any{configWorkerURL: "https://viewer.example.workers.dev"}))
@@ -50,18 +30,17 @@ func TestTheHookSaysWhatStoppedTheSend(t *testing.T) {
 	}
 }
 
-// The folder is on the user's own machine, in their own account, so nothing placed there is put
-// in an envelope — and a mac with no Worker, which is where the key comes from, is a mac that can
-// still feed a phone.
-func TestTheFolderIsARouteWithNoKey(t *testing.T) {
-	t.Setenv(envAuthToken, "")
+// Every route this plugin has now ends somewhere its owner merely rents, so a send with no key
+// is a send with nowhere to go. There was one that needed none — the app's own iCloud folder, on
+// the user's own machine — and it went with the route.
+func TestARouteWithNoKeyCarriesNothing(t *testing.T) {
+	t.Setenv(envAuthToken, "a-throwaway-token")
 	t.Setenv(envEncryptionKey, "")
-	withICloud(t, true)
 
-	open := routesFor(fired("task.done", nil))
+	open := routesFor(fired("task.done", map[string]any{configWorkerURL: "https://viewer.example.workers.dev"}))
 
-	if len(open) != 1 || !strings.Contains(open[0].String(), "iCloud") {
-		t.Errorf("routes = %v, want the folder alone", open)
+	if len(open) != 0 {
+		t.Errorf("routes = %v, want none — the key is what the records leave in", open)
 	}
 }
 
@@ -69,13 +48,11 @@ func TestTheFolderIsARouteWithNoKey(t *testing.T) {
 // log with something nobody asked for — and none of these is a fault to report.
 func TestTheHookIsQuietWhenThereIsNothingToSay(t *testing.T) {
 	for name, test := range map[string]struct {
-		in     input
-		token  string
-		icloud bool
+		in    input
+		token string
 	}{
-		// Every install starts here: no Worker stood up, and no iCloud folder because the app
-		// has not been opened on a phone yet. Neither is a fault, and a line about either would
-		// be a complaint about the user not having got to it.
+		// Every install starts here: no Worker stood up. That is not a fault, and a line about
+		// it would be a complaint about the user not having got to it.
 		"nothing has been set up yet": {
 			in: fired("task.done", nil),
 		},
@@ -83,20 +60,17 @@ func TestTheHookIsQuietWhenThereIsNothingToSay(t *testing.T) {
 			in: fired("task.done", map[string]any{configWorkerURL: "https://viewer.example.workers.dev"}),
 		},
 		"the document announces a contract this build does not read": {
-			in:     input{V: contractVersion + 1, Event: "task.done"},
-			token:  "a-throwaway-token",
-			icloud: true,
+			in:    input{V: contractVersion + 1, Event: "task.done"},
+			token: "a-throwaway-token",
 		},
 		"nothing fired at all": {
-			in:     input{V: contractVersion},
-			token:  "a-throwaway-token",
-			icloud: true,
+			in:    input{V: contractVersion},
+			token: "a-throwaway-token",
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Setenv(envAuthToken, test.token)
 			t.Setenv(envEncryptionKey, "")
-			withICloud(t, test.icloud)
 
 			stdout, stderr := capture(t, func() { hook(test.in) })
 
@@ -123,12 +97,12 @@ func TestHalfOfTheCloudflareRouteIsNotARoute(t *testing.T) {
 	}
 }
 
-// Both routes carry the same records to two places, so they are not modes to choose between: a
-// mac user with an iPhone at home and an Android phone at work wants them in both.
+// A route that is set up whole is one the records reach. The shape still holds a list because
+// there was more than one and could be again — what a route has to answer for is where it ends,
+// not how many of them there are.
 func TestEveryRouteThatIsOpenIsCarriedTo(t *testing.T) {
 	t.Setenv(envAuthToken, "a-throwaway-token")
 	t.Setenv(envEncryptionKey, base64.RawURLEncoding.EncodeToString(make([]byte, keySize)))
-	withICloud(t, true)
 
 	open := routesFor(fired("task.done", map[string]any{configWorkerURL: "https://viewer.example.workers.dev"}))
 
@@ -136,10 +110,7 @@ func TestEveryRouteThatIsOpenIsCarriedTo(t *testing.T) {
 	for i, where := range open {
 		named[i] = where.String()
 	}
-	if len(open) != 2 {
-		t.Fatalf("routes = %v, want both of them", named)
-	}
-	if !strings.Contains(strings.Join(named, " "), "iCloud") || !strings.Contains(strings.Join(named, " "), "Cloudflare") {
-		t.Errorf("routes = %v", named)
+	if len(open) != 1 || !strings.Contains(named[0], "Cloudflare") {
+		t.Fatalf("routes = %v, want the Worker", named)
 	}
 }

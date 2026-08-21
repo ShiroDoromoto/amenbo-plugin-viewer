@@ -8,7 +8,7 @@ import (
 
 // rememberedAt is one route's place, for the tests that only need there to be a memory.
 func rememberedAt(version, cursor int64) state {
-	return state{Routes: map[string]carried{"icloud": {Version: version, Cursor: cursor}}}
+	return state{Routes: map[string]carried{routeCloudflare: {Version: version, Cursor: cursor}}}
 }
 
 // remembering points the plugin's memory at a directory a test is allowed to write in.
@@ -141,13 +141,15 @@ func TestTheMemoryLandsWholeAndLeavesNothingBehind(t *testing.T) {
 	}
 }
 
-// Forgetting is per route: standing a Worker up says nothing about the folder on this machine,
-// and forgetting that too would cost it a whole placement for something that did not happen to it.
+// Forgetting is per route: standing one up says nothing about any other, and forgetting those too
+// would cost each of them a whole placement for something that did not happen to it. There is one
+// route today, so the route beside it here is a name from a file an older build wrote — which is
+// also the case this has to hold for.
 func TestForgettingOneRouteLeavesTheOthersWhereTheyStand(t *testing.T) {
 	remembering(t)
 	if err := writeState(state{Routes: map[string]carried{
-		routeCloudflare: {Version: 1, Cursor: 7},
-		routeICloud:     {Version: 2, Cursor: 42},
+		routeCloudflare:                    {Version: 1, Cursor: 7},
+		"a-route-this-build-does-not-have": {Version: 2, Cursor: 42},
 	}}); err != nil {
 		t.Fatal(err)
 	}
@@ -163,7 +165,7 @@ func TestForgettingOneRouteLeavesTheOthersWhereTheyStand(t *testing.T) {
 	if _, known := remembered.Routes[routeCloudflare]; known {
 		t.Error("the route that was stood up anew is still remembered")
 	}
-	if left := remembered.Routes[routeICloud]; left.Cursor != 42 {
+	if left := remembered.Routes["a-route-this-build-does-not-have"]; left.Cursor != 42 {
 		t.Errorf("the route beside it was left at %+v", left)
 	}
 }
@@ -176,7 +178,7 @@ func TestForgettingTheLastRouteLeavesNothingAtAll(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := forgetRoute(routeICloud); err != nil {
+	if err := forgetRoute(routeCloudflare); err != nil {
 		t.Fatal(err)
 	}
 

@@ -69,7 +69,6 @@ func fed(t *testing.T, text string) *os.File {
 // exist yet.
 func TestPushSaysWhenThereIsNowhereToSendTo(t *testing.T) {
 	t.Setenv(envAuthToken, "")
-	withICloud(t, false)
 
 	var code int
 	stdout, stderr := capture(t, func() { code = run(input{}, []string{"push"}) })
