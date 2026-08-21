@@ -106,13 +106,15 @@ class Place {
     // either of them is answered.
     if (closedFor > 0) {
       closedFor -= 1;
+      final headers = {..._json};
+      final after = comeBackAfter;
+      // A door with nothing to come back for is the other 503 — a Worker deployed without its
+      // write token — which the phone has to tell apart from this one.
+      if (after != null) headers['retry-after'] = after;
       return http.Response(
         jsonEncode({'error': 'the whole of this store is being placed again'}),
         503,
-        headers: {
-          ..._json,
-          if (comeBackAfter != null) 'retry-after': comeBackAfter!,
-        },
+        headers: headers,
       );
     }
 
