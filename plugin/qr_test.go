@@ -1,15 +1,10 @@
 package main
 
 import (
-	"bytes"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
-	"image/png"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -66,13 +61,14 @@ func pairingAgainst(t *testing.T, store *pretendStore) (in input, carried *pairi
 	t.Setenv(envEncryptionKey, throwawayKey)
 	remembering(t)
 
+	inATerminal(t)
 	shown := &pairing{}
 	was := present
-	present = func(what []byte, _, _ bool) (string, string, error) {
+	present = func(what []byte, _ bool) error {
 		if err := json.Unmarshal(what, shown); err != nil {
 			t.Errorf("what was about to be shown does not parse: %q", what)
 		}
-		return "image", "", nil
+		return nil
 	}
 	t.Cleanup(func() { present = was })
 
@@ -95,7 +91,7 @@ func TestPairingIssuesATokenAndTellsTheStoreOnlyItsHash(t *testing.T) {
 	in, shown := pairingAgainst(t, store)
 
 	var code int
-	stdout, _ := capture(t, func() { code = run(in, []string{"qr", "--label", "iPhone"}) })
+	stdout, stderr := capture(t, func() { code = run(in, []string{"qr", "--label", "iPhone"}) })
 
 	if code != 0 {
 		t.Fatalf("exit %d", code)
@@ -128,11 +124,29 @@ func TestPairingIssuesATokenAndTellsTheStoreOnlyItsHash(t *testing.T) {
 	if paired := pairedPhones(t); len(paired) != 1 || paired[0].Label != "iPhone" || paired[0].IssuedAt != store.issuedAt {
 		t.Errorf("the phone was not written down, so nobody can cut it off: %+v", paired)
 	}
-	if strings.Contains(stdout, shown.T) || strings.Contains(stdout, shown.K) {
-		t.Error("the return value carries a secret")
+	// **The pairing rides back on the answer, because that is what the form draws**:
+	// Amenbo is handed the string and makes the code out of it. It is not a secret reaching
+	// somewhere new — the key is Amenbo's own setting, handed to this run in the environment —
+	// and the execution log keeps stderr rather than the answer.
+	var said answered
+	if err := json.Unmarshal([]byte(stdout), &said); err != nil {
+		t.Fatalf("the answer is not one the form can read: %q", stdout)
+	}
+	if len(said.Show) != 2 || said.Show[1].QR == "" {
+		t.Fatalf("the answer carries no code for the form to draw: %+v", said.Show)
+	}
+	var handed pairing
+	if err := json.Unmarshal([]byte(said.Show[1].QR), &handed); err != nil {
+		t.Fatalf("what the form would draw is not a pairing: %q", said.Show[1].QR)
+	}
+	if handed != *shown {
+		t.Errorf("the form would draw %+v and the terminal drew %+v", handed, *shown)
 	}
 	if !strings.Contains(stdout, `"label":"iPhone"`) {
 		t.Errorf("the return value does not name the phone: %q", stdout)
+	}
+	if strings.Contains(stderr, shown.T) || strings.Contains(stderr, shown.K) {
+		t.Error("a secret reached the execution log, which is what stderr becomes")
 	}
 }
 
@@ -232,92 +246,6 @@ func TestPairingRefusesBeforeItAsksForAnything(t *testing.T) {
 	})
 }
 
-// The image is what a phone is meant to read, so it has to be a real one, written where only
-// this user can reach it — it carries the key, and a file anyone on the machine could open would
-// hand over what the QR exists to keep off the network.
-//
-// It is also not left behind: what says so is that its removal was set going for the directory it
-// was written in, with nothing said to the caller about a file to go and delete.
-func TestTheImageIsWrittenWhereOnlyThisUserCanReadItAndThenTakesItselfAway(t *testing.T) {
-	code := codeForATest(t)
-	opened := watchTheViewer(t)
-	scheduled := watchTheErasing(t, nil)
-
-	left, err := capturedOpen(t, code)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if *opened == "" {
-		t.Fatal("nothing was handed to a viewer")
-	}
-	if left != "" {
-		t.Errorf("the run says it left %q behind, and the image takes itself away", left)
-	}
-	if *scheduled != filepath.Dir(*opened) {
-		t.Errorf("the removal was set going for %q, and the image is in %q", *scheduled, filepath.Dir(*opened))
-	}
-	written, err := os.Stat(*opened)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if mode := written.Mode().Perm(); mode != 0o600 {
-		t.Errorf("the code is written %o, and it carries the key", mode)
-	}
-	raw, err := os.ReadFile(*opened)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := png.Decode(bytes.NewReader(raw)); err != nil {
-		t.Errorf("what was opened is not an image: %v", err)
-	}
-	os.RemoveAll(filepath.Dir(*opened))
-}
-
-// When the removal could not be set going, the file is still there and the key is still on it —
-// so it is said out loud and handed back, rather than pulled out from under a viewer that is
-// showing it or left somewhere nobody was told about.
-func TestAnImageThatCannotTakeItselfAwayIsSaidOutLoud(t *testing.T) {
-	code := codeForATest(t)
-	opened := watchTheViewer(t)
-	watchTheErasing(t, errors.New("nothing could be started"))
-
-	var left string
-	var err error
-	_, stderr := capture(t, func() { left, err = openAsAnImage(code, carriesTheKey) })
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if left != *opened {
-		t.Errorf("the run left %q and opened %q", left, *opened)
-	}
-	if !strings.Contains(stderr, left) {
-		t.Errorf("nobody was told where the file with the key on it is: %q", stderr)
-	}
-	os.RemoveAll(filepath.Dir(left))
-}
-
-// **The word the image calls this binary back with removes what this binary wrote, and nothing
-// else.** It answers to that word like any other, so one that took whatever it was pointed at
-// would be a delete anybody on the machine could aim at anything of the user's.
-func TestForgettingACodeRefusesADirectoryItDidNotWrite(t *testing.T) {
-	mine := t.TempDir()
-
-	var code int
-	_, stderr := capture(t, func() { code = run(input{}, []string{forgetTheCodeCommand, mine}) })
-
-	if code != 1 {
-		t.Fatalf("exit %d — a directory this never wrote was accepted for removal", code)
-	}
-	if _, err := os.Stat(mine); err != nil {
-		t.Errorf("it was removed anyway: %v", err)
-	}
-	if !strings.Contains(stderr, mine) {
-		t.Errorf("the refusal does not say what it was pointed at: %q", stderr)
-	}
-}
-
 // The settings screen has its own box for the phone's name, and the answer arrives the way a
 // secret setting does. Without it read here, the button would run with no name and go looking for
 // a terminal that a settings screen does not have.
@@ -358,28 +286,6 @@ func watchTheViewer(t *testing.T) *string {
 	return &opened
 }
 
-// watchTheErasing stands in for the run that outlives this one, answering as told and handing
-// back the directory it was asked about. A test must not start the real one: the executable under
-// a test is the test binary.
-func watchTheErasing(t *testing.T, answer error) *string {
-	t.Helper()
-	var scheduled string
-	was := eraseLater
-	eraseLater = func(dir string) error { scheduled = dir; return answer }
-	t.Cleanup(func() { eraseLater = was })
-	return &scheduled
-}
-
-// capturedOpen runs the image path with the diagnostics held, and hands back what it said it left
-// behind.
-func capturedOpen(t *testing.T, code *qrcode.Code) (string, error) {
-	t.Helper()
-	var left string
-	var err error
-	capture(t, func() { left, err = openAsAnImage(code, carriesTheKey) })
-	return left, err
-}
-
 // The drawing needs its quiet zone: without four modules of white on every side a reader has no
 // edges to find, and the code on a terminal is the one nobody can adjust afterwards.
 func TestTheDrawnCodeKeepsItsQuietZone(t *testing.T) {
@@ -415,7 +321,7 @@ func TestTheDrawnCodeKeepsItsQuietZone(t *testing.T) {
 func TestTheAppButtonDrawsTheStorePageRatherThanOpeningItHere(t *testing.T) {
 	carried, secret := drawingIsHeld(t)
 	opened := watchTheViewer(t)
-	onlyAScreen(t)
+	inATerminal(t)
 
 	var code int
 	_, stderr := capture(t, func() { code = run(input{}, []string{"app"}) })
@@ -459,30 +365,6 @@ func TestAMachineWithNothingToDrawOnIsGivenTheAddressInWords(t *testing.T) {
 	}
 }
 
-// The warning about what is left on disk belongs to the code that carries the key, and not to the
-// one that carries a public address. Saying it of both would teach the user to read past it on
-// the run where it is true.
-func TestACodeWithNoSecretOnItIsNotSaidToCarryTheKey(t *testing.T) {
-	code := codeForATest(t)
-	watchTheViewer(t)
-	watchTheErasing(t, errors.New("nothing could be started"))
-
-	var left string
-	var err error
-	_, stderr := capture(t, func() { left, err = openAsAnImage(code, carriesNoSecret) })
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if !strings.Contains(stderr, left) {
-		t.Errorf("nobody was told where the file that was left behind is: %q", stderr)
-	}
-	if strings.Contains(stderr, "key") {
-		t.Errorf("a public page was reported as carrying the key: %q", stderr)
-	}
-	os.RemoveAll(filepath.Dir(left))
-}
-
 // drawingIsHeld stands in for putting a code in front of a camera, and hands back what was going
 // to be on it and whether it was drawn as something carrying a secret. What comes back empty is
 // a run that drew nothing.
@@ -491,20 +373,20 @@ func drawingIsHeld(t *testing.T) (carried *string, secret *bool) {
 	var what string
 	var hidden bool
 	was := present
-	present = func(bytes []byte, _, carriesASecret bool) (string, string, error) {
+	present = func(bytes []byte, carriesASecret bool) error {
 		what, hidden = string(bytes), carriesASecret
-		return "image", "", nil
+		return nil
 	}
 	t.Cleanup(func() { present = was })
 	return &what, &hidden
 }
 
-// onlyAScreen is the machine a settings screen's button is pressed on: there is a display, and
+// inATerminal is the machine somebody typed this into: there is a display, and
 // asking after a terminal would reach for the one a GUI does not have.
-func onlyAScreen(t *testing.T) {
+func inATerminal(t *testing.T) {
 	t.Helper()
 	wasScreen, wasTerminal := thereIsAScreen, thereIsATerminal
-	thereIsAScreen, thereIsATerminal = onAScreen, func() bool { return false }
+	thereIsAScreen, thereIsATerminal = onAScreen, func() bool { return true }
 	t.Cleanup(func() { thereIsAScreen, thereIsATerminal = wasScreen, wasTerminal })
 }
 

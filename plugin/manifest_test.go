@@ -127,7 +127,7 @@ func nothingOpens(t *testing.T) {
 	t.Helper()
 	wasOpen, wasScreen, wasShown := openInTheSystem, thereIsAScreen, present
 	openInTheSystem, thereIsAScreen = opensFine, onAScreen
-	present = func([]byte, bool, bool) (string, string, error) { return "image", "", nil }
+	present = func([]byte, bool) error { return nil }
 	t.Cleanup(func() { openInTheSystem, thereIsAScreen, present = wasOpen, wasScreen, wasShown })
 }
 
