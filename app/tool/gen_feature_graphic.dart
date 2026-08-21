@@ -116,7 +116,9 @@ Future<Uint8List> _draw() async {
     textDirection: TextDirection.ltr,
   )..layout();
 
-  final bounds = markBounds();
+  // The wide picture is 214 pixels of mark, well clear of where the small drawing takes over.
+  const art = markLarge;
+  final bounds = markBounds(art);
   final scale = _markHeight / bounds.height;
   final markWidth = bounds.width * scale;
 
@@ -127,6 +129,7 @@ Future<Uint8List> _draw() async {
 
   _paintMark(
     canvas,
+    art,
     scale,
     left + markWidth / 2 - bounds.centreX * scale,
     _height / 2 - bounds.centreY * scale,
@@ -159,42 +162,48 @@ Future<Uint8List> _draw() async {
 
 /// The mark, [scale]d out of its own square and moved by [dx] / [dy].
 ///
-/// The legs go down as one stroked path: a leg's two segments meet at the knee, and stroking them
-/// one after the other would round the joint off inside the bend. The nodes at their tips are not
-/// drawn at all — they are narrower than the leg's own round cap, so they sit inside it.
-void _paintMark(Canvas canvas, double scale, double dx, double dy) {
-  Offset at(List<double> point) =>
-      Offset(point[0] * scale + dx, point[1] * scale + dy);
+/// The arms are drawn with butt caps, which is how the artwork is written: an arm stops where the
+/// node it runs out of begins, and a round cap would push it half a stroke further. The nodes are
+/// squares standing on a corner, stroked rather than filled at this size.
+void _paintMark(
+  Canvas canvas,
+  MarkArt art,
+  double scale,
+  double dx,
+  double dy,
+) {
+  Offset at(double x, double y) => Offset(x * scale + dx, y * scale + dy);
 
-  final traces = Path();
-  for (final leg in markLegs) {
-    traces.moveTo(at(leg.first).dx, at(leg.first).dy);
-    for (final point in leg.skip(1)) {
-      traces.lineTo(at(point).dx, at(point).dy);
-    }
+  final ink = Paint()..color = const Color(0xFF000000 | markInk);
+  final stroked = Paint()
+    ..color = ink.color
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = art.stroke * scale
+    ..strokeCap = StrokeCap.butt
+    ..strokeJoin = StrokeJoin.miter;
+
+  for (final link in art.links) {
+    canvas.drawLine(at(link[0], link[1]), at(link[2], link[3]), stroked);
   }
-
-  canvas.drawPath(
-    traces,
-    Paint()
-      ..color = const Color(0xFF000000 | markTrace)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = markLegWidth * scale
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round,
-  );
-  // The body is the one heavier stroke, so it goes down on its own rather than with the legs.
-  canvas.drawLine(
-    at(markBody.first),
-    at(markBody.last),
-    Paint()
-      ..color = const Color(0xFF000000 | markTrace)
-      ..strokeWidth = markBodyWidth * scale
-      ..strokeCap = StrokeCap.round,
-  );
-  canvas.drawCircle(
-    at(markHeadCentre),
-    markHeadRadius * scale,
-    Paint()..color = const Color(0xFF000000 | markHead),
-  );
+  for (final node in art.nodes) {
+    final path = Path()
+      ..moveTo(
+        at(node[0] - art.nodeRadius, node[1]).dx,
+        at(node[0], node[1]).dy,
+      )
+      ..lineTo(
+        at(node[0], node[1] - art.nodeRadius).dx,
+        at(node[0], node[1] - art.nodeRadius).dy,
+      )
+      ..lineTo(
+        at(node[0] + art.nodeRadius, node[1]).dx,
+        at(node[0], node[1]).dy,
+      )
+      ..lineTo(
+        at(node[0], node[1] + art.nodeRadius).dx,
+        at(node[0], node[1] + art.nodeRadius).dy,
+      )
+      ..close();
+    canvas.drawPath(path, art.nodesAreFilled ? ink : stroked);
+  }
 }

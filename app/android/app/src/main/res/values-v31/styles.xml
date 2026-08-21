@@ -5,11 +5,14 @@
      ground, and the mark alone on it.
 
      A style is chosen from one file, not merged across them, so the window background below is
-     repeated rather than inherited from values/styles.xml. -->
+     repeated rather than inherited from values/styles.xml.
+
+     The icon named is `launch_mark`, which answers in white where the ground is dark — see
+     drawable/launch_background.xml for why the launch sheet is not the icon's own foreground. -->
 <resources>
     <style name="LaunchTheme" parent="@android:style/Theme.NoTitleBar">
         <item name="android:windowBackground">@drawable/launch_background</item>
         <item name="android:windowSplashScreenBackground">@color/launch_background</item>
-        <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_foreground</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@mipmap/launch_mark</item>
     </style>
 </resources>
