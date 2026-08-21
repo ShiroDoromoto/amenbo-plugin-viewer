@@ -216,7 +216,7 @@ func openAsAnImage(code *qrcode.Code) (left string, err error) {
 		os.RemoveAll(dir)
 		return "", err
 	}
-	if err := openInTheViewer(path); err != nil {
+	if err := openInTheSystem(path); err != nil {
 		os.RemoveAll(dir)
 		return "", err
 	}
@@ -233,27 +233,27 @@ func openAsAnImage(code *qrcode.Code) (left string, err error) {
 	return "", nil
 }
 
-// thereIsAScreen says whether opening an image is worth trying. Everywhere but Linux there is a
-// windowing system by definition; on Linux a machine with no display would hand the run to an
-// opener that has nowhere to put it.
-func thereIsAScreen() bool {
+// thereIsAScreen says whether opening something on screen is worth trying. Everywhere but Linux
+// there is a windowing system by definition; on Linux a machine with no display would hand the
+// run to an opener that has nowhere to put it.
+var thereIsAScreen = func() bool {
 	if runtime.GOOS != "linux" {
 		return true
 	}
 	return os.Getenv("DISPLAY") != "" || os.Getenv("WAYLAND_DISPLAY") != ""
 }
 
-// openInTheViewer hands the file to whatever the system opens images with. Each of these returns
-// as soon as the viewer has been handed the file, which is what lets the run carry on and wait
-// for the person instead of for the window.
-var openInTheViewer = func(path string) error {
+// openInTheSystem hands what it is given to whatever the system opens that with — the pairing
+// image to an image viewer, a link to the browser. Each of these returns as soon as the handover
+// is done, which is what lets the run carry on and wait for the person instead of for the window.
+var openInTheSystem = func(target string) error {
 	switch runtime.GOOS {
 	case "darwin":
-		return exec.Command("open", path).Run()
+		return exec.Command("open", target).Run()
 	case "windows":
-		return exec.Command("cmd", "/c", "start", "", path).Run()
+		return exec.Command("cmd", "/c", "start", "", target).Run()
 	default:
-		return exec.Command("xdg-open", path).Run()
+		return exec.Command("xdg-open", target).Run()
 	}
 }
 

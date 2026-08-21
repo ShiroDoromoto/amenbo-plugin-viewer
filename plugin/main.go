@@ -164,6 +164,8 @@ func run(in input, args []string) int {
 	}
 
 	switch args[0] {
+	case "token":
+		return do(token(in, args[1:]))
 	case "setup":
 		return do(setup(in, args[1:]))
 	case "push":
@@ -226,6 +228,8 @@ Two routes carry the same records:
   anywhere your own Cloudflare Worker, over HTTPS. 'setup' stands it up in your account.
 
 Usage (through Amenbo, from the project the plugin is enabled for):
+  amenbo plugin run %s token     open Cloudflare's token screen, with the permissions
+                                      'setup' needs already ticked
   amenbo plugin run %s setup     stand up the Worker and its database in your own account
                                       --account <id>  when your token reaches more than one
   amenbo plugin run %s push      carry what has not reached the phone yet, by hand
@@ -237,10 +241,13 @@ Usage (through Amenbo, from the project the plugin is enabled for):
   amenbo plugin run %s revoke <name>
                                     cut one of them off. The others carry on reading
 
-'setup' asks you to press and to paste, and nothing else: it opens a Cloudflare token screen with
-the permissions already ticked, and you paste back the token it gives you. That token stands the
-Worker and the database up and is not kept. What it leaves in your account is yours — uninstalling
-this plugin does not take it away.
+Setting the Cloudflare route up asks you to press and to paste, and nothing else. 'token' opens a
+Cloudflare token screen with the permissions already ticked, and 'setup' takes back the token that
+page gives you. That token stands the Worker and the database up and is not kept. What it leaves
+in your account is yours — uninstalling this plugin does not take it away.
+
+Both are on the settings screen as buttons, in that order, which is the only route for someone who
+has no terminal to type any of this into.
 
 With no arguments the plugin is an observation hook: Amenbo fires it when the project changed,
 which is what tells it the phone is now behind. It carries what moved on its own, so 'push' is
@@ -259,6 +266,6 @@ read by the camera and never goes over the network, which is what keeps the key 
 
 The iCloud folder needs none of that: it holds one file per record, the folder itself is what the
 phone reads, and a record you delete here is a file that goes away.`,
-		pluginName, pluginName, pluginName, pluginName, pluginName, pluginName,
+		pluginName, pluginName, pluginName, pluginName, pluginName, pluginName, pluginName,
 		configWorkerURL, configAuthToken, configEncryptionKey)
 }

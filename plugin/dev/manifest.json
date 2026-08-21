@@ -62,8 +62,12 @@
   "settings": {
     "actions": [
       {
+        "cmd": "token",
+        "label": "1. Get a Cloudflare API token"
+      },
+      {
         "cmd": "setup",
-        "label": "Set up the Cloudflare route",
+        "label": "2. Set up the Cloudflare route",
         "ask": [
           {
             "key": "api_token",
@@ -91,6 +95,10 @@
   "agent": {
     "when": "Setting up the phone viewer, pairing a phone with it, or carrying by hand what has not reached one yet",
     "commands": [
+      {
+        "cmd": "token",
+        "does": "Opens Cloudflare's token screen in the browser, with the three permissions setup needs already ticked, and ends there. Asks nothing and keeps nothing — the token the page makes is pasted into setup"
+      },
       {
         "cmd": "setup",
         "does": "Stands up the Worker and its database in the user's own Cloudflare account, and generates the token and key. Takes a Cloudflare API token from the settings screen, a terminal or CLOUDFLARE_API_TOKEN"

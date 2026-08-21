@@ -243,9 +243,9 @@ func TestTheImageIsWrittenWhereOnlyThisUserCanReadIt(t *testing.T) {
 		t.Fatal(err)
 	}
 	var opened string
-	was := openInTheViewer
-	openInTheViewer = func(path string) error { opened = path; return nil }
-	t.Cleanup(func() { openInTheViewer = was })
+	was := openInTheSystem
+	openInTheSystem = func(target string) error { opened = target; return nil }
+	t.Cleanup(func() { openInTheSystem = was })
 
 	left, err := capturedOpen(t, code)
 	if err != nil {
