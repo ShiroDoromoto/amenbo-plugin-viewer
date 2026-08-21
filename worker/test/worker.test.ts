@@ -763,6 +763,16 @@ describe("a store with no room left", () => {
  */
 const A_REAL_BACKLOG = 20202;
 
+/**
+ * How long a test at that size is given.
+ *
+ * The default of five seconds is right for a test at three records and wrong for one at twenty
+ * thousand: reading this backlog back is a hundred and two pages, and a runner slower than a
+ * laptop crosses five seconds on the way. The number is a ceiling on a test that has already
+ * passed, not a target — what it buys is the difference between a slow machine and a broken one.
+ */
+const LONG_ENOUGH_FOR_A_REAL_BACKLOG = 60_000;
+
 describe("the whole of a real backlog", () => {
 	/** Places `total` records through the door that empties first, in the parts a write takes. */
 	async function placeWhole(total: number, version: number): Promise<void> {
@@ -782,7 +792,7 @@ describe("the whole of a real backlog", () => {
 		expect(held?.n).toBe(A_REAL_BACKLOG);
 		const distinct = await env.RECORDS.prepare("SELECT COUNT(DISTINCT k) AS n FROM records").first<{ n: number }>();
 		expect(distinct?.n).toBe(A_REAL_BACKLOG);
-	});
+	}, LONG_ENOUGH_FOR_A_REAL_BACKLOG);
 
 	it("names the version only once the last part has landed", async () => {
 		const parts = Math.ceil(A_REAL_BACKLOG / 500);
@@ -795,7 +805,7 @@ describe("the whole of a real backlog", () => {
 
 		const settled = await env.RECORDS.prepare("SELECT version FROM store WHERE id = 1").first<{ version: number }>();
 		expect(settled?.version).toBe(7);
-	});
+	}, LONG_ENOUGH_FOR_A_REAL_BACKLOG);
 
 	it("reads back to a phone with nothing missing and nothing twice", async () => {
 		await placeWhole(A_REAL_BACKLOG, 7);
@@ -826,5 +836,5 @@ describe("the whole of a real backlog", () => {
 
 		expect(seen.size).toBe(A_REAL_BACKLOG);
 		expect(pages).toBe(Math.ceil(A_REAL_BACKLOG / 200));
-	});
+	}, LONG_ENOUGH_FOR_A_REAL_BACKLOG);
 });
