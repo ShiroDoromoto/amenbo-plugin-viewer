@@ -24,10 +24,9 @@ Hace falta Amenbo funcionando en un Mac, un Windows o un Linux, con el complemen
 
 CÓMO LLEGA
 
-- Mac e iPhone: por tu propio iCloud. En el móvil no hay nada que configurar.
-- Con una cuenta de Cloudflare, en cualquiera de los dos móviles: el PC entrega el backlog a un worker que es tuyo, y el móvil va a buscarlo. Para emparejarlos, apunta la cámara al código que aparece en la pantalla del PC.
+El PC entrega el backlog a un worker que es tuyo, en tu propia cuenta de Cloudflare, y el móvil va a buscarlo. Para emparejarlos, apunta la cámara al código que aparece en la pantalla del PC. En los dos móviles es igual.
 
-Ninguno de los dos caminos pasa por un servidor nuestro, y no hay cuenta que crear.
+El camino no pasa por ningún servidor nuestro, y no hay cuenta nuestra que crear.
 
 CIFRADO, Y SIGUE SIENDO TUYO
 
@@ -48,10 +47,8 @@ Sin anuncios. Sin rastreo. Sin cuenta.
 
 ## release_notes
 
-En el iPhone, la vía de iCloud ya se puede apagar.
+La vía de iCloud ha desaparecido. Todos los móviles leen ahora de un worker en tu propia cuenta de Cloudflare.
 
-- Apaga «Recibir desde iCloud» en los ajustes, y vuelve a encenderlo en el mismo sitio
-- El icono y la pantalla de inicio están redibujados con la marca nueva; la de inicio se invierte entre claro y oscuro
-- Que tu PC coloque de nuevo todo el backlog ahora se lee como una espera, no como algo ilegible
-- Si la copia de tu PC se rehízo desde cero, se avisa antes de seguir leyendo
-- Solo se leen los nombres que escribe el contrato
+- Si tu Mac escribía por iCloud, prepara el worker en el PC: lo hace el complemento y tú solo pegas un token una vez
+- Lo que ya llegó al móvil se sigue leyendo, y la app dice con claridad cuándo no va a llegar nada más
+- La app ya no pide iCloud para nada

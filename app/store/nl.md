@@ -24,10 +24,9 @@ Je hebt Amenbo nodig op een Mac, Windows of Linux, met de viewer-plug-in erbij. 
 
 HOE HET AANKOMT
 
-- Mac en iPhone: via je eigen iCloud. Op de telefoon valt niets in te stellen.
-- Met een Cloudflare-account, op allebei de telefoons: de pc geeft de backlog aan een worker die van jou is, en de telefoon haalt hem op. Koppelen doe je door de camera op de code op je pc-scherm te richten.
+De pc geeft de backlog aan een worker die van jou is, op je eigen Cloudflare-account, en de telefoon haalt hem op. Koppelen doe je door de camera op de code op je pc-scherm te richten. Op allebei de telefoons hetzelfde.
 
-Geen van beide wegen loopt langs een server van ons, en er is geen account aan te maken.
+De weg loopt langs geen enkele server van ons, en er is bij ons geen account aan te maken.
 
 VERSLEUTELD, EN NOG STEEDS VAN JOU
 
@@ -48,10 +47,8 @@ Geen advertenties. Geen tracking. Geen account.
 
 ## release_notes
 
-Op de iPhone kan de weg via iCloud nu uit.
+De weg via iCloud is verdwenen. Elke telefoon leest nu uit een worker op je eigen Cloudflare-account.
 
-- Zet 'Ophalen uit iCloud' uit in de instellingen, en op dezelfde plek weer aan
-- Het icoon en het startscherm zijn opnieuw getekend naar het nieuwe merk; het scherm keert om tussen licht en donker
-- Dat je pc de hele backlog opnieuw plaatst, staat er nu als een wachten en niet als iets onleesbaars
-- Is de kopie op je pc opnieuw opgebouwd, dan zegt de app dat voordat er verder wordt gelezen
-- Gelezen worden alleen de namen die het contract schrijft
+- Schreef je Mac via iCloud, zet de worker dan op de pc klaar: de plug-in doet het, jij plakt één keer een token
+- Wat al op de telefoon staat blijft leesbaar, en de app zegt duidelijk wanneer er niets meer bij komt
+- De app vraagt helemaal niet meer om iCloud

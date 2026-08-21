@@ -24,10 +24,9 @@ O Amenbo Viewer coloca no seu bolso o backlog que você mantém no PC. Ele lê; 
 
 COMO CHEGA ATÉ AQUI
 
-- Mac e iPhone: pelo seu próprio iCloud. No celular não há nada para configurar.
-- Com uma conta na Cloudflare, nos dois celulares: o PC entrega o backlog a um worker que é seu, e o celular vai buscar. Para parear, aponte a câmera para o código na tela do PC.
+O PC entrega o backlog a um worker que é seu, na sua própria conta da Cloudflare, e o celular vai buscar. Para parear, aponte a câmera para o código na tela do PC. Nos dois celulares é igual.
 
-Nenhum dos dois caminhos passa por um servidor nosso, e não há conta para criar.
+Esse caminho não passa por nenhum servidor nosso, e não há conta nossa para criar.
 
 CRIPTOGRAFADO, E AINDA SEU
 
@@ -48,10 +47,8 @@ Sem anúncios. Sem rastreamento. Sem conta.
 
 ## release_notes
 
-No iPhone, o caminho do iCloud agora pode ser desligado.
+O caminho do iCloud acabou. Agora todo celular lê de um worker na sua própria conta da Cloudflare.
 
-- Desligue “Receber do iCloud” nos ajustes e ligue de novo no mesmo lugar
-- O ícone e a tela de abertura foram redesenhados com a marca nova; a de abertura se inverte entre claro e escuro
-- O PC recolocar todo o backlog agora aparece como espera, não como algo ilegível
-- Se a cópia do seu PC foi refeita do zero, o aviso vem antes de seguir lendo
-- Do que chega, só são lidos os nomes que o contrato escreve
+- Se o seu Mac escrevia pelo iCloud, prepare o worker no PC: o plugin faz isso e você cola um token uma única vez
+- O que já chegou ao celular continua legível, e o app diz com clareza quando não vem mais nada
+- O app não pede mais nada ao iCloud

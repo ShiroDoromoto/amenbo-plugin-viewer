@@ -24,10 +24,9 @@ Il faut qu'Amenbo tourne sur un Mac, un Windows ou un Linux, avec le greffon vie
 
 PAR OÙ ÇA ARRIVE
 
-- Mac et iPhone : par votre propre iCloud. Rien à régler côté téléphone.
-- Avec un compte Cloudflare, sur les deux téléphones : le PC confie le backlog à un worker qui vous appartient, et le téléphone vient le chercher. Pour appairer, visez avec la caméra le code affiché sur l'écran du PC.
+Le PC confie le backlog à un worker qui vous appartient, sur votre propre compte Cloudflare, et le téléphone vient le chercher. Pour appairer, visez avec la caméra le code affiché sur l'écran du PC. C'est pareil sur les deux téléphones.
 
-Aucune des deux routes ne passe par un serveur à nous, et il n'y a pas de compte à créer.
+La route ne passe par aucun serveur à nous, et il n'y a pas de compte chez nous à créer.
 
 CHIFFRÉ, ET TOUJOURS À VOUS
 
@@ -48,10 +47,8 @@ Pas de publicité. Pas de pistage. Pas de compte.
 
 ## release_notes
 
-Sur iPhone, la voie iCloud peut désormais être coupée.
+La voie iCloud a disparu. Chaque téléphone lit désormais depuis un worker sur votre propre compte Cloudflare.
 
-- Coupez « Recevoir depuis iCloud » dans les réglages, et rallumez-la au même endroit
-- L'icône et l'écran de lancement sont redessinés sur la nouvelle marque ; l'écran s'inverse entre clair et sombre
-- Votre PC redéposant tout le backlog se lit comme une attente, non comme quelque chose d'illisible
-- Si la copie de votre PC a été refaite de zéro, l'app le dit avant d'aller plus loin
-- De ce qui arrive, seuls les noms du contrat sont lus
+- Si votre Mac écrivait par iCloud, préparez le worker sur le PC : le module s'en charge, vous collez un jeton une fois
+- Ce qui est déjà arrivé reste lisible, et l'app dit clairement quand plus rien ne viendra
+- L'app ne demande plus rien à iCloud

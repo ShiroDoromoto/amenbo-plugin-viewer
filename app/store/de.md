@@ -24,10 +24,9 @@ Dafür muss Amenbo auf einem Mac, unter Windows oder unter Linux laufen, mit ins
 
 WIE ES ANKOMMT
 
-- Mac und iPhone: über deine eigene iCloud. Am Telefon ist nichts einzurichten.
-- Mit einem Cloudflare-Konto, auf beiden Telefonen: Der PC übergibt das Backlog einem Worker, der dir gehört, und das Telefon holt es ab. Zum Koppeln hältst du die Kamera auf den Code am PC-Bildschirm.
+Der PC übergibt das Backlog einem Worker, der dir gehört, in deinem eigenen Cloudflare-Konto, und das Telefon holt es ab. Zum Koppeln hältst du die Kamera auf den Code am PC-Bildschirm. Auf beiden Telefonen gleich.
 
-Keiner der beiden Wege führt über einen Server von uns, und es gibt kein Konto anzulegen.
+Der Weg führt über keinen Server von uns, und es gibt bei uns kein Konto anzulegen.
 
 VERSCHLÜSSELT, UND WEITER DEINS
 
@@ -48,10 +47,8 @@ Keine Werbung. Kein Tracking. Kein Konto.
 
 ## release_notes
 
-Auf dem iPhone lässt sich der iCloud-Weg jetzt abschalten.
+Der iCloud-Weg ist weg. Jedes Telefon liest jetzt aus einem Worker in deinem eigenen Cloudflare-Konto.
 
-- „Aus iCloud übernehmen“ in den Einstellungen abschalten und dort wieder einschalten
-- Symbol und Startbildschirm neu aus der neuen Marke gezeichnet; der Startbildschirm dreht zwischen hell und dunkel um
-- Dass dein PC das Backlog neu ablegt, steht jetzt als Warten da, nicht als etwas Unlesbares
-- Wurde die Kopie auf deinem PC neu aufgebaut, sagt die App das, bevor weitergelesen wird
-- Gelesen wird nur, was der Vertrag benennt
+- Hat dein Mac über iCloud geschrieben, richte den Worker am PC ein: Das erledigt das Plugin, du fügst einmal einen Token ein
+- Was schon angekommen ist, bleibt lesbar, und die App sagt klar, wenn nichts mehr nachkommt
+- Die App verlangt gar kein iCloud mehr

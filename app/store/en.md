@@ -24,10 +24,9 @@ You need Amenbo running on a Mac, Windows or Linux machine, with the viewer plug
 
 HOW IT GETS THERE
 
-- Mac and iPhone: through your own iCloud. There is nothing to set up on the phone.
-- Anywhere, with a Cloudflare account: your PC hands the backlog to a small worker you own, and the phone comes and takes it. To pair, point the camera at the code on your PC screen.
+Your PC hands the backlog to a small worker you own, on your own Cloudflare account, and the phone comes and takes it. To pair, point the camera at the code on your PC screen. Both kinds of phone read the same way.
 
-Neither road passes through a server of ours, and there is no account to create.
+The road passes through no server of ours, and there is no account of ours to create.
 
 ENCRYPTED, AND STILL YOURS
 
@@ -48,10 +47,8 @@ No ads. No tracking. No account.
 
 ## release_notes
 
-The iCloud route now has a switch, on the iPhone.
+The iCloud route is gone. Every phone now reads from a worker on your own Cloudflare account.
 
-- Turn "Take it in from iCloud" off in Settings, and back on in the same place
-- The icon and the launch screen are redrawn from the new mark; the launch screen turns over between light and dark
-- Your PC placing the whole backlog again now reads as a wait, not as something unreadable
-- If your PC's copy was rebuilt from nothing, you hear about it before reading on
-- Of what arrives, only the names the contract writes are read
+- If your Mac was writing through iCloud, set the worker up on the PC: the plugin does it, and you paste one token once
+- What already reached the phone stays readable, and the app says plainly when nothing more is coming
+- The app no longer asks for iCloud at all

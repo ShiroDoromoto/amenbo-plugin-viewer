@@ -24,10 +24,9 @@ Bunun için Mac, Windows ya da Linux'ta çalışan bir Amenbo ve kurulu viewer e
 
 NASIL GELİYOR
 
-- Mac ve iPhone: kendi iCloud'un üzerinden. Telefon tarafında ayarlanacak bir şey yok.
-- Cloudflare hesabın varsa iki telefonda da: bilgisayar backlog'u senin olan bir worker'a bırakır, telefon da gidip alır. Eşlemek için kamerayı bilgisayar ekranındaki koda tut.
+Bilgisayar backlog'u senin olan bir worker'a bırakır, telefon da gidip alır; worker senin kendi Cloudflare hesabında çalışır. Eşlemek için kamerayı bilgisayar ekranındaki koda tut. İki telefonda da aynı.
 
-İki yol da bize ait bir sunucudan geçmez ve açılacak bir hesap yoktur.
+Bu yol bize ait hiçbir sunucudan geçmez ve bizde açılacak bir hesap yoktur.
 
 ŞİFRELİ, VE HÂLÂ SENİN
 
@@ -48,10 +47,8 @@ Reklam yok. Takip yok. Hesap yok.
 
 ## release_notes
 
-iPhone'da iCloud yolu artık kapatılabiliyor.
+iCloud yolu kalktı. Artık her telefon, senin kendi Cloudflare hesabındaki bir worker'dan okuyor.
 
-- Ayarlardan "iCloud'dan al"ı kapatın, aynı yerden geri açın
-- Simge ve açılış ekranı yeni işaretten yeniden çizildi; açılış ekranı aydınlıkla karanlık arasında ters döner
-- Bilgisayarın bütün iş listesini yeniden koyması artık okunamayan bir şey değil, bir bekleyiş olarak okunuyor
-- Bilgisayardaki kopya sıfırdan yeniden kurulduysa, okumaya devam etmeden önce söyleniyor
-- Gelenin içinden yalnızca sözleşmenin yazdığı adlar okunuyor
+- Mac'in iCloud üzerinden yazıyorduysa worker'ı bilgisayarda kur: işi eklenti yapar, sen bir kez tek bir token yapıştırırsın
+- Telefona daha önce ulaşanlar okunmaya devam eder, uygulama da başka bir şey gelmeyeceğini açıkça söyler
+- Uygulama artık iCloud'dan hiçbir şey istemiyor
