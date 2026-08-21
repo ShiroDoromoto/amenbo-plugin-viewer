@@ -65,9 +65,10 @@ endif
 # it would be a second copy of a contract Amenbo already owns.
 #
 # **Everything is pointed inside the base**: the store that is read, the environment Amenbo would
-# fill in, and the home whose iCloud folder is written into. Left pointing outside, this loop
-# would place the author's own backlog in the author's own container. Turn the mac route on by
-# standing that folder up:
+# fill in, and the iCloud folder that is written into. The last of those follows from the first —
+# the plugin counts its drop from the store it was fired for, so a base that is not the one the
+# author works in cannot reach the author's own container. Turn the mac route on by standing that
+# folder up:
 #
 #   mkdir -p "$$AMENBO_BASE/machine/Library/Mobile Documents/iCloud~work~amenbo~viewer/Documents"
 #
@@ -97,7 +98,7 @@ fire: install
 		document='{"v":1,"event":"$(EVENT)","id":$(ID),"at":"'"$$(date -u +%Y-%m-%dT%H:%M:%SZ)"'"'"$$version$$config"'}'; \
 	fi; \
 	echo "$$document" >&2; \
-	printf '%s' "$$document" | AMENBO_HOME="$(AMENBO_BASE)" HOME="$(AMENBO_BASE)/machine" \
+	printf '%s' "$$document" | AMENBO_HOME="$(AMENBO_BASE)" \
 		AMENBO_PLUGIN_REACH="AMB-P-$(PROJECT)" "$(AMENBO_BASE)/plugins/$(BIN)/$(BIN)"
 #
 # The release build: every asset the catalog entry points at, plus the digests it quotes. The

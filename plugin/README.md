@@ -47,6 +47,23 @@ Cloudflare 経路は、Worker とデータベースを利用者のアカウン�
 `brctl` がこのコンテナを `SYNC DISABLED (app not installed)` と表示することがあるが、同期は通る。
 **判定に使わない。**
 
+## 数える起点は、走っているストアで決まる
+
+Amenbo はプラグインを起動するとき、どのストアの run なのかを `AMENBO_HOME` に書いて渡す
+（git がフックへ `GIT_DIR` を渡すのと同じ形）。上のコンテナへ書くのは、そのストアが利用者自身のもの
+だったときだけ。
+
+| ストアの居場所 | 書き先 |
+|---|---|
+| 既定の場所（`~/Library/Application Support/work.amenbo.amenbo`）と、名前が無いとき | 上のコンテナ |
+| それ以外＝使い捨てのストア | `$AMENBO_HOME/machine/Library/Mobile Documents/iCloud~work~amenbo~viewer/Documents` |
+
+**使い捨てのストアは、書かないのではなく隣へ書く。** 経路を殺すと、置き場そのものを直す作業が手元で
+確かめられなくなる。隣は素のディレクトリなので、`mkdir` で立てられる（→「手元で1周回す」）。
+
+**これは柵であって、届け先ではない。** 隣は iCloud を通らないので、電話まで届くかは確かめられない。
+手元用の iCloud コンテナへ書き分ける本命は別に控えている。
+
 ## iCloud の置き場は、フォルダそのものが「今の全部」
 
 Worker と違って**台帳を持つ相手が居ない**ので、その時点でフォルダに在るものが端末の見るべき全部になる。
@@ -211,9 +228,9 @@ make fire AMENBO_BASE="$B" PAYLOAD='{"v":2,"event":"task.done"}'   # 丸ごと�
 そこだけ差し替えれば、その先（Amenbo の口・経路・状態）は全部本物のまま1周が回る。
 口に偽物を置けば、同じ仕様を Amenbo と2か所で持つことになる。
 
-**行き先は全部ベースの中に向く**——読むストアも、Amenbo が埋める環境変数も、
-iCloud フォルダを探す先の HOME も。外を向いたままだと、この loop が自分の本物のバックログを
-自分の本物のコンテナへ置く。mac 経路を点けるなら、その中にフォルダを立てる:
+**行き先は全部ベースの中に向く**——読むストアも、Amenbo が埋める環境変数も、iCloud の置き場も。
+置き場は `AMENBO_HOME` から数えるので、**ベースを指しているかぎり本物のコンテナは向かない**。
+mac 経路を点けるなら、その中にフォルダを立てる:
 
 ```sh
 mkdir -p "$B/machine/Library/Mobile Documents/iCloud~work~amenbo~viewer/Documents"
@@ -227,11 +244,10 @@ AMENBO_CONFIG_ENCRYPTION_KEY=$(head -c 32 /dev/urandom | base64 | tr '+/' '-_' |
 ```
 
 コマンド面（`setup` / `push` / `qr`）は Amenbo から呼ぶので、`make fire` を通らない。
-**Amenbo が向けてくれるのは `AMENBO_HOME` だけで、`HOME` は実物のまま**——iCloud を探す先が
-本物のコンテナになるので、`make fire` が渡していた分を自分で渡す。
+渡すのは `AMENBO_HOME` だけでよい——iCloud の置き場もそこから数える。
 
 ```sh
 AMENBO_HOME="$B" amenbo plugin enable viewer --actor human       # install ≠ enable
 cd "$W"                                                          # 束ねた作業場から呼ぶ
-HOME="$B/machine" AMENBO_HOME="$B" amenbo --actor human plugin run viewer push
+AMENBO_HOME="$B" amenbo --actor human plugin run viewer push
 ```
