@@ -13,11 +13,9 @@
 /// interval would be a number that does nothing. Automatic means launch and coming back to the
 /// front, and the alternative is not a slower version of that but asking for it by hand.
 ///
-/// The third choice is the one that is not about reading at all: whether this phone takes what
-/// the Mac leaves in iCloud. It is a ceiling rather than a switch onto the route — turning it on
-/// where no container exists does nothing, and what runs is the declaration and the real thing
-/// together. The Cloudflare route has no row here because erasing the phone's copy already ends
-/// it; the iCloud route has no pairing to end, which is the whole reason this row exists.
+/// **There is no row for the route.** There is one, it is the person's own Worker, and it ends by
+/// erasing this phone's copy — which is on the connection screen, where the rest of what this
+/// phone can say about itself is.
 ///
 /// The choices are this device's own, not the place's, so they are kept beside the cursor rather
 /// than inside it: throwing the local copy away and taking it again leaves them standing.
@@ -76,65 +74,35 @@ String appearanceWords(Words words, Appearance appearance) =>
       Appearance.dark => words.appearanceDark,
     };
 
-/// Whether this phone still takes what the Mac leaves in iCloud.
-///
-/// Written out rather than kept as `true` / `false`, for the reason the other two are: what is
-/// on the device is read by builds that come later.
-enum TakeFromICloud {
-  on('on'),
-  off('off');
-
-  const TakeFromICloud(this.stored);
-
-  final String stored;
-
-  /// An unwritten choice is on. A phone that has never been to the screen behaves the way it did
-  /// before the row existed, and the row is a way to stop rather than a way to start.
-  static TakeFromICloud read(String? stored) =>
-      values.firstWhere((one) => one.stored == stored, orElse: () => on);
-
-  bool get isOn => this == on;
-}
-
-/// The three choices, together.
+/// The two choices, together.
 @immutable
 class ViewerSettings {
   const ViewerSettings({
     this.refresh = Refresh.automatic,
     this.appearance = Appearance.system,
-    this.iCloud = TakeFromICloud.on,
   });
 
   /// What a phone that has never been to this screen behaves like: go and look without being
-  /// asked, wear what the phone wears, and read the folder if there is one.
+  /// asked, and wear what the phone wears.
   static const defaults = ViewerSettings();
 
   final Refresh refresh;
   final Appearance appearance;
 
-  /// The ceiling on the iCloud route. What runs is this and a container that answers, together —
-  /// so on an Android phone, or on an iPhone signed out of iCloud, it decides nothing.
-  final TakeFromICloud iCloud;
-
-  ViewerSettings copyWith({
-    Refresh? refresh,
-    Appearance? appearance,
-    TakeFromICloud? iCloud,
-  }) => ViewerSettings(
-    refresh: refresh ?? this.refresh,
-    appearance: appearance ?? this.appearance,
-    iCloud: iCloud ?? this.iCloud,
-  );
+  ViewerSettings copyWith({Refresh? refresh, Appearance? appearance}) =>
+      ViewerSettings(
+        refresh: refresh ?? this.refresh,
+        appearance: appearance ?? this.appearance,
+      );
 
   @override
   bool operator ==(Object other) =>
       other is ViewerSettings &&
       other.refresh == refresh &&
-      other.appearance == appearance &&
-      other.iCloud == iCloud;
+      other.appearance == appearance;
 
   @override
-  int get hashCode => Object.hash(refresh, appearance, iCloud);
+  int get hashCode => Object.hash(refresh, appearance);
 }
 
 /// Where the choices survive a restart.
@@ -178,7 +146,6 @@ class SettingsController extends ChangeNotifier {
     : _value = ViewerSettings(
         refresh: Refresh.read(_keep.read(MetaKey.refresh)),
         appearance: Appearance.read(_keep.read(MetaKey.appearance)),
-        iCloud: TakeFromICloud.read(_keep.read(MetaKey.iCloud)),
       );
 
   final SettingsKeep _keep;
@@ -196,12 +163,6 @@ class SettingsController extends ChangeNotifier {
       MetaKey.appearance,
       appearance.stored,
     );
-  }
-
-  /// Turns the iCloud route on or off. Erasing this phone's copy comes through here too — a copy
-  /// thrown away while the route stayed on would be back the next time the app was opened.
-  void setICloud(TakeFromICloud iCloud) {
-    _change(_value.copyWith(iCloud: iCloud), MetaKey.iCloud, iCloud.stored);
   }
 
   void _change(ViewerSettings next, String key, String stored) {

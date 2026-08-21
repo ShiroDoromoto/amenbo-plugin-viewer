@@ -1,5 +1,5 @@
 // The store is checked against rows shaped exactly like Amenbo's, written out by hand. Nothing
-// here runs Amenbo, reaches a Worker or opens iCloud: the app has to be verifiable on its own,
+// here runs Amenbo or reaches a Worker: the app has to be verifiable on its own,
 // and a test that needed a snapshot from somewhere would end that.
 
 import 'package:amenbo_viewer/store/backlog_queries.dart';

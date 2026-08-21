@@ -18,9 +18,6 @@ void main() {
       expect(settings, ViewerSettings.defaults);
       expect(settings.refresh, Refresh.automatic);
       expect(settings.appearance.themeMode, ThemeMode.system);
-      // The row is a way to stop, not a way to start: a phone that has never seen it behaves the
-      // way it did before the row existed.
-      expect(settings.iCloud, TakeFromICloud.on);
     });
 
     test('a value written by another build reads as the default', () {
@@ -72,8 +69,7 @@ void main() {
     final keep = UnkeptSettings();
     SettingsController(keep)
       ..setRefresh(Refresh.manualOnly)
-      ..setAppearance(Appearance.dark)
-      ..setICloud(TakeFromICloud.off);
+      ..setAppearance(Appearance.dark);
 
     // A second controller over the same keep is what the next launch is.
     expect(
@@ -81,7 +77,6 @@ void main() {
       const ViewerSettings(
         refresh: Refresh.manualOnly,
         appearance: Appearance.dark,
-        iCloud: TakeFromICloud.off,
       ),
     );
   });
@@ -90,10 +85,8 @@ void main() {
     final store = BacklogStore.openInMemory();
     addTearDown(store.close);
     final settings = SettingsController(StoredSettings(store))
-      ..setAppearance(Appearance.dark)
-      // The one that has to survive a wipe rather than fall back to its default: erasing this
-      // phone's copy switches it off, and a wipe that reset it would switch it back on.
-      ..setICloud(TakeFromICloud.off);
+      ..setRefresh(Refresh.manualOnly)
+      ..setAppearance(Appearance.dark);
     store.seq = 42;
 
     // What the intake does when the place turns out to have been built again from nothing. The

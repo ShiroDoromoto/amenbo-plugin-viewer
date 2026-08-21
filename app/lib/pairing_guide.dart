@@ -8,13 +8,7 @@
 ///
 /// The setup happens on the PC, in Amenbo itself; almost nothing here can start it. That is why
 /// the screen is mostly steps: **one button, on one card.** Reading the QR code is the whole of
-/// this phone's half of the Cloudflare route, and the iCloud route has no half at all — the phone
-/// held up its end by having been opened once. A second button would have to do nothing.
-///
-/// The one time it would not is a phone that switched the iCloud route off. Then this phone's
-/// half is a thing it can do again, and this screen is where it has to be offered: the switch
-/// lives in the settings, the settings are opened from the front screen, and the front screen is
-/// exactly what a phone with nothing left does not have.
+/// this phone's half, and a second button would have to do nothing.
 ///
 /// The one thing the bar carries is the way to what this build is, and it is here because it is
 /// nowhere else: the settings are opened from the front screen, and the front screen is what a
@@ -40,50 +34,18 @@ import 'ui/measure.dart';
 import 'ui/theme.dart';
 import 'ui/tokens.dart';
 
-/// One of the two ways a snapshot reaches the phone.
+/// What the card says about the one way a snapshot reaches the phone.
 ///
-/// They differ only in where the file sits. What is carried, how it is encrypted, that it goes
-/// one way and that each snapshot replaces the last are the same either way.
-enum PairingRoute {
-  /// mac and iPhone. iOS only — the place both ends meet is this app's own iCloud container, and
-  /// Android has no equivalent at all.
-  iCloud,
-
-  /// Everything else. It costs an account, which is the price of not being on Apple's two
-  /// machines.
-  cloudflare;
-
-  /// What the phone in hand can actually do.
-  static List<PairingRoute> forPlatform(TargetPlatform platform) =>
-      platform == TargetPlatform.iOS
-      ? const [iCloud, cloudflare]
-      : const [cloudflare];
-}
-
-/// What a card says about a route.
-///
-/// [who] is who it is for — the two are not ranked by quality, they are picked by what the person
-/// already owns. [cost] is what it asks before it works, and the iCloud route asking nothing is
-/// most of why somebody would choose it. [action] is the one thing this phone can do about the
-/// route, and it is null where there is nothing to do: a button that did nothing would read as
-/// the app being broken rather than as the person's next step being elsewhere.
-({String name, String who, String cost, List<String> steps, String? action})
-pairingRouteWords(Words words, PairingRoute route) => switch (route) {
-  PairingRoute.iCloud => (
-    name: words.routeICloud,
-    who: words.guideICloudWho,
-    cost: words.guideICloudCost,
-    steps: [words.guideICloudStepOne, words.guideICloudStepTwo],
-    action: null,
-  ),
-  PairingRoute.cloudflare => (
-    name: words.routeCloudflare,
-    who: words.guideCloudflareWho,
-    cost: words.guideCloudflareCost,
-    steps: [words.guideCloudflareStepOne, words.guideCloudflareStepTwo],
-    action: words.guideCloudflareAction,
-  ),
-};
+/// [who] is who it is for, [cost] is what it asks before it works, and [action] is this phone's
+/// whole half of it.
+({String name, String who, String cost, List<String> steps, String action})
+pairingRouteWords(Words words) => (
+  name: words.routeCloudflare,
+  who: words.guideCloudflareWho,
+  cost: words.guideCloudflareCost,
+  steps: [words.guideCloudflareStepOne, words.guideCloudflareStepTwo],
+  action: words.guideCloudflareAction,
+);
 
 class PairingGuideScreen extends StatelessWidget {
   const PairingGuideScreen({
@@ -91,8 +53,6 @@ class PairingGuideScreen extends StatelessWidget {
     required this.appName,
     required this.onPaired,
     this.readACode = scanForACode,
-    this.iCloudSwitchedOff = false,
-    this.onTakeICloudBackIn,
   });
 
   /// Handed down rather than read back out of the app, so the screen stays a screen and the
@@ -107,14 +67,6 @@ class PairingGuideScreen extends StatelessWidget {
   /// How a code gets read. The default opens the camera; a test hands back an answer.
   final Future<Pairing?> Function(BuildContext context) readACode;
 
-  /// Whether this phone has a container to read and has been told to stop reading it. False on
-  /// every phone that never had the route, which is every Android one.
-  final bool iCloudSwitchedOff;
-
-  /// Takes the iCloud route back up. What follows is the root's business, the same way pairing is
-  /// — this screen has nothing left to say the moment a route exists again.
-  final VoidCallback? onTakeICloudBackIn;
-
   /// The scanning screen, which saves the pairing itself and hands it back on the way out.
   static Future<Pairing?> scanForACode(BuildContext context) => Navigator.of(
     context,
@@ -125,36 +77,10 @@ class PairingGuideScreen extends StatelessWidget {
     if (pairing != null) onPaired(pairing);
   }
 
-  /// The one thing this phone can do about a route, where there is one.
-  ///
-  /// The Cloudflare card's is reading the code. The iCloud card has none while the route is on —
-  /// the phone held up its end by having been opened once — and exactly one while it is switched
-  /// off, which is to take it back up.
-  ({String label, VoidCallback pressed})? _canDo(
-    BuildContext context,
-    Words words,
-    PairingRoute route,
-  ) {
-    if (pairingRouteWords(words, route).action case final label?) {
-      return (label: label, pressed: () => _pair(context));
-    }
-    if (route != PairingRoute.iCloud || !iCloudSwitchedOff) return null;
-    return switch (onTakeICloudBackIn) {
-      final takeItBackIn? => (
-        label: words.takeFromICloud,
-        pressed: takeItBackIn,
-      ),
-      null => null,
-    };
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final words = Words.of(context);
-    // Read off the theme rather than dart:io, so the Android screen can be looked at on a Mac and
-    // both are reachable from a test.
-    final routes = PairingRoute.forPlatform(theme.platform);
 
     return Scaffold(
       appBar: AppBar(
@@ -184,16 +110,15 @@ class PairingGuideScreen extends StatelessWidget {
           children: [
             Text(words.guideHeading, style: theme.textTheme.headlineSmall),
             const SizedBox(height: Space.s4),
-            Text(
-              routes.length > 1 ? words.guideBothRoutes : words.guideOneRoute,
-              style: theme.textTheme.bodyLarge,
+            Text(words.guideOneRoute, style: theme.textTheme.bodyLarge),
+            const SizedBox(height: Space.s6),
+            _RouteCard(
+              canDo: (
+                label: pairingRouteWords(words).action,
+                pressed: () => _pair(context),
+              ),
             ),
             const SizedBox(height: Space.s6),
-            for (final route in routes) ...[
-              _RouteCard(route: route, canDo: _canDo(context, words, route)),
-              const SizedBox(height: Space.s5),
-            ],
-            const SizedBox(height: Space.s3),
             const _Assurance(),
           ],
         ),
@@ -203,17 +128,15 @@ class PairingGuideScreen extends StatelessWidget {
 }
 
 class _RouteCard extends StatelessWidget {
-  const _RouteCard({required this.route, this.canDo});
+  const _RouteCard({required this.canDo});
 
-  final PairingRoute route;
-
-  /// The card's button, where the route has one — what it says, and what it does.
-  final ({String label, VoidCallback pressed})? canDo;
+  /// The card's button — what it says, and what it does.
+  final ({String label, VoidCallback pressed}) canDo;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final said = pairingRouteWords(Words.of(context), route);
+    final said = pairingRouteWords(Words.of(context));
 
     return Card(
       margin: EdgeInsets.zero,
@@ -234,18 +157,16 @@ class _RouteCard extends StatelessWidget {
             const SizedBox(height: Space.s5),
             for (var i = 0; i < said.steps.length; i++)
               _Step(number: i + 1, text: said.steps[i]),
-            if (canDo case final canDo?) ...[
-              const SizedBox(height: Space.s3),
-              // Left where the steps are, not stretched across the card: it is the last step's
-              // other half, not a decision about the whole screen.
-              Align(
-                alignment: Alignment.centerLeft,
-                child: FilledButton(
-                  onPressed: canDo.pressed,
-                  child: Text(canDo.label),
-                ),
+            const SizedBox(height: Space.s3),
+            // Left where the steps are, not stretched across the card: it is the last step's
+            // other half, not a decision about the whole screen.
+            Align(
+              alignment: Alignment.centerLeft,
+              child: FilledButton(
+                onPressed: canDo.pressed,
+                child: Text(canDo.label),
               ),
-            ],
+            ),
           ],
         ),
       ),

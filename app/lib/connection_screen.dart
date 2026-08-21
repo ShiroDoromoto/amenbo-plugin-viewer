@@ -139,19 +139,12 @@ class _Details extends StatelessWidget {
             ),
           _Fact(
             label: words.factRoute,
-            value: connectionRouteWords(words, connection.route),
-            // The host on the Cloudflare route, and on the other one the sentence a route that is
-            // switched off owes: without it the screen names a place nothing is coming from.
-            detail: connection.taking ? connection.host : words.routeStopped,
+            // A phone with no pairing has rows and no place they came from that this build can
+            // still reach, and naming one anyway would be the screen answering for a route that
+            // is not there.
+            value: connection.paired ? words.routeCloudflare : words.routeNone,
+            detail: connection.host,
           ),
-          if (connection.iCloudAvailable case final available?)
-            _Fact(
-              label: words.factICloud,
-              value: available
-                  ? words.iCloudSignedIn
-                  : words.iCloudNotAvailable,
-              detail: available ? null : words.iCloudNotAvailableDetail,
-            ),
           if (taken.isEmpty)
             _Fact(
               label: words.factLastTaken,
@@ -174,12 +167,11 @@ class _Details extends StatelessWidget {
               ),
             ),
           const Divider(),
-          if (connection.canPairAgain)
-            ListTile(
-              title: Text(words.pairAgainTitle),
-              subtitle: Text(words.pairAgainDetail),
-              onTap: onPairAgain,
-            ),
+          ListTile(
+            title: Text(words.pairAgainTitle),
+            subtitle: Text(words.pairAgainDetail),
+            onTap: onPairAgain,
+          ),
           ListTile(
             title: Text(words.erase, style: TextStyle(color: scheme.error)),
             subtitle: Text(words.eraseDetail),

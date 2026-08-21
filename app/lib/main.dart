@@ -1,7 +1,7 @@
 /// Amenbo Viewer — the backlog, on the phone, while you are away from the PC.
 ///
-/// The app reads an encrypted snapshot out of a place its owner holds — a folder in their iCloud
-/// Drive, or their own Cloudflare Worker — decrypts it here, and shows it. It never writes back.
+/// The app reads an encrypted snapshot out of a place its owner holds — their own Cloudflare
+/// Worker — decrypts it here, and shows it. It never writes back.
 ///
 /// **The app has to be complete on its own.** Store review takes as long as it takes, so there
 /// will be users running this build against an Amenbo and a plugin that know nothing about it.
@@ -11,8 +11,6 @@
 /// What it shows is decided in [ViewerHome]: the setup instructions on a phone with no way in,
 /// and the backlog on one that has.
 library;
-
-import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
 
@@ -37,9 +35,6 @@ Future<AmenboViewerApp> openViewer() async {
   return AmenboViewerApp(
     store: store,
     settings: SettingsController(StoredSettings(store)),
-    // Only the iPhone has a container to read. Asked here, so everything below it can be walked
-    // with either answer from any machine.
-    hasICloud: Platform.isIOS,
   );
 }
 
@@ -48,7 +43,6 @@ class AmenboViewerApp extends StatelessWidget {
     super.key,
     required this.store,
     required this.settings,
-    this.hasICloud = false,
   });
 
   /// The phone's copy of the backlog. Opened before the first frame — it is a file on the device,
@@ -59,8 +53,6 @@ class AmenboViewerApp extends StatelessWidget {
   /// Held here rather than looked up, because the one setting the app itself obeys — how dark it
   /// is — is decided at this level and nowhere else.
   final SettingsController settings;
-
-  final bool hasICloud;
 
   /// The name the stores show, in every language — it reads the same in each, so it is the one
   /// piece of text on these screens that is not on a sheet.
@@ -82,12 +74,7 @@ class AmenboViewerApp extends StatelessWidget {
         theme: viewerTheme(Brightness.light),
         darkTheme: viewerTheme(Brightness.dark),
         themeMode: settings.value.appearance.themeMode,
-        home: ViewerHome(
-          store: store,
-          settings: settings,
-          appName: title,
-          hasICloud: hasICloud,
-        ),
+        home: ViewerHome(store: store, settings: settings, appName: title),
       ),
     );
   }

@@ -37,10 +37,7 @@ void main() {
           reason: '$failure',
         );
       }
-      expect(
-        standingOf(anythingHere: false, iCloudAvailable: false),
-        Standing.noICloud,
-      );
+      expect(standingOf(anythingHere: false, paired: false), Standing.unpaired);
     });
 
     test('each failure keeps its own words', () {
@@ -68,15 +65,10 @@ void main() {
       );
     });
 
-    test('being signed out is more specific than being unreachable', () {
-      expect(
-        standingOf(
-          anythingHere: true,
-          failure: IntakeFailure.unreachable,
-          iCloudAvailable: false,
-        ),
-        Standing.noICloud,
-      );
+    test('rows with no pairing behind them say so', () {
+      // The state a phone lands in when its route was taken out from under it: rows are here,
+      // and there is nothing left to ask for more.
+      expect(standingOf(anythingHere: true, paired: false), Standing.unpaired);
     });
 
     test('a place built again says nothing — the intake already handled it', () {
@@ -104,7 +96,6 @@ void main() {
       Standing standing, {
       bool whole = false,
       VoidCallback? onPairAgain,
-      VoidCallback? onOpenSettings,
     }) => MaterialApp(
       localizationsDelegates: Words.localizationsDelegates,
       supportedLocales: Words.supportedLocales,
@@ -114,7 +105,6 @@ void main() {
           standing: standing,
           whole: whole,
           onPairAgain: onPairAgain,
-          onOpenSettings: onOpenSettings,
         ),
       ),
     );
@@ -148,16 +138,15 @@ void main() {
       expect(paired, 1);
     });
 
-    testWidgets('a signed-out iCloud points at the OS, not at this app', (
-      tester,
-    ) async {
-      var opened = 0;
+    testWidgets('having no pairing offers reading a code', (tester) async {
+      var paired = 0;
       await tester.pumpWidget(
-        band(Standing.noICloud, onOpenSettings: () => opened++),
+        band(Standing.unpaired, onPairAgain: () => paired++),
       );
 
-      await tester.tap(find.text(words.bandOpenSettings));
-      expect(opened, 1);
+      // Not "pair again": this phone may never have read one.
+      await tester.tap(find.text(words.bandPair));
+      expect(paired, 1);
     });
 
     testWidgets('with nothing underneath, the words take the screen', (
@@ -177,7 +166,7 @@ void main() {
       expect(Standing.values.where(standingIsLifted).toSet(), {
         Standing.unreadable,
         Standing.refused,
-        Standing.noICloud,
+        Standing.unpaired,
       });
       for (final standing in Standing.values) {
         expect(
@@ -239,11 +228,7 @@ void main() {
                 data: MediaQueryData(textScaler: TextScaler.linear(scale)),
                 child: Scaffold(
                   body: SingleChildScrollView(
-                    child: StateBand(
-                      standing: standing,
-                      onPairAgain: () {},
-                      onOpenSettings: () {},
-                    ),
+                    child: StateBand(standing: standing, onPairAgain: () {}),
                   ),
                 ),
               ),

@@ -80,9 +80,6 @@ class MetaKey {
   /// Light, dark, or whatever the phone is doing.
   static const appearance = 'appearance';
 
-  /// Whether this phone still takes what the Mac leaves in iCloud — see `settings.dart`.
-  static const iCloud = 'icloud';
-
   /// The last few words typed into the search face.
   static const recentTerms = 'recent_terms';
 
@@ -93,13 +90,7 @@ class MetaKey {
   /// alone. Everything else in `meta` describes the copy being thrown away; these describe the
   /// person holding the phone, who has not changed their mind — nor forgotten what they were
   /// looking for — just because the PC re-uploaded everything.
-  static const deviceOwn = {
-    refresh,
-    appearance,
-    iCloud,
-    recentTerms,
-    recentlyViewed,
-  };
+  static const deviceOwn = {refresh, appearance, recentTerms, recentlyViewed};
 }
 
 class BacklogStore {
@@ -250,17 +241,6 @@ class BacklogStore {
     db.execute('DELETE FROM meta WHERE key NOT IN ($kept)');
     db.execute('COMMIT');
   }
-
-  /// Every record the device holds, under the key it arrived as — `<dataset>/<id>`.
-  ///
-  /// The iCloud route is what needs it. There the folder is the whole current truth and a
-  /// deletion is a file that is gone, so what the device holds and the folder does not is the only
-  /// place a removal can be read. It is a key per record and nothing else: the rows themselves
-  /// stay where they are.
-  Set<String> heldKeys() => {
-    for (final row in db.select('SELECT dataset, id FROM record'))
-      '${row['dataset']}/${row['id']}',
-  };
 
   void _put(String dataset, int id, Map<String, Object?> row) {
     db.execute(

@@ -183,7 +183,7 @@ class _ShotApp extends StatelessWidget {
   Widget _shell(int tab, {int? task}) => HomeShell(
     store: store,
     settings: settings,
-    connection: PhoneConnection(store: store, settings: settings),
+    connection: PhoneConnection(store: store),
     appName: AmenboViewerApp.title,
     initialTab: tab,
     initialTask: task,

@@ -1,8 +1,8 @@
 /// One line at the top, for the eight ways things can stand.
 ///
 /// The promise the whole app is built on is that **it never breaks quietly**. Every state below is
-/// one the person can end up in without doing anything wrong — a train tunnel, a signed-out iCloud,
-/// a PC that has not sent anything yet — and each of them has to be told apart from the others,
+/// one the person can end up in without doing anything wrong — a train tunnel, a phone that was
+/// never paired, a PC that has not sent anything yet — and each has to be told apart from the rest,
 /// because the next thing to do is different in every case and identical silence is what makes
 /// somebody reinstall an app that was working.
 ///
@@ -36,8 +36,8 @@ enum Standing {
   /// The place turned this device away. The token was revoked, or it was never for this place.
   refused,
 
-  /// The iCloud route, with nobody signed in to iCloud.
-  noICloud,
+  /// Rows are here and nothing is reaching them: this phone has no pairing.
+  unpaired,
 
   /// The place is being written again from the beginning, and has closed its reading doors for
   /// the length of it.
@@ -58,14 +58,14 @@ enum Standing {
 /// the person would be waiting on a PC that had already done its part.
 ///
 /// Among the causes the order is how much they take away: a contract this build cannot read stops
-/// everything, a key that does not open stops the records, a refusal stops the fetch, a signed-out
-/// iCloud stops one route, and being unreachable stops nothing that is already here. A placement
-/// stops nothing either — it is the one cause that ends by itself, and it is here rather than
+/// everything, a key that does not open stops the records, a refusal stops the fetch, having no
+/// pairing stops every round there is, and being unreachable stops nothing that is already here.
+/// A placement stops nothing either — it is the one cause that ends by itself, and it is here rather than
 /// silent because a pull that brought nothing owes the person a reason.
 Standing standingOf({
   required bool anythingHere,
   IntakeFailure? failure,
-  bool? iCloudAvailable,
+  bool paired = true,
 }) {
   switch (failure) {
     case IntakeFailure.tooNew:
@@ -77,9 +77,6 @@ Standing standingOf({
     case IntakeFailure.placing:
       return Standing.placing;
     case IntakeFailure.unreachable:
-      // Held below iCloud: being signed out is the more specific of the two, and the one with
-      // something to do about it.
-      if (iCloudAvailable == false) return Standing.noICloud;
       return Standing.offline;
     // The intake empties the local copy and takes the place from the beginning by itself, so by
     // the time anybody could read a line about it there is nothing left to say.
@@ -87,7 +84,10 @@ Standing standingOf({
     case null:
       break;
   }
-  if (iCloudAvailable == false) return Standing.noICloud;
+  // Below every cause and above the absence: rows that came in over a route this build no longer
+  // has are rows nothing will ever add to, and "nothing has arrived yet" would be the app waiting
+  // on a PC that has no way to answer.
+  if (!paired) return Standing.unpaired;
   if (!anythingHere) return Standing.waiting;
   return Standing.quiet;
 }
@@ -98,7 +98,7 @@ String standingWords(Words words, Standing standing) => switch (standing) {
   Standing.tooNew => words.standingTooNew,
   Standing.unreadable => words.standingUnreadable,
   Standing.refused => words.standingRefused,
-  Standing.noICloud => words.standingNoICloud,
+  Standing.unpaired => words.standingUnpaired,
   Standing.placing => words.standingPlacing,
   Standing.offline => words.standingOffline,
   Standing.waiting => words.standingWaiting,
@@ -112,7 +112,7 @@ String standingDetail(Words words, Standing standing) => switch (standing) {
   Standing.tooNew => words.standingDetailTooNew,
   Standing.unreadable => words.standingDetailUnreadable,
   Standing.refused => words.standingDetailRefused,
-  Standing.noICloud => words.standingDetailNoICloud,
+  Standing.unpaired => words.standingDetailUnpaired,
   Standing.placing => words.standingDetailPlacing,
   Standing.waiting => words.standingDetailWaiting,
   _ => '',
@@ -130,7 +130,7 @@ String standingDetail(Words words, Standing standing) => switch (standing) {
 /// what the person can act on from here: a contract this build cannot read is real and is not on
 /// this list, because nothing in this app will fix it.
 bool standingIsLifted(Standing standing) => switch (standing) {
-  Standing.unreadable || Standing.refused || Standing.noICloud => true,
+  Standing.unreadable || Standing.refused || Standing.unpaired => true,
   _ => false,
 };
 
@@ -139,7 +139,7 @@ bool standingIsLifted(Standing standing) => switch (standing) {
 IconData? standingMark(Standing standing) => switch (standing) {
   Standing.unreadable => Icons.key_off_outlined,
   Standing.refused => Icons.do_not_disturb_on_outlined,
-  Standing.noICloud => Icons.cloud_off_outlined,
+  Standing.unpaired => Icons.link_off_outlined,
   _ => null,
 };
 
@@ -148,14 +148,12 @@ class StateBand extends StatelessWidget {
     super.key,
     required this.standing,
     this.onPairAgain,
-    this.onOpenSettings,
     this.whole = false,
   });
 
   final Standing standing;
 
   final VoidCallback? onPairAgain;
-  final VoidCallback? onOpenSettings;
 
   /// True where there is no picture to sit above — a device that has never had anything. Then the
   /// same words take the screen instead of a strip of it.
@@ -172,10 +170,11 @@ class StateBand extends StatelessWidget {
         onPairAgain == null
             ? null
             : (label: words.bandPairAgain, onTap: onPairAgain!),
-      Standing.noICloud =>
-        onOpenSettings == null
+      // Not "again": this phone may never have had one. The code is read the same way either way.
+      Standing.unpaired =>
+        onPairAgain == null
             ? null
-            : (label: words.bandOpenSettings, onTap: onOpenSettings!),
+            : (label: words.bandPair, onTap: onPairAgain!),
       _ => null,
     };
 
