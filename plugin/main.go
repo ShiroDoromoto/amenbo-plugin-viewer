@@ -174,6 +174,10 @@ func run(in input, args []string) int {
 		return do(listPhones(in, args[1:]))
 	case "revoke":
 		return do(revoke(in, args[1:]))
+	case forgetTheCodeCommand:
+		// Not a command anyone types: `qr` calls this binary back with it so the image it left
+		// on disk goes away on its own. It is dispatched here and advertised nowhere.
+		return do(forgetTheCode(args[1:]))
 	case "help", "-h", "--help":
 		usage()
 		return 0
