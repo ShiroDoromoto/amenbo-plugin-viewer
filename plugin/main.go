@@ -12,11 +12,13 @@
 //     stdout is the machine return value Amenbo relays back verbatim; stderr is the human
 //     diagnostics; the exit code is the verdict.
 //
-// Two routes carry the same bytes, and which one a user gets is decided by what they have
-// rather than by a setting:
+// One route carries the bytes:
 //
-//	mac      → a folder in the user's iCloud Drive. No account, no key handover, no setup.
 //	anywhere → the user's own Cloudflare Worker and its database, over HTTPS.
+//
+// **There were two.** The other was a folder in the user's iCloud Drive, which needed nothing set
+// up — and never said whether it had carried anything. A cursor cannot move over a route that
+// gives no answer, so it went (see README.md).
 //
 // **The plugin encrypts, and nothing downstream decrypts.** The key reaches the phone by QR,
 // off the network, so the Worker never sees it — which is what makes a place the user merely
@@ -257,29 +259,16 @@ func push(in input, _ []string) error {
 	return nil
 }
 
-// theRoutesFromHere is the part of the usage that differs by machine: a mac has two roads to a
-// phone and everything else has one.
+// theRouteFromHere is the paragraph of the usage that names where the records go.
 //
-// **A road this machine does not have is not worth a line.** The iCloud folder is a mac's own app
-// container, so on anything else the paragraph describing it is a paragraph about somebody else's
-// computer — printed first, above the one road the reader can actually take.
-func theRoutesFromHere() string {
-	if icloudIsARoadHere() {
-		return `Two routes carry the same records:
+// **There is one route, and it is the same on every machine.** There were two: the other was the
+// app's own iCloud folder, which needed nothing set up and told nobody whether it had carried
+// anything. It went with the version this text belongs to (see plugin/README.md), and with it went
+// the paragraph that differed by OS.
+func theRouteFromHere() string {
+	return `One route carries the records:
 
-  mac      the app's own iCloud folder. Nothing to set up, no account, no key to hand over.
-           It turns itself on once you have opened the app on your phone — that is what makes
-           the folder exist, so 'app' is where this starts and until then there is nothing
-           else to do here.
-  anywhere your own Cloudflare Worker, over HTTPS. 'setup' stands it up in your account.`
-	}
-	return `One route carries the records from this machine:
-
-  your own Cloudflare Worker, over HTTPS. 'setup' stands it up in your account.
-
-(There is a second one, the app's own iCloud folder, and it is a mac's: no other OS has an app
-container for the phone to read. Nothing here has to be turned off for it — a place this machine
-does not have is a place nothing is carried to.)`
+  your own Cloudflare Worker, over HTTPS. 'setup' stands it up in your account.`
 }
 
 func usage() {
@@ -317,8 +306,8 @@ in your account is yours — uninstalling this plugin does not take it away.
 
 Those two, 'app' and 'qr' are on the settings screen as buttons, numbered in the order they are
 pressed, which is the only route for someone who has no terminal to type any of this into. 'app'
-is the first of them: the phone is what reads all this, and the iCloud folder does not exist until
-the app has been opened on one.
+is the first of them: the phone is what reads all this, and nothing here is worth standing up
+until there is one to read it.
 
 With no arguments the plugin is an observation hook: Amenbo fires it when the project changed,
 which is what tells it the phone is now behind. It carries what moved on its own, so 'push' is
@@ -327,11 +316,11 @@ fallen behind for a reason nobody can see.
 
 Settings — **one of them is yours, and three are not.**
 
-  %s          which of the places above this may carry to. It can only take one away:
-                  a place you tick still has to exist before anything reaches it, so ticking
-                  one never puts the settings at odds with what is actually there. Tick none
-                  and the plugin stays on and carries nowhere. 'check' says where it is
-                  reaching right now
+  %s          whether this may carry to the place above. It can only take it away: ticking
+                  it still needs the Worker to exist before anything reaches it, so the
+                  setting is never at odds with what is actually there. Tick nothing and the
+                  plugin stays on and carries nowhere. 'check' says where it is reaching
+                  right now
 
 'setup' writes the other three, and there is nothing to type in any of them:
   %s      the endpoint it deployed
@@ -342,10 +331,8 @@ Every phone gets its own read token, issued when you pair it, so losing one is o
 rather than every phone to pair again. 'qr' is how one is issued: the code it puts on screen is
 read by the camera and never goes over the network, which is what keeps the key out of the Worker.
 'revoke' is the other end of that — one phone stops reading and the rest never notice.
-
-The iCloud folder needs none of that: it holds one file per record, the folder itself is what the
-phone reads, and a record you delete here is a file that goes away.`,
-		pluginName, appStoreLink, theRoutesFromHere(),
+`,
+		pluginName, appStoreLink, theRouteFromHere(),
 		pluginName, pluginName, pluginName, pluginName, pluginName, pluginName, pluginName, pluginName,
 		configRoutes, configWorkerURL, configAuthToken, configEncryptionKey)
 }

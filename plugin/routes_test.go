@@ -7,15 +7,14 @@ import (
 	"testing"
 )
 
-// bothPlacesStanding stands both places up — a folder a test may write in, and the three settings
-// the Cloudflare route needs — so that what a declaration does can be read on its own.
+// thePlaceStanding stands the one place up — the three settings the Cloudflare route needs — so
+// that what a declaration does can be read on its own.
 //
 // The declaration is a pointer because **the empty string is an answer**: it is how a form with
 // every place ticked off reaches the plugin, and nil is the different fact of Amenbo not sending
 // the setting at all.
-func bothPlacesStanding(t *testing.T, declared *string) input {
+func thePlaceStanding(t *testing.T, declared *string) input {
 	t.Helper()
-	withICloud(t, true)
 	t.Setenv(envAuthToken, "a-throwaway-token")
 	t.Setenv(envEncryptionKey, throwawayKey)
 	settings := map[string]any{configWorkerURL: "https://viewer.example.workers.dev"}
@@ -36,14 +35,13 @@ func TestTickingAPlaceOffStopsItEvenThoughItStands(t *testing.T) {
 		says    *string
 		carries []string
 	}{
-		{"an Amenbo that does not send the setting", nil, []string{"the iCloud Drive folder", "the Cloudflare Worker"}},
-		{"both ticked", ticked("icloud,cloudflare"), []string{"the iCloud Drive folder", "the Cloudflare Worker"}},
-		{"only the folder", ticked("icloud"), []string{"the iCloud Drive folder"}},
-		{"only the Worker", ticked("cloudflare"), []string{"the Cloudflare Worker"}},
+		{"an Amenbo that does not send the setting", nil, []string{"the Cloudflare Worker"}},
+		{"the Worker ticked", ticked("cloudflare"), []string{"the Cloudflare Worker"}},
+		{"a place this build no longer has", ticked("icloud"), nil},
 		{"every one of them ticked off", ticked(""), nil},
 	} {
 		t.Run(declared.what, func(t *testing.T) {
-			in := bothPlacesStanding(t, declared.says)
+			in := thePlaceStanding(t, declared.says)
 
 			open := routesFor(in)
 
@@ -60,14 +58,12 @@ func TestTickingAPlaceOffStopsItEvenThoughItStands(t *testing.T) {
 }
 
 // The other half of the bound: a place ticked on is still not carried to when it is not there.
-// The folder is made by the OS on a trigger this plugin cannot pull, so a tick that could turn it
-// on would be a setting the user cannot make true.
+// What makes the Worker there is `setup` having stood it up, which no tick can do.
 func TestTickingAPlaceOnDoesNotMakeItExist(t *testing.T) {
-	withICloud(t, false)
 	t.Setenv(envAuthToken, "")
 	t.Setenv(envEncryptionKey, "")
 
-	open := routesFor(fired("task.done", map[string]any{configRoutes: "icloud,cloudflare"}))
+	open := routesFor(fired("task.done", map[string]any{configRoutes: "cloudflare"}))
 
 	if len(open) != 0 {
 		t.Errorf("%d route(s) carrying to places that are not there", len(open))
@@ -78,7 +74,7 @@ func TestTickingAPlaceOnDoesNotMakeItExist(t *testing.T) {
 // up. A sentence sending someone to `setup` over a choice they made on purpose would have them
 // undo it looking for a problem that is not there.
 func TestTickingNoneIsNotReadAsNothingBeingSetUp(t *testing.T) {
-	in := bothPlacesStanding(t, ticked(""))
+	in := thePlaceStanding(t, ticked(""))
 
 	err := nothingIsReaching(in)
 
@@ -92,7 +88,6 @@ func TestTickingNoneIsNotReadAsNothingBeingSetUp(t *testing.T) {
 
 // And with nothing ticked off, nowhere to carry is the ordinary waiting install.
 func TestNothingSetUpIsStillTheSentenceAboutSettingUp(t *testing.T) {
-	withICloud(t, false)
 	t.Setenv(envAuthToken, "")
 	t.Setenv(envEncryptionKey, "")
 
@@ -106,67 +101,16 @@ func TestNothingSetUpIsStillTheSentenceAboutSettingUp(t *testing.T) {
 	}
 }
 
-// **Only the roads this machine has.** The iCloud folder is a mac's app container and nothing
-// else has one, so a line telling a Windows user to open the app on a phone and wait for a folder
-// names a road that will never appear for them — ahead of the one road they do have.
-func TestTheWayInNamesOnlyTheRoadsThisMachineHas(t *testing.T) {
-	for _, machine := range []struct {
-		what string
-		mac  bool
-	}{{"a mac", true}, {"anything else", false}} {
-		t.Run(machine.what, func(t *testing.T) {
-			was := icloudIsARoadHere
-			icloudIsARoadHere = func() bool { return machine.mac }
-			t.Cleanup(func() { icloudIsARoadHere = was })
-
-			said := theWayInFromHere()
-
-			if !strings.Contains(said, "setup") {
-				t.Errorf("%q does not name the road every machine has", said)
-			}
-			if waits := strings.Contains(said, "open Amenbo Viewer"); waits != machine.mac {
-				t.Errorf("%q tells a machine to wait for a folder it %v have", said, map[bool]string{true: "does", false: "does not"}[machine.mac])
-			}
-		})
-	}
-}
-
-// The same on the page: a paragraph about a mac's folder, printed first on a machine that has no
-// such thing, is a paragraph about somebody else's computer.
-func TestTheUsageNamesOnlyTheRoutesThisMachineHas(t *testing.T) {
-	was := icloudIsARoadHere
-	icloudIsARoadHere = func() bool { return false }
-	t.Cleanup(func() { icloudIsARoadHere = was })
-
-	_, page := capture(t, usage)
-
-	if strings.Contains(page, "Two routes carry") {
-		t.Error("a machine with one route is told it has two")
-	}
-	if !strings.Contains(page, "Cloudflare Worker") {
-		t.Error("the page does not name the route this machine does have")
-	}
-	if !strings.Contains(page, "mac") {
-		t.Error("the page never says why there is only one — a reader who has heard of the other is left guessing")
-	}
-}
-
 // Pairing and cutting a phone off are the Worker's alone, so what they say when there is no
-// Worker is about that one route — on every OS, and never about a folder that holds no tokens.
+// Worker is about standing one up — and never about a place that holds no tokens.
 func TestTheCloudflareOnlyCommandsSayTheCloudflareThing(t *testing.T) {
-	for _, mac := range []bool{true, false} {
-		was := icloudIsARoadHere
-		icloudIsARoadHere = func() bool { return mac }
+	_, err := storeFor(fired("", nil))
 
-		_, err := storeFor(fired("", nil))
-
-		icloudIsARoadHere = was
-		if !errors.Is(err, errNoCloudflareRoute) {
-			t.Fatalf("%v is not the Cloudflare route's own answer", err)
-		}
-		if strings.Contains(err.Error(), "iCloud") {
-			t.Errorf("%v sends someone pairing a phone to a folder that holds no tokens", err)
-		}
+	if !errors.Is(err, errNoCloudflareRoute) {
+		t.Fatalf("%v is not the Cloudflare route's own answer", err)
+	}
+	if strings.Contains(err.Error(), "iCloud") {
+		t.Errorf("%v sends someone pairing a phone to a place this build no longer has", err)
 	}
 }
 
@@ -198,28 +142,24 @@ func answeredCheck(t *testing.T, in input) (ok bool, message string) {
 // The form is three readonly boxes and a set of ticks, and none of it answers the one question a
 // person has: is anything reaching a phone right now. This is that answer.
 func TestTheCheckSaysWhereRecordsAreReaching(t *testing.T) {
-	ok, said := answeredCheck(t, bothPlacesStanding(t, ticked("icloud,cloudflare")))
+	ok, said := answeredCheck(t, thePlaceStanding(t, ticked("cloudflare")))
 
 	if !ok {
-		t.Errorf("both places standing and ticked read as nothing reaching: %q", said)
+		t.Errorf("the place standing and ticked read as nothing reaching: %q", said)
 	}
-	if !strings.Contains(said, "iCloud") || !strings.Contains(said, "Cloudflare") {
-		t.Errorf("%q does not name both places", said)
+	if !strings.Contains(said, "Cloudflare") {
+		t.Errorf("%q does not name the place it is reaching", said)
 	}
 }
 
 // A place ticked and not there is what a person most needs told: the form said nothing was wrong,
 // and nothing has been reaching a phone.
 func TestTheCheckSaysWhatATickedPlaceIsWaitingOn(t *testing.T) {
-	withICloud(t, true)
 	t.Setenv(envAuthToken, "")
 	t.Setenv(envEncryptionKey, "")
 
-	ok, said := answeredCheck(t, fired("", map[string]any{configRoutes: "icloud,cloudflare"}))
+	_, said := answeredCheck(t, fired("", map[string]any{configRoutes: "cloudflare"}))
 
-	if !ok {
-		t.Errorf("the folder is standing and ticked, so something is reaching: %q", said)
-	}
 	if !strings.Contains(said, "Waiting on") || !strings.Contains(said, "setup") {
 		t.Errorf("%q does not say what the Cloudflare route is waiting on", said)
 	}
@@ -228,11 +168,10 @@ func TestTheCheckSaysWhatATickedPlaceIsWaitingOn(t *testing.T) {
 // A place nobody ticked is not mentioned. It was turned off on purpose, and a form that repeats
 // every choice back reads as a list of faults.
 func TestTheCheckDoesNotReportAPlaceNobodyTicked(t *testing.T) {
-	withICloud(t, true)
 	t.Setenv(envAuthToken, "")
 	t.Setenv(envEncryptionKey, "")
 
-	_, said := answeredCheck(t, fired("", map[string]any{configRoutes: "icloud"}))
+	_, said := answeredCheck(t, fired("", map[string]any{configRoutes: ""}))
 
 	if strings.Contains(said, "Cloudflare") {
 		t.Errorf("%q reports a place the user ticked off", said)
@@ -243,7 +182,7 @@ func TestTheCheckDoesNotReportAPlaceNobodyTicked(t *testing.T) {
 // door, so a check that says no over a pause somebody asked for would refuse to enable the plugin
 // they were pausing.
 func TestTheCheckSaysSoWhenNothingIsTickedWithoutCallingItWrong(t *testing.T) {
-	ok, said := answeredCheck(t, bothPlacesStanding(t, ticked("")))
+	ok, said := answeredCheck(t, thePlaceStanding(t, ticked("")))
 
 	if !ok {
 		t.Errorf("a pause the user asked for was refused as a wrong setting: %q", said)
@@ -253,10 +192,9 @@ func TestTheCheckSaysSoWhenNothingIsTickedWithoutCallingItWrong(t *testing.T) {
 	}
 }
 
-// A fresh install carries nowhere by definition, and the folder it will use appears only after
-// the app has been opened on a phone — which nobody can do from a plugin that will not enable.
+// A fresh install carries nowhere by definition: `setup` is what stands the route up, and nobody
+// runs it from a plugin that will not enable.
 func TestTheCheckLetsAFreshInstallBeEnabled(t *testing.T) {
-	withICloud(t, false)
 	t.Setenv(envAuthToken, "")
 	t.Setenv(envEncryptionKey, "")
 
@@ -269,7 +207,6 @@ func TestTheCheckLetsAFreshInstallBeEnabled(t *testing.T) {
 
 // What it can honestly refuse: a place ticked on, standing, and still impossible to carry with.
 func TestTheCheckRefusesSettingsThatCannotBeCarriedWith(t *testing.T) {
-	withICloud(t, false)
 	t.Setenv(envAuthToken, "a-throwaway-token")
 	t.Setenv(envEncryptionKey, "not-a-key")
 
@@ -318,90 +255,18 @@ func TestEveryPlaceTickedOffIsNotTheSameAsASettingThatNeverCame(t *testing.T) {
 	}
 }
 
-// **Three states, and a line that tells them apart.** A place that is carrying, a place that is
-// ticked and waiting, and a place this machine does not have at all — the third is the one that
-// used to wear the second's words, telling a Windows user to open the app on a phone and wait for
-// a folder that never comes.
-func TestTheCheckTellsAPlaceThatIsNotHereFromOneThatIsWaiting(t *testing.T) {
-	was := icloudIsARoadHere
-	icloudIsARoadHere = func() bool { return false }
-	t.Cleanup(func() { icloudIsARoadHere = was })
-	withICloud(t, false)
-	t.Setenv(envAuthToken, "a-throwaway-token")
-	t.Setenv(envEncryptionKey, throwawayKey)
-
-	_, said := answeredCheck(t, fired("", map[string]any{
-		configRoutes:    "icloud,cloudflare",
-		configWorkerURL: "https://viewer.example.workers.dev",
-	}))
-
-	if strings.Contains(said, "Waiting on the iCloud") {
-		t.Errorf("%q tells this machine to wait for a place it will never have", said)
-	}
-	if !strings.Contains(said, "no such place") {
-		t.Errorf("%q does not say the folder is not on this machine at all", said)
-	}
-	if strings.Contains(said, "Carrying to the iCloud folder") {
-		t.Errorf("%q says a place that is not here is carrying", said)
-	}
-}
-
-// And a place nobody ticked stays out of the line, whichever machine this is — that absence is
-// how "turned off" reads, and it is the one of the three states that needs no words.
-func TestAPlaceThatIsNotHereAndNotTickedIsStillNotMentioned(t *testing.T) {
-	was := icloudIsARoadHere
-	icloudIsARoadHere = func() bool { return false }
-	t.Cleanup(func() { icloudIsARoadHere = was })
-	withICloud(t, false)
-	t.Setenv(envAuthToken, "a-throwaway-token")
-	t.Setenv(envEncryptionKey, throwawayKey)
-
-	_, said := answeredCheck(t, fired("", map[string]any{
-		configRoutes:    "cloudflare",
-		configWorkerURL: "https://viewer.example.workers.dev",
-	}))
-
-	if strings.Contains(said, "iCloud") {
-		t.Errorf("%q reports a place the user ticked off as though it were a fault", said)
-	}
-}
-
-// On a mac the folder is a place that will appear, so it keeps the words that say how.
-func TestOnAMacTheFolderIsStillSomethingToWaitFor(t *testing.T) {
-	was := icloudIsARoadHere
-	icloudIsARoadHere = func() bool { return true }
-	t.Cleanup(func() { icloudIsARoadHere = was })
-	withICloud(t, false)
-	t.Setenv(envAuthToken, "")
-	t.Setenv(envEncryptionKey, "")
-
-	_, said := answeredCheck(t, fired("", map[string]any{configRoutes: "icloud"}))
-
-	if !strings.Contains(said, "open Amenbo Viewer") {
-		t.Errorf("%q does not say how the folder appears", said)
-	}
-	if strings.Contains(said, "no such place") {
-		t.Errorf("%q writes a mac's own folder off", said)
-	}
-}
-
 // **Where to get it, and not only what to do with it.** Every sentence that asks for the app to
 // be opened on a phone is read by somebody who may not have it, and one that names no place to
 // get it sends them off to look with nothing to look for.
 func TestEverySentenceThatAsksForTheAppSaysWhereToGetIt(t *testing.T) {
-	asAMac(t, true)
-	withICloud(t, false)
 	t.Setenv(envAuthToken, "")
 	t.Setenv(envEncryptionKey, "")
 
-	_, waiting := answeredCheck(t, fired("", map[string]any{configRoutes: "icloud,cloudflare"}))
 	_, wayIn := capture(t, func() { usage() })
 
 	for what, said := range map[string]string{
-		"the check's line about the folder": waiting,
-		"the way in from a mac":             onAMac(t, true),
-		"the way in from anywhere else":     onAMac(t, false),
-		"the usage":                         wayIn,
+		"the way in from here": theWayInFromHere(),
+		"the usage":            wayIn,
 	} {
 		if !strings.Contains(said, appStoreLink) {
 			t.Errorf("%s does not say where the app is: %q", what, said)
@@ -409,39 +274,23 @@ func TestEverySentenceThatAsksForTheAppSaysWhereToGetIt(t *testing.T) {
 	}
 }
 
-// **The line has a budget, and the address spends some of it.** The worst case is the one a fresh
-// install on a mac reads — both places ticked, neither standing — so it is the case that must fit
-// whole: cut, what goes is the tail, which is the Cloudflare route's half of what to do next.
-func TestTheLineAFreshMacReadsFitsWholeWithTheAddressOnIt(t *testing.T) {
-	asAMac(t, true)
-	withICloud(t, false)
+// **The line has a budget.** The worst case is the one a fresh install reads — the place ticked
+// and not standing — so it is the case that must fit whole.
+//
+// The App Store address used to ride in this line, on the sentence that asked for the app to be
+// opened once so a mac's iCloud folder would appear. That route is gone and so is that sentence:
+// what stands the Cloudflare route up is `setup`, and the settings screen puts the app's own page
+// on a code rather than spelling an address into 200 bytes.
+func TestTheLineAFreshInstallReadsFitsWhole(t *testing.T) {
 	t.Setenv(envAuthToken, "")
 	t.Setenv(envEncryptionKey, "")
 
-	_, said := answeredCheck(t, fired("", map[string]any{configRoutes: "icloud,cloudflare"}))
+	_, said := answeredCheck(t, fired("", map[string]any{configRoutes: "cloudflare"}))
 
 	if strings.HasSuffix(said, "…") {
-		t.Errorf("the line a fresh mac reads is cut at %d bytes: %q", checkAnswerBytes, said)
+		t.Errorf("the line a fresh install reads is cut at %d bytes: %q", checkAnswerBytes, said)
 	}
-	if !strings.Contains(said, appStoreLink) || !strings.Contains(said, "setup") {
-		t.Errorf("%q has lost one of the two things to do next", said)
+	if !strings.Contains(said, "setup") {
+		t.Errorf("%q has lost what to do next", said)
 	}
-}
-
-// asAMac answers the question of whether this machine has an app container at all, for as long
-// as the test lasts — the suite runs on machines of both kinds, and these lines differ by it.
-func asAMac(t *testing.T, mac bool) {
-	t.Helper()
-	was := icloudIsARoadHere
-	icloudIsARoadHere = func() bool { return mac }
-	t.Cleanup(func() { icloudIsARoadHere = was })
-}
-
-// onAMac is what to do about having nowhere to carry to, as the machine named would read it.
-func onAMac(t *testing.T, mac bool) string {
-	t.Helper()
-	was := icloudIsARoadHere
-	icloudIsARoadHere = func() bool { return mac }
-	defer func() { icloudIsARoadHere = was }()
-	return theWayInFromHere()
 }

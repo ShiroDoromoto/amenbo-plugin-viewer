@@ -421,8 +421,8 @@ func TestSetupForgetsWhatWasSentToTheStoreBeforeItAndNothingElse(t *testing.T) {
 	watched(t, account)
 	remembering(t)
 	if err := writeState(state{Routes: map[string]carried{
-		routeCloudflare: {Version: 12345, Cursor: 42},
-		routeICloud:     {Version: 12345, Cursor: 42},
+		routeCloudflare:                    {Version: 12345, Cursor: 42},
+		"a-route-this-build-does-not-have": {Version: 12345, Cursor: 42},
 	}}); err != nil {
 		t.Fatal(err)
 	}
@@ -440,8 +440,8 @@ func TestSetupForgetsWhatWasSentToTheStoreBeforeItAndNothingElse(t *testing.T) {
 	if _, known := remembered.Routes[routeCloudflare]; known {
 		t.Error("the send still remembers a store that is not there any more")
 	}
-	if left := remembered.Routes[routeICloud]; left.Cursor != 42 {
-		t.Errorf("the folder was left at %+v, and it is owed a whole placement it has no reason for", left)
+	if left := remembered.Routes["a-route-this-build-does-not-have"]; left.Cursor != 42 {
+		t.Errorf("the route beside it was left at %+v, and it is owed a whole placement it has no reason for", left)
 	}
 }
 

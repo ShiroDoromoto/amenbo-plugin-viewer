@@ -40,9 +40,9 @@ func TestEveryLanguageAmenboOffersHasARow(t *testing.T) {
 // measured against. It is written out rather than derived, so a phrase added to the code and
 // forgotten in the languages shows up here as a line nobody added.
 var everyPhrase = []phrase{
-	phICloudFolder, phCloudflareWorker, phOpenTheAppOnce, phStandTheWorkerUp,
+	phCloudflareWorker, phStandTheWorkerUp,
 	phStandingWithNoKey, phStandingBadKey, phCarryingTo, phCarryingNowhere,
-	phNothingIsTicked, phWaitingOn, phNoSuchPlaceHere, phNowhere, phAnd, phComma,
+	phNothingIsTicked, phWaitingOn, phNowhere, phAnd, phComma,
 	phNothingToDrawOn, phCodeNotDrawn, phPointTheCamera,
 	phImageNotOpened, phCodeLeftWithKey, phCodeLeftBehind, phCodeIsOnScreen,
 	phNoScreenForTheTokenPage, phTokenPageNotOpened, phTokenPageIsOpen,
@@ -113,7 +113,7 @@ func TestALanguageThisBuildHasNotHeardOfFallsBackToEnglish(t *testing.T) {
 // address is an address in every one of them.
 func TestTheCheckAnswersInTheStoresLanguage(t *testing.T) {
 	inJapanese(t)
-	in := bothPlacesStanding(t, ticked("cloudflare"))
+	in := thePlaceStanding(t, ticked("cloudflare"))
 
 	said := whatIsReaching(screen, routesStanding(in))
 
@@ -130,7 +130,6 @@ func TestTheCheckAnswersInTheStoresLanguage(t *testing.T) {
 // is behind.
 func TestTheLogASendLeavesIsEnglishWhateverTheStoreReadsIn(t *testing.T) {
 	inJapanese(t)
-	withICloud(t, false)
 	t.Setenv(envAuthToken, "a-throwaway-token")
 	t.Setenv(envEncryptionKey, "not-a-key")
 	in := fired("task.done", map[string]any{
@@ -168,31 +167,25 @@ func TestAButtonAnswersInTheStoresLanguage(t *testing.T) {
 	}
 }
 
-// **Every language has to fit the same 200 bytes**, and they do not spend them
-// alike: the App Store address is 45 of them in all nineteen, and a Devanagari or Thai character
-// costs three where a Latin one costs one. There are two worst cases and they are worst on
-// different machines — a fresh mac waits on both places and pays for the address, and everything
-// else waits on one and spends the words for a place it will never have — so both are measured.
+// **Every language has to fit the same 200 bytes**, and they do not spend them alike: the App
+// Store address is 45 of them in all nineteen, and a Devanagari or Thai character costs three
+// where a Latin one costs one. The worst case is a fresh install — the place ticked, nothing
+// standing — which is the line that pays for the address as well as the waiting.
 //
-// Cut, what goes is the tail, which is the Cloudflare route's half of what to do next. That is
-// the half a reader would have to guess at, and guessing is what this line exists to stop.
+// Cut, what goes is the tail, which is what to do next. That is the half a reader would have to
+// guess at, and guessing is what this line exists to stop.
 func TestEveryLanguageFitsTheLineAFreshInstallReads(t *testing.T) {
-	withICloud(t, false)
 	t.Setenv(envAuthToken, "")
 	t.Setenv(envEncryptionKey, "")
-	in := fired("", map[string]any{configRoutes: "icloud,cloudflare"})
+	standing := routesStanding(fired("", map[string]any{configRoutes: routeCloudflare}))
 
-	for _, mac := range []bool{true, false} {
-		asAMac(t, mac)
-		standing := routesStanding(in)
-		for language := range wordings {
-			said := whatIsReaching(wordsIn(language), standing)
-			if strings.HasSuffix(said, "…") {
-				t.Errorf("on a mac=%v, %s is cut at %d bytes: %q", mac, language, checkAnswerBytes, said)
-			}
-			if !strings.Contains(said, "setup") {
-				t.Errorf("on a mac=%v, %s has lost the Cloudflare half of what to do next: %q", mac, language, said)
-			}
+	for language := range wordings {
+		said := whatIsReaching(wordsIn(language), standing)
+		if strings.HasSuffix(said, "…") {
+			t.Errorf("%s is cut at %d bytes: %q", language, checkAnswerBytes, said)
+		}
+		if !strings.Contains(said, "setup") {
+			t.Errorf("%s has lost what to do next: %q", language, said)
 		}
 	}
 }
