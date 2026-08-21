@@ -456,8 +456,13 @@ func TestSetupLeavesADatabaseThatAlreadyHasItsTables(t *testing.T) {
 			t.Errorf("the schema was laid down over one that was already there: %q", statement)
 		}
 	}
-	if !sameNames(account.ledger, laidDownBeforeTheLedger) {
-		t.Errorf("the ledger it was given does not say what it already had: %v", account.ledger)
+	// What it had is written down first, and whatever was added after that is applied on top —
+	// so it ends up saying it has had them all.
+	if !sameNames(account.ledger[:len(laidDownBeforeTheLedger)], laidDownBeforeTheLedger) {
+		t.Errorf("the ledger does not open with what it already had: %v", account.ledger)
+	}
+	if !sameNames(account.ledger, everyMigration(t)) {
+		t.Errorf("it did not go on to apply what it had not had: %v", account.ledger)
 	}
 }
 
