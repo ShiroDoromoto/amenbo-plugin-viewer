@@ -75,6 +75,16 @@
             "secret": true
           }
         ]
+      },
+      {
+        "cmd": "qr",
+        "label": "3. Pair a phone",
+        "ask": [
+          {
+            "key": "label",
+            "label": "What to call this phone"
+          }
+        ]
       }
     ]
   },
@@ -117,7 +127,7 @@
       },
       {
         "cmd": "qr",
-        "does": "Pairs one phone: issues a read token, registers its hash, puts endpoint/token/key/name on a QR the camera reads, off the network. --label names it (one in use is refused); --terminal draws it here"
+        "does": "Pairs one phone: issues a read token, registers its hash, puts endpoint/token/key/name on a QR the camera reads, off the network. --label or the settings screen box names it; --terminal draws it here"
       }
     ]
   }

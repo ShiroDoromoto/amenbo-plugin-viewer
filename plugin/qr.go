@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	qrcode "rsc.io/qr"
 )
@@ -54,6 +55,32 @@ type pairing struct {
 // something other than ASCII costs one version more, and that is the whole of how this grows:
 // what is on the code is four short fields and a name, not anything that gets longer with use.
 const codeScale = 10
+
+// The two ways the phone's name reaches this run, before the terminal is asked at all.
+//
+// askLabel is what the manifest declares the settings screen to ask for when the button that runs
+// this is pressed: Amenbo hands the answer over in envAskLabel for that one run and saves nothing.
+// **It is not declared secret.** The name is what the person will be looking for when they cut
+// this phone off, so a box that hid what was typed into it would hide the one thing they have to
+// remember.
+const (
+	askLabel    = "label"
+	envAskLabel = "AMENBO_ASK_LABEL"
+)
+
+// forgetTheCodeCommand is the word this binary calls itself back with, and it is on neither the
+// manifest nor the usage: nobody is meant to type it. It is how the image lets go of itself once
+// the phone has had its moment with it.
+const forgetTheCodeCommand = "forget-the-code"
+
+// codeDirPrefix names the directory each code is written in, and it is also the guard on the word
+// above: forgetting a code removes a directory this one wrote, and nothing else the user has.
+const codeDirPrefix = "amenbo-viewer-pairing-"
+
+// codeLifetime is how long the image stays before it takes itself away. It is a window rather
+// than a prompt because the button on the settings screen has no terminal to answer at — long
+// enough to unlock a phone and point it, short enough that the key is not left lying about.
+const codeLifetime = 2 * time.Minute
 
 func qr(in input, args []string) error {
 	options := flag.NewFlagSet("qr", flag.ContinueOnError)
@@ -200,14 +227,15 @@ func show(code *qrcode.Code, inTerminal bool) (shown, left string, err error) {
 	return "terminal", "", nil
 }
 
-// openAsAnImage writes the code out and hands it to whatever opens images, then waits to be told
-// it has been read so the file can go.
+// openAsAnImage writes the code out, hands it to whatever opens images, and sets its removal
+// going.
 //
 // **What is on disk is the key.** It is written where only this user can reach it and taken away
-// as soon as the phone has had it — and when there is nobody to ask, it is left with its path
-// said out loud rather than removed from under a viewer that is still showing it.
+// again by a run of this binary that outlives this one — nobody is asked to say when the phone is
+// done, because the button on the settings screen has no terminal to be asked at, and a file
+// waiting on a person who is not there waits for good.
 func openAsAnImage(code *qrcode.Code) (left string, err error) {
-	dir, err := os.MkdirTemp("", "amenbo-viewer-pairing-")
+	dir, err := os.MkdirTemp("", codeDirPrefix)
 	if err != nil {
 		return "", err
 	}
@@ -221,16 +249,49 @@ func openAsAnImage(code *qrcode.Code) (left string, err error) {
 		return "", err
 	}
 
-	terminal, err := os.OpenFile(terminalPath, os.O_RDWR, 0)
-	if err != nil {
-		logf("%s: the code is at %s, and it carries the key — delete it once the phone has read it.", pluginName, path)
+	if err := eraseLater(dir); err != nil {
+		logf("%s: the code is at %s, and it carries the key — delete it once the phone has read it (%v).", pluginName, path, err)
 		return path, nil
 	}
-	defer terminal.Close()
-	fmt.Fprint(terminal, "\nthe pairing code is on screen. Press return once the phone has read it: ")
-	bufio.NewReader(terminal).ReadString('\n')
-	os.RemoveAll(dir)
+	logf("%s: the code is on screen, and the image goes in %d minutes — read it with the phone before then.",
+		pluginName, int(codeLifetime/time.Minute))
 	return "", nil
+}
+
+// eraseLater sets the code's own removal going, in a run of this binary that outlives this one.
+//
+// It is a variable so a test can see what was scheduled without starting anything: under a test
+// the executable is the test binary, and handing it these arguments would run the tests again
+// rather than sleep through a code's life.
+var eraseLater = func(dir string) error {
+	self, err := os.Executable()
+	if err != nil {
+		return err
+	}
+	child := exec.Command(self, forgetTheCodeCommand, dir)
+	// It is given nothing: no channels, so Amenbo is not left holding a pipe open on a run that
+	// has already answered, and no environment, so the key this run was handed does not sit in a
+	// process listing for as long as the image lasts.
+	child.Env = []string{}
+	detached(child)
+	return child.Start()
+}
+
+// forgetTheCode is the far side of that: it waits out the code's life and takes the image away.
+//
+// The directory it is given has to be one of ours by name. The word is on no manifest, but it is
+// still a word this binary answers to, and one that removed whatever it was pointed at would be
+// a delete anybody on the machine could aim.
+func forgetTheCode(args []string) error {
+	if len(args) != 1 {
+		return fmt.Errorf("%s takes the one directory a code was written in", forgetTheCodeCommand)
+	}
+	dir := args[0]
+	if !strings.HasPrefix(filepath.Base(dir), codeDirPrefix) {
+		return fmt.Errorf("%q is not a pairing code this wrote", dir)
+	}
+	time.Sleep(codeLifetime)
+	return os.RemoveAll(dir)
 }
 
 // thereIsAScreen says whether opening something on screen is worth trying. Everywhere but Linux
@@ -319,7 +380,15 @@ func blocksFor(code *qrcode.Code) string {
 // **A name is asked for rather than made up.** The store refuses a name that is already there, so
 // a default would pair the first phone and turn away every one after it — and the name is what
 // they will have to recognise when they cut one off.
+//
+// The settings screen asks its own box before the button runs, so an answer waiting in the
+// environment is this run's and there is nothing left to ask. A terminal is what is left when
+// nobody came in that way.
 func askForALabel() (string, error) {
+	if named := strings.TrimSpace(os.Getenv(envAskLabel)); named != "" {
+		return named, nil
+	}
+
 	terminal, err := os.OpenFile(terminalPath, os.O_RDWR, 0)
 	if err != nil {
 		return "", fmt.Errorf("there is no terminal here to ask on — name the phone with --label: %w", err)

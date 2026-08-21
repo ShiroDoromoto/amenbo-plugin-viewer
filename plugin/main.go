@@ -176,6 +176,10 @@ func run(in input, args []string) int {
 		return do(listPhones(in, args[1:]))
 	case "revoke":
 		return do(revoke(in, args[1:]))
+	case forgetTheCodeCommand:
+		// Not a command anyone types: `qr` calls this binary back with it so the image it left
+		// on disk goes away on its own. It is dispatched here and advertised nowhere.
+		return do(forgetTheCode(args[1:]))
 	case "help", "-h", "--help":
 		usage()
 		return 0
@@ -246,8 +250,8 @@ Cloudflare token screen with the permissions already ticked, and 'setup' takes b
 page gives you. That token stands the Worker and the database up and is not kept. What it leaves
 in your account is yours — uninstalling this plugin does not take it away.
 
-Both are on the settings screen as buttons, in that order, which is the only route for someone who
-has no terminal to type any of this into.
+Those two and 'qr' are on the settings screen as buttons, numbered in the order they are pressed,
+which is the only route for someone who has no terminal to type any of this into.
 
 With no arguments the plugin is an observation hook: Amenbo fires it when the project changed,
 which is what tells it the phone is now behind. It carries what moved on its own, so 'push' is
