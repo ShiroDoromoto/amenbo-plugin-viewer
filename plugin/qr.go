@@ -75,7 +75,11 @@ const forgetTheCodeCommand = "forget-the-code"
 
 // codeDirPrefix names the directory each code is written in, and it is also the guard on the word
 // above: forgetting a code removes a directory this one wrote, and nothing else the user has.
-const codeDirPrefix = "amenbo-viewer-pairing-"
+//
+// It says code rather than pairing because more than one thing is drawn as one — the pairing code
+// and the app's address both come through here, and a window titled after pairing would be the
+// wrong word on the one that is only a link.
+const codeDirPrefix = "amenbo-viewer-code-"
 
 // codeLifetime is how long the image stays before it takes itself away. It is a window rather
 // than a prompt because the button on the settings screen has no terminal to answer at — long
@@ -128,7 +132,7 @@ func qr(in input, args []string) error {
 	if err != nil {
 		return err
 	}
-	shown, left, err := present(carried, *inTerminal)
+	shown, left, err := present(carried, *inTerminal, carriesTheKey)
 	if err != nil {
 		return err
 	}
@@ -183,18 +187,68 @@ func hashOf(token string) string {
 	return hex.EncodeToString(sum[:])
 }
 
+// appStoreLink is where the phone's half of this is got. It is the id form and carries no
+// country: an App Store address that names one sends everybody else's phone to a page that is
+// not for their store.
+const appStoreLink = "https://apps.apple.com/app/id6800196224"
+
+// getTheApp puts the App Store page on a code, for the camera that is going to install it.
+//
+// **The link's reader is a phone, and the screen it is drawn on is a PC.** Opening the page in
+// the browser here would land it on the machine that cannot install it, leaving the person to
+// carry the address across by hand — and the settings screen cannot write the address either,
+// since its labels and help are drawn as plain text.
+//
+// Nothing on this code is a secret, so it is the same image with the warnings off. It still goes
+// away on pairing's two minutes: the window is no shorter than a person needs to point a phone at
+// it, and a public link left on disk is still a file that piles up in the temporary directory.
+func getTheApp(_ input, args []string) error {
+	options := flag.NewFlagSet("app", flag.ContinueOnError)
+	options.SetOutput(errOut)
+	// The same escape `qr` has, for the same machine: over SSH to a mac the image opens on the
+	// console user's screen, which is not the screen the person asking is sitting at.
+	inTerminal := options.Bool("terminal", false, "draw the code in the terminal instead of opening it as an image")
+	if err := options.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return nil
+		}
+		return err
+	}
+
+	// Nothing to open an image on and nothing to draw blocks in: the address in words is what is
+	// left, and writing it out costs nothing when the page it names is public.
+	if !thereIsAScreen() && !thereIsATerminal() {
+		logf("%s: there is nothing here to draw a code on. Amenbo Viewer is at %s", pluginName, appStoreLink)
+		return nil
+	}
+	if _, _, err := present([]byte(appStoreLink), *inTerminal, carriesNoSecret); err != nil {
+		return fmt.Errorf("the code could not be drawn (%w) — Amenbo Viewer is at %s", err, appStoreLink)
+	}
+	logf("%s: point the phone's camera at the code. Amenbo Viewer is also at %s", pluginName, appStoreLink)
+	return nil
+}
+
+// What a code is carrying, named rather than spelled as a bare true and false at the call. What
+// turns on it is only what is said about the code once it is drawn: pairing puts the encryption
+// key in front of a camera, and getting the app puts a public address there — so one of the two
+// leaves something behind worth warning about, and the other leaves a link.
+const (
+	carriesTheKey   = true
+	carriesNoSecret = false
+)
+
 // present encodes what the phone is to read and puts it in front of the camera.
 //
 // It is a variable so a test can read what was about to be shown. The token on the code is the
 // one thing that has to match the hash the store was given, and once it has been drawn as a code
 // there is no reading it back out.
-var present = func(carried []byte, inTerminal bool) (shown, left string, err error) {
+var present = func(carried []byte, inTerminal, carriesASecret bool) (shown, left string, err error) {
 	code, err := qrcode.Encode(string(carried), qrcode.M)
 	if err != nil {
 		return "", "", err
 	}
 	code.Scale = codeScale
-	return show(code, inTerminal)
+	return show(code, inTerminal, carriesASecret)
 }
 
 // show puts the code where the camera can see it, and says how it did and what it left behind.
@@ -203,15 +257,15 @@ var present = func(carried []byte, inTerminal bool) (shown, left string, err err
 // its pixels are then belong to the operating system's own viewer rather than to whatever the
 // user's terminal is set to — and a code that reads only on some terminals is not one to hang the
 // whole of pairing on. The terminal is what is left when there is no screen to open it on.
-func show(code *qrcode.Code, inTerminal bool) (shown, left string, err error) {
+func show(code *qrcode.Code, inTerminal, carriesASecret bool) (shown, left string, err error) {
 	if !inTerminal && thereIsAScreen() {
-		left, err := openAsAnImage(code)
+		left, err := openAsAnImage(code, carriesASecret)
 		if err == nil {
 			return "image", left, nil
 		}
 		logf("%s: the image could not be opened (%v) — drawing it here instead", pluginName, err)
 	}
-	if err := drawInTheTerminal(code); err != nil {
+	if err := drawInTheTerminal(code, carriesASecret); err != nil {
 		return "", "", err
 	}
 	return "terminal", "", nil
@@ -224,12 +278,12 @@ func show(code *qrcode.Code, inTerminal bool) (shown, left string, err error) {
 // again by a run of this binary that outlives this one — nobody is asked to say when the phone is
 // done, because the button on the settings screen has no terminal to be asked at, and a file
 // waiting on a person who is not there waits for good.
-func openAsAnImage(code *qrcode.Code) (left string, err error) {
+func openAsAnImage(code *qrcode.Code, carriesASecret bool) (left string, err error) {
 	dir, err := os.MkdirTemp("", codeDirPrefix)
 	if err != nil {
 		return "", err
 	}
-	path := filepath.Join(dir, "pairing.png")
+	path := filepath.Join(dir, "code.png")
 	if err := os.WriteFile(path, code.PNG(), 0o600); err != nil {
 		os.RemoveAll(dir)
 		return "", err
@@ -240,7 +294,11 @@ func openAsAnImage(code *qrcode.Code) (left string, err error) {
 	}
 
 	if err := eraseLater(dir); err != nil {
-		logf("%s: the code is at %s, and it carries the key — delete it once the phone has read it (%v).", pluginName, path, err)
+		if carriesASecret {
+			logf("%s: the code is at %s, and it carries the key — delete it once the phone has read it (%v).", pluginName, path, err)
+		} else {
+			logf("%s: the code is at %s, and nothing was started to take it away again (%v).", pluginName, path, err)
+		}
 		return path, nil
 	}
 	logf("%s: the code is on screen, and the image goes in %d minutes — read it with the phone before then.",
@@ -294,6 +352,18 @@ var thereIsAScreen = func() bool {
 	return os.Getenv("DISPLAY") != "" || os.Getenv("WAYLAND_DISPLAY") != ""
 }
 
+// thereIsATerminal says whether there is one here to draw a code in. It is asked before the
+// drawing rather than after, because what a failed draw falls back to is a screenful of blocks in
+// a log — and a log is not something a camera can be pointed at.
+var thereIsATerminal = func() bool {
+	terminal, err := os.OpenFile(terminalPath, os.O_RDWR, 0)
+	if err != nil {
+		return false
+	}
+	terminal.Close()
+	return true
+}
+
 // openInTheSystem hands what it is given to whatever the system opens that with — the pairing
 // image to an image viewer, a link to the browser. Each of these returns as soon as the handover
 // is done, which is what lets the run carry on and wait for the person instead of for the window.
@@ -314,17 +384,21 @@ var openInTheSystem = func(target string) error {
 // It goes to the terminal itself rather than to stderr, because Amenbo holds a plugin's stderr
 // until the run is over — and a code nobody can see while the run is waiting on them is no code
 // at all.
-func drawInTheTerminal(code *qrcode.Code) error {
+func drawInTheTerminal(code *qrcode.Code, carriesASecret bool) error {
 	drawn := blocksFor(code)
 	terminal, err := os.OpenFile(terminalPath, os.O_RDWR, 0)
 	if err != nil {
 		logf("%s: %s", pluginName, drawn)
-		logf("%s: that code carries the key, and it stays in this terminal's scrollback.", pluginName)
+		if carriesASecret {
+			logf("%s: that code carries the key, and it stays in this terminal's scrollback.", pluginName)
+		}
 		return nil
 	}
 	defer terminal.Close()
 	fmt.Fprint(terminal, "\n"+drawn+"\n")
-	fmt.Fprintln(terminal, "that code carries the key, and it stays in this terminal's scrollback.")
+	if carriesASecret {
+		fmt.Fprintln(terminal, "that code carries the key, and it stays in this terminal's scrollback.")
+	}
 	return nil
 }
 

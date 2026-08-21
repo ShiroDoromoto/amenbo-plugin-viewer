@@ -85,12 +85,16 @@
     "check": "check",
     "actions": [
       {
+        "cmd": "app",
+        "label": "1. Get the app on your phone"
+      },
+      {
         "cmd": "token",
-        "label": "1. Get a Cloudflare API token"
+        "label": "2. Get a Cloudflare API token"
       },
       {
         "cmd": "setup",
-        "label": "2. Set up the Cloudflare route",
+        "label": "3. Set up the Cloudflare route",
         "ask": [
           {
             "key": "api_token",
@@ -101,7 +105,7 @@
       },
       {
         "cmd": "qr",
-        "label": "3. Pair a phone",
+        "label": "4. Pair a phone",
         "ask": [
           {
             "key": "label",
@@ -128,6 +132,10 @@
   "agent": {
     "when": "Setting up the phone viewer, pairing a phone with it, or carrying by hand what has not reached one yet",
     "commands": [
+      {
+        "cmd": "app",
+        "does": "Puts the App Store page for Amenbo Viewer on a QR the phone's camera reads, so the address does not have to be carried from this screen to the phone by hand. Asks nothing and keeps nothing"
+      },
       {
         "cmd": "token",
         "does": "Opens Cloudflare's token screen in the browser, with the three permissions setup needs already ticked, and ends there. Asks nothing and keeps nothing — the token the page makes is pasted into setup"
