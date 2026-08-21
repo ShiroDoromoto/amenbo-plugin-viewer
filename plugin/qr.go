@@ -156,32 +156,22 @@ func (s store) issue(label, hash string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	request.Header.Set("Authorization", "Bearer "+s.token)
 	request.Header.Set("Content-Type", "application/json")
 
-	answer, err := (&http.Client{Timeout: sendTimeout}).Do(request)
-	if err != nil {
-		return "", fmt.Errorf("/tokens did not answer: %w", err)
-	}
-	defer answer.Body.Close()
-
-	var said struct {
-		IssuedAt string `json:"issued_at"`
-		Error    string `json:"error"`
-	}
-	decoded := json.NewDecoder(answer.Body).Decode(&said)
-	if answer.StatusCode == http.StatusConflict {
+	answered, err := s.askTheStore(request)
+	var turnedDown storeRefused
+	if errors.As(err, &turnedDown) && turnedDown.status == http.StatusConflict {
 		return "", fmt.Errorf("a phone is already paired as %q — cut it off with `%s revoke %s`, then pair it again",
 			label, pluginName, label)
 	}
-	if answer.StatusCode < 200 || answer.StatusCode > 299 {
-		if decoded == nil && said.Error != "" {
-			return "", fmt.Errorf("/tokens answered %d: %s", answer.StatusCode, said.Error)
-		}
-		return "", fmt.Errorf("/tokens answered %d", answer.StatusCode)
+	if err != nil {
+		return "", err
 	}
-	if decoded != nil {
-		return "", fmt.Errorf("/tokens answered %d with something this build cannot read: %w", answer.StatusCode, decoded)
+	var said struct {
+		IssuedAt string `json:"issued_at"`
+	}
+	if err := json.Unmarshal(answered, &said); err != nil {
+		return "", fmt.Errorf("/tokens answered with something this build cannot read: %w", err)
 	}
 	return said.IssuedAt, nil
 }

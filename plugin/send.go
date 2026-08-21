@@ -393,8 +393,8 @@ func storeFor(in input) (store, error) {
 
 // put sends one body to one door and reads the ordering the store answered with.
 //
-// **No diagnostic here carries the token or anything the body held.** What comes back from a
-// refusal is the store's own sentence, which is written for whoever has to fix it.
+// A refusal is read where every door's is (see `askTheStore`), so what reaches the user's log
+// says what happened and what to do about it, whichever door turned them down.
 func (s store) put(path string, body placement) (int64, error) {
 	raw, err := json.Marshal(body)
 	if err != nil {
@@ -404,28 +404,17 @@ func (s store) put(path string, body placement) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	request.Header.Set("Authorization", "Bearer "+s.token)
 	request.Header.Set("Content-Type", "application/json")
 
-	answer, err := (&http.Client{Timeout: sendTimeout}).Do(request)
+	answered, err := s.askTheStore(request)
 	if err != nil {
-		return 0, fmt.Errorf("%s did not answer: %w", path, err)
+		return 0, err
 	}
-	defer answer.Body.Close()
-
 	var said struct {
-		Seq   int64  `json:"seq"`
-		Error string `json:"error"`
+		Seq int64 `json:"seq"`
 	}
-	decoded := json.NewDecoder(answer.Body).Decode(&said)
-	if answer.StatusCode < 200 || answer.StatusCode > 299 {
-		if decoded == nil && said.Error != "" {
-			return 0, fmt.Errorf("%s answered %d: %s", path, answer.StatusCode, said.Error)
-		}
-		return 0, fmt.Errorf("%s answered %d", path, answer.StatusCode)
-	}
-	if decoded != nil {
-		return 0, fmt.Errorf("%s answered %d with something this build cannot read: %w", path, answer.StatusCode, decoded)
+	if err := json.Unmarshal(answered, &said); err != nil {
+		return 0, fmt.Errorf("%s answered with something this build cannot read: %w", path, err)
 	}
 	return said.Seq, nil
 }
