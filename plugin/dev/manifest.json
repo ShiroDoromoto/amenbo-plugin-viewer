@@ -33,6 +33,7 @@
     }
   },
   "payload_v": 1,
+  "min_amenbo": "13.0.0",
   "config": [
     {
       "key": "worker_url",

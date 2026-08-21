@@ -188,7 +188,7 @@ make dist      # リリース資産一式と、カタログに貼る digest
 
 CI（[`.github/workflows/ci.yml`](../.github/workflows/ci.yml)）の `plugin` ジョブが回すのも
 `make build` と `make test` の2行だけ。**段を向こう側だけに足さない**——足した瞬間、手元が全部緑でも
-push すると赤くなる形ができる。manifest の検証は Amenbo が PATH に在るときだけ走るので、CI では飛ぶ。
+push すると赤くなる形ができる。manifest の検証は amenbo が PATH に在るときだけ走るので、CI では飛ぶ。
 
 ## 手元で1周回す
 
