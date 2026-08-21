@@ -98,6 +98,9 @@
   "fileSizeMegabytes": "{megabytes} Mo",
 
   "settingsTitle": "Réglages",
+  "routeHeading": "Voie",
+  "takeFromICloud": "Recevoir depuis iCloud",
+  "takeFromICloudNote": "Ce que le Mac dépose dans iCloud est lu sur ce téléphone. Désactivé, ce téléphone n'ira plus voir.",
   "refreshHeading": "Aller voir",
   "appearanceHeading": "Apparence",
   "refreshNote": "Automatiquement veut dire à l'ouverture de l'app et quand vous y revenez. Rien ne tourne en arrière-plan.",
@@ -113,6 +116,7 @@
   "thisPhone": "Ce téléphone",
   "thisPhoneDetail": "Le nom sous lequel couper ce téléphone, depuis le PC.",
   "factRoute": "Voie",
+  "routeStopped": "Désactivé dans les réglages. Rien n'est reçu d'ici.",
   "factICloud": "iCloud",
   "iCloudSignedIn": "Connecté",
   "iCloudNotAvailable": "Indisponible sur ce téléphone",
@@ -128,7 +132,7 @@
   "erase": "Effacer la copie de ce téléphone",
   "eraseDetail": "Supprime le backlog gardé ici et la clé qui l'ouvre. Rien ne change sur le PC.",
   "eraseQuestion": "Effacer la copie de ce téléphone ?",
-  "eraseDialogDetail": "Le backlog gardé sur ce téléphone et la clé qui l'ouvre sont supprimés. Rien ne change sur votre PC, et vous pouvez réappairer quand vous voulez.",
+  "eraseDialogDetail": "Le backlog gardé sur ce téléphone et la clé qui l'ouvre sont supprimés, et ce téléphone ne reçoit plus rien. Rien ne change sur votre PC, et vous pouvez recommencer quand vous voulez.",
   "keepIt": "Garder",
   "eraseConfirm": "Effacer",
 

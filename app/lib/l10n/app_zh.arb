@@ -98,6 +98,9 @@
   "fileSizeMegabytes": "{megabytes} MB",
 
   "settingsTitle": "设置",
+  "routeHeading": "通路",
+  "takeFromICloud": "从 iCloud 接收",
+  "takeFromICloudNote": "Mac 放到 iCloud 里的东西，会在这台手机上读。关掉之后，这台手机就不再去取。",
   "refreshHeading": "去取",
   "appearanceHeading": "外观",
   "refreshNote": "自动是指打开应用时，以及回到应用时。它从不在后台运行。",
@@ -113,6 +116,7 @@
   "thisPhone": "这台手机",
   "thisPhoneDetail": "在电脑上断开这台手机时用的名字。",
   "factRoute": "通路",
+  "routeStopped": "已在设置里关掉。这里不再接收。",
   "factICloud": "iCloud",
   "iCloudSignedIn": "已登录",
   "iCloudNotAvailable": "这台手机上用不了",
@@ -128,7 +132,7 @@
   "erase": "删除本机上的副本",
   "eraseDetail": "删除放在这里的待办和打开它的密钥。电脑那边不变。",
   "eraseQuestion": "删除本机上的副本吗？",
-  "eraseDialogDetail": "放在这台手机上的待办和打开它的密钥都会删掉。你电脑那边不变，随时可以重新配对。",
+  "eraseDialogDetail": "放在这台手机上的待办和打开它的密钥都会删掉，这台手机也不再接收。你电脑那边不变，随时可以重新开始。",
   "keepIt": "保留",
   "eraseConfirm": "删除",
 

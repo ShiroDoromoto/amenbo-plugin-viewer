@@ -111,18 +111,38 @@ class _ViewerHomeState extends State<ViewerHome> with WidgetsBindingObserver {
   /// together, and two rounds at once would read the same pages twice.
   bool _fetching = false;
 
+  /// The iCloud route as it stood when the phone was last asked about itself. Kept so a change
+  /// to it can be told apart from the other two choices, which nothing out here has to redraw for.
+  ///
+  /// Read on the way in rather than lazily: the first read has to be what the route was *before*
+  /// a change, and the first thing to read it is the change itself.
+  late TakeFromICloud _iCloud;
+
   @override
   void initState() {
     super.initState();
+    _iCloud = widget.settings.value.iCloud;
     WidgetsBinding.instance.addObserver(this);
+    widget.settings.addListener(_chosen);
     _look();
   }
 
   @override
   void dispose() {
+    widget.settings.removeListener(_chosen);
     WidgetsBinding.instance.removeObserver(this);
     _arrivals.dispose();
     super.dispose();
+  }
+
+  /// A choice was made on the settings screen. Only one of them is this screen's business: the
+  /// iCloud route can be switched off while the app is running, and switched back on, and either
+  /// way the phone has to be asked about itself again — the route it takes has just changed.
+  void _chosen() {
+    final chosen = widget.settings.value.iCloud;
+    if (chosen == _iCloud) return;
+    _iCloud = chosen;
+    _look();
   }
 
   /// One of the two moments "automatically" means. The other is the launch, at the end of [_look].
@@ -143,8 +163,10 @@ class _ViewerHomeState extends State<ViewerHome> with WidgetsBindingObserver {
   Future<void> _look() async {
     final pairing = await widget.pairings.read();
     // A pairing is this phone having been pointed at a Worker on purpose, so it settles the route
-    // — the same rule the connection screen reads by.
-    final available = pairing == null && widget.hasICloud
+    // — the same rule the connection screen reads by. A container nobody is taking from is not
+    // asked about: whether iCloud is signed in says nothing about a phone that has stopped
+    // reading it, and the band would be reporting a route that is not running.
+    final available = pairing == null && _takesTheFolder
         ? (await ICloudContainer.status()).available
         : null;
     if (!mounted) return;
@@ -208,8 +230,14 @@ class _ViewerHomeState extends State<ViewerHome> with WidgetsBindingObserver {
   TakeTheBacklog? get _rounds {
     final pairing = _pairing;
     if (pairing != null) return _overTheNetwork(pairing);
-    return widget.hasICloud ? _overTheFolder : null;
+    return _takesTheFolder ? _overTheFolder : null;
   }
+
+  /// Whether the folder is a route this phone has: one to read, and the person still taking from
+  /// it. The declaration is a ceiling rather than a way on — switched on where no container
+  /// exists it does nothing, which is why both halves are asked for here.
+  bool get _takesTheFolder =>
+      widget.hasICloud && widget.settings.value.iCloud.isOn;
 
   TakeTheBacklog _overTheNetwork(Pairing pairing) =>
       widget.rounds?.call(pairing) ??
@@ -252,6 +280,10 @@ class _ViewerHomeState extends State<ViewerHome> with WidgetsBindingObserver {
     await _paired(pairing);
   }
 
+  /// The route is taken up again, from the guide. Setting it announces itself, and [_chosen] is
+  /// what asks the phone about itself and takes the first round.
+  void _takeTheFolderAgain() => widget.settings.setICloud(TakeFromICloud.on);
+
   /// This phone's copy is gone, and with it the way in. What is left to show is the guide, and the
   /// phone is asked about itself again — a phone that can read a container is back on that route.
   void _erased() {
@@ -271,17 +303,28 @@ class _ViewerHomeState extends State<ViewerHome> with WidgetsBindingObserver {
     // The guide is for a phone with no way in. Rows already here are a way in of their own — the
     // iCloud route is set up entirely on the Mac, so there is nothing this phone was asked to do.
     if (pairing == null && widget.store.latestTaskChange() == null) {
-      return PairingGuideScreen(appName: widget.appName, onPaired: _paired);
+      return PairingGuideScreen(
+        appName: widget.appName,
+        onPaired: _paired,
+        // The settings are behind the front screen, and this screen is what stands where the
+        // front screen would be. A phone that erased its copy on the iCloud route lands here with
+        // the route switched off, so without this the way back would be a reinstall.
+        iCloudSwitchedOff:
+            widget.hasICloud && !widget.settings.value.iCloud.isOn,
+        onTakeICloudBackIn: _takeTheFolderAgain,
+      );
     }
     return HomeShell(
       store: widget.store,
       settings: widget.settings,
       connection: PhoneConnection(
         store: widget.store,
+        settings: widget.settings,
         pairings: widget.pairings,
         hasICloud: widget.hasICloud,
       ),
       appName: widget.appName,
+      hasICloud: widget.hasICloud,
       take: _take,
       arrivals: _arrivals,
       failure: _failure,
@@ -301,6 +344,7 @@ class HomeShell extends StatefulWidget {
     required this.settings,
     required this.connection,
     required this.appName,
+    this.hasICloud = false,
     this.take,
     this.arrivals,
     this.failure,
@@ -316,6 +360,11 @@ class HomeShell extends StatefulWidget {
   final SettingsController settings;
   final ConnectionFacts connection;
   final String appName;
+
+  /// Whether this build runs somewhere with an iCloud container — iOS. All the shell does with it
+  /// is hand it to the settings, where the route is switched off and on.
+  final bool hasICloud;
+
   final Future<void> Function()? take;
 
   /// Which of the three ways out the shell opens on. The front screen, for anybody arriving at the
@@ -403,6 +452,7 @@ class _HomeShellState extends State<HomeShell> {
           settings: widget.settings,
           connection: widget.connection,
           appName: widget.appName,
+          hasICloud: widget.hasICloud,
         ),
       ),
     );

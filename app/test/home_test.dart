@@ -620,5 +620,121 @@ void main() {
       );
       expect(find.text(standingWords(words, Standing.offline)), findsNothing);
     });
+
+    testWidgets('a phone told to stop reading the folder takes no round', (
+      tester,
+    ) async {
+      final round = folder();
+      await tester.pumpWidget(
+        home(
+          hasICloud: true,
+          folderRounds: round.rounds,
+          settings: asked(Refresh.automatic)..setICloud(TakeFromICloud.off),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Not the launch, and not the return to the front either. The declaration is a ceiling: a
+      // container that answers is not a route while the person has said no to it.
+      expect(round.ran, isEmpty);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pumpAndSettle();
+      expect(round.ran, isEmpty);
+      // And the pull it would have offered is gone with the route.
+      expect(find.byTooltip(words.refresh), findsNothing);
+    });
+
+    testWidgets('switching it back on goes and looks straight away', (
+      tester,
+    ) async {
+      final round = folder();
+      final settings = asked(Refresh.automatic)..setICloud(TakeFromICloud.off);
+      await tester.pumpWidget(
+        home(hasICloud: true, folderRounds: round.rounds, settings: settings),
+      );
+      await tester.pumpAndSettle();
+      expect(round.ran, isEmpty);
+
+      settings.setICloud(TakeFromICloud.on);
+      await tester.pumpAndSettle();
+
+      // The route came back, and the phone was asked about itself again rather than waiting for
+      // the next launch to notice.
+      expect(round.ran, hasLength(1));
+    });
+
+    testWidgets('being signed out is not reported for a route nobody takes', (
+      tester,
+    ) async {
+      containerAnswers(() => false);
+      final round = folder();
+      await tester.pumpWidget(
+        home(
+          hasICloud: true,
+          folderRounds: round.rounds,
+          settings: asked(Refresh.automatic)..setICloud(TakeFromICloud.off),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // A phone that has stopped reading the folder is not waiting on iCloud, so a line about
+      // iCloud would be the band answering a question nobody is asking.
+      expect(find.text(standingWords(words, Standing.noICloud)), findsNothing);
+    });
+  });
+
+  group('taking the folder back up', () {
+    setUp(
+      () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+            const MethodChannel('work.amenbo.viewer/icloud_container'),
+            (call) async => {'available': true, 'path': '/dev/null'},
+          ),
+    );
+
+    tearDown(
+      () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+            const MethodChannel('work.amenbo.viewer/icloud_container'),
+            null,
+          ),
+    );
+
+    testWidgets('the guide offers it to a phone with nothing else left', (
+      tester,
+    ) async {
+      // Where erasing an iPhone on the iCloud route lands: no rows, no pairing, and the switch
+      // down. The settings are behind the front screen, which is exactly what is missing here.
+      final settings = SettingsController(UnkeptSettings())
+        ..setICloud(TakeFromICloud.off);
+      await tester.pumpWidget(home(hasICloud: true, settings: settings));
+      await tester.pumpAndSettle();
+
+      final guide = tester.widget<PairingGuideScreen>(
+        find.byType(PairingGuideScreen),
+      );
+      expect(guide.iCloudSwitchedOff, isTrue);
+      guide.onTakeICloudBackIn!();
+      await tester.pumpAndSettle();
+
+      expect(settings.value.iCloud, TakeFromICloud.on);
+    });
+
+    testWidgets('a phone that never switched it off is offered nothing', (
+      tester,
+    ) async {
+      await tester.pumpWidget(home(hasICloud: true));
+      await tester.pumpAndSettle();
+
+      // The iCloud route asks nothing of the phone, so a button here would be one that does
+      // nothing — which reads as the app being broken rather than as the next step being on the
+      // Mac.
+      expect(
+        tester
+            .widget<PairingGuideScreen>(find.byType(PairingGuideScreen))
+            .iCloudSwitchedOff,
+        isFalse,
+      );
+    });
   });
 }

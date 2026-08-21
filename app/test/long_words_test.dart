@@ -343,6 +343,9 @@ void main() {
                 settings: SettingsController(UnkeptSettings()),
                 connection: _Facts(_paired),
                 appName: 'Amenbo Viewer',
+                // The iPhone answer, which is the one with a row more on it — and the row with
+                // the longest sentence under it.
+                hasICloud: true,
               ),
               locale: locale,
               text: text,
