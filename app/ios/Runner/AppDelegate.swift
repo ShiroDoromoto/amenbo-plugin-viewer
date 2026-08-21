@@ -12,8 +12,6 @@ import UIKit
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
-    ICloudContainerBridge.register(
-      with: engineBridge.pluginRegistry.registrar(forPlugin: ICloudContainerBridge.channelName)!)
     FileProtectionBridge.register(
       with: engineBridge.pluginRegistry.registrar(forPlugin: FileProtectionBridge.channelName)!)
     BuildOriginBridge.register(

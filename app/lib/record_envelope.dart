@@ -1,8 +1,8 @@
 /// The envelope a record travels in, and the only place the app opens one.
 ///
 /// The PC seals one ciphertext per record, so the phone opens them one at a time — that is what
-/// lets either side move a single row without touching the rest. Both routes carry the same
-/// envelope, so nothing below knows whether the bytes came out of iCloud or off a Worker.
+/// lets either side move a single row without touching the rest. The envelope is what the two
+/// ends agree on, and nothing below it knows where the bytes were carried from.
 ///
 /// The other half of this lives on the PC, in Go. Only four things have to line up, and all four
 /// are here: XChaCha20-Poly1305 with a 256-bit key, a 192-bit nonce carried beside the ciphertext

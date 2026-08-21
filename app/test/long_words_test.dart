@@ -75,7 +75,7 @@ final _today = DateTime(2026, 8, 9, 12);
 /// A phone pointed at a Worker, with a round behind it — the connection screen with every line it
 /// has to say filled in.
 final _paired = Connection(
-  route: ConnectionRoute.cloudflare,
+  paired: true,
   label: 'iPhone',
   host: 'amenbo.example.workers.dev',
   lastTaken: LastTaken(
@@ -343,9 +343,6 @@ void main() {
                 settings: SettingsController(UnkeptSettings()),
                 connection: _Facts(_paired),
                 appName: 'Amenbo Viewer',
-                // The iPhone answer, which is the one with a row more on it — and the row with
-                // the longest sentence under it.
-                hasICloud: true,
               ),
               locale: locale,
               text: text,
@@ -397,15 +394,10 @@ void main() {
                 Scaffold(
                   body: ListView(
                     children: [
+                      StateBand(standing: standing, onPairAgain: () {}),
                       StateBand(
                         standing: standing,
                         onPairAgain: () {},
-                        onOpenSettings: () {},
-                      ),
-                      StateBand(
-                        standing: standing,
-                        onPairAgain: () {},
-                        onOpenSettings: () {},
                         whole: true,
                       ),
                     ],

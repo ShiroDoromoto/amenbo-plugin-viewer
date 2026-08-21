@@ -6,13 +6,6 @@
 /// the person tuning a reader instead of reading. Narrowing is not here either — it is changed on
 /// the screen being read, not in a drawer two screens away from it.
 ///
-/// The one row that is not a preference is the iCloud one, and it is here rather than on the
-/// connection screen because it belongs to the same question as "when do you go and look": that
-/// screen is what this phone can say about itself plus the one way out, and a switch that changes
-/// what the app does would put a choice in the middle of a list of facts. It is drawn only where
-/// there is a container to read — on Android the route does not exist, and a switch over nothing
-/// is a switch that lies.
-///
 /// Erasing the phone happens two screens in and undoes everything behind this one, so whoever put
 /// this screen there has to hear about it — which this screen says by popping `true`.
 library;
@@ -33,7 +26,6 @@ class SettingsScreen extends StatelessWidget {
     required this.settings,
     required this.connection,
     required this.appName,
-    this.hasICloud = false,
   });
 
   final SettingsController settings;
@@ -42,10 +34,6 @@ class SettingsScreen extends StatelessWidget {
   final ConnectionFacts connection;
 
   final String appName;
-
-  /// Whether this build runs somewhere with an iCloud container — iOS. Passed in rather than read
-  /// from `dart:io`, so the Android screen is reachable from a Mac.
-  final bool hasICloud;
 
   Future<void> _openConnection(BuildContext context) async {
     final erased = await Navigator.of(context).push<bool>(
@@ -68,17 +56,6 @@ class SettingsScreen extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.only(bottom: Space.s7),
               children: [
-                if (hasICloud) ...[
-                  _Heading(words.routeHeading),
-                  SwitchListTile(
-                    value: chosen.iCloud.isOn,
-                    onChanged: (taking) => settings.setICloud(
-                      taking ? TakeFromICloud.on : TakeFromICloud.off,
-                    ),
-                    title: Text(words.takeFromICloud),
-                  ),
-                  _Note(words.takeFromICloudNote),
-                ],
                 _Heading(words.refreshHeading),
                 RadioGroup<Refresh>(
                   groupValue: chosen.refresh,

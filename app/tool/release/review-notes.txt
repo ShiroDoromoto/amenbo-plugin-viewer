@@ -19,12 +19,12 @@ After scanning, the first sync runs and the app opens on the task list. The thre
 HOW A REAL USER SETS IT UP
 
 1. Install Amenbo on a computer, and its viewer plugin.
-2. Either sign a Mac and an iPhone into the same iCloud account — the computer then writes an encrypted snapshot into this app's own iCloud container (iCloud.work.amenbo.viewer), nothing to set up on the phone — or deploy the viewer Worker into their own Cloudflare account.
+2. Deploy the viewer Worker into their own Cloudflare account. The plugin does it; what the user supplies is one API token, once.
 3. Scan the code the computer displays.
 
 What crosses the network is ciphertext. The key never travels over it, only optically in the QR code — that is why the camera is requested, and it is the only reason. There are no credentials to supply anywhere in this app.
 
-New in this version: the iCloud route can be switched off, and back on, from Settings > "Receive from iCloud".
+New in this version: the iCloud route is gone. There was a second way in — the computer wrote into this app's own iCloud container — and it is removed, along with the app's iCloud entitlement. Every phone now reads from the user's own Cloudflare Worker.
 
 DEVICE MODELS AND OPERATING SYSTEMS TESTED
 
@@ -36,7 +36,6 @@ Minimum supported version is iOS 15.0.
 
 EXTERNAL SERVICES, TOOLS AND PLATFORMS
 
-- Apple iCloud — the app's own container, in the user's own iCloud account.
 - Cloudflare Workers — deployed into and owned by the END USER's Cloudflare account. For a shipped app we operate no instance and hold no account on the user's behalf. The one exception is the sample Worker behind the code we sent, which exists for this review and holds only invented rows.
 
 There is no analytics, advertising, crash reporting, authentication provider, payment processor or AI service. The app makes no network request other than to the Worker its pairing code names, so no data of any kind reaches us.

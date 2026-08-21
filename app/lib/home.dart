@@ -12,9 +12,8 @@
 /// **When it goes and looks.** "Automatically" is the launch and the return to the front, and
 /// nothing else — the app does not sit in the background and has no interval to offer. What a
 /// round like that brings back is counted rather than applied, because nobody asked for it while
-/// they were reading. Both routes come through here: which one a round takes is decided from what
-/// the phone holds, and everything downstream of it — the count, the pill, the band — is handed the
-/// same report either way.
+/// they were reading. A phone with no pairing takes no round at all, and the band is what says
+/// so — rows that arrived before are still rows, and they are not a way in.
 ///
 /// **Where the ways out go.** Three of them, across the bottom of a phone, because the thumb of a
 /// hand holding one reaches the bottom half and a menu at the top does not exist for someone
@@ -35,9 +34,7 @@ import 'connection.dart';
 import 'decision_detail.dart';
 import 'decisions_screen.dart';
 import 'first_sync.dart';
-import 'icloud_container.dart';
 import 'l10n/words.dart';
-import 'icloud_intake.dart';
 import 'now_screen.dart';
 import 'pairing_guide.dart';
 import 'pairing_scan.dart';
@@ -63,9 +60,7 @@ class ViewerHome extends StatefulWidget {
     required this.settings,
     required this.appName,
     this.pairings = const PairingStore(),
-    this.hasICloud = false,
     this.rounds,
-    this.folderRounds,
     this.clock = DateTime.now,
   });
 
@@ -74,15 +69,7 @@ class ViewerHome extends StatefulWidget {
   final String appName;
   final PairingStore pairings;
 
-  /// Whether this build runs somewhere with an iCloud container — iOS. Passed in rather than read
-  /// from `dart:io`, so the Android answer is reachable from a Mac.
-  final bool hasICloud;
-
   final Rounds? rounds;
-
-  /// One round over the folder the Mac writes into. Handed in for the same reason [rounds] is —
-  /// the root has to be walkable on a machine with no container behind it.
-  final TakeTheBacklog? folderRounds;
 
   final DateTime Function() clock;
 
@@ -92,10 +79,6 @@ class ViewerHome extends StatefulWidget {
 
 class _ViewerHomeState extends State<ViewerHome> with WidgetsBindingObserver {
   Pairing? _pairing;
-
-  /// Whether the container answers, on a phone that has one and was never paired. Null everywhere
-  /// else, where it is not a fact about this phone's route at all.
-  bool? _iCloudAvailable;
 
   /// Whether the keychain has been read yet. It is a file on the device, not a request.
   bool _looked = false;
@@ -111,38 +94,18 @@ class _ViewerHomeState extends State<ViewerHome> with WidgetsBindingObserver {
   /// together, and two rounds at once would read the same pages twice.
   bool _fetching = false;
 
-  /// The iCloud route as it stood when the phone was last asked about itself. Kept so a change
-  /// to it can be told apart from the other two choices, which nothing out here has to redraw for.
-  ///
-  /// Read on the way in rather than lazily: the first read has to be what the route was *before*
-  /// a change, and the first thing to read it is the change itself.
-  late TakeFromICloud _iCloud;
-
   @override
   void initState() {
     super.initState();
-    _iCloud = widget.settings.value.iCloud;
     WidgetsBinding.instance.addObserver(this);
-    widget.settings.addListener(_chosen);
     _look();
   }
 
   @override
   void dispose() {
-    widget.settings.removeListener(_chosen);
     WidgetsBinding.instance.removeObserver(this);
     _arrivals.dispose();
     super.dispose();
-  }
-
-  /// A choice was made on the settings screen. Only one of them is this screen's business: the
-  /// iCloud route can be switched off while the app is running, and switched back on, and either
-  /// way the phone has to be asked about itself again — the route it takes has just changed.
-  void _chosen() {
-    final chosen = widget.settings.value.iCloud;
-    if (chosen == _iCloud) return;
-    _iCloud = chosen;
-    _look();
   }
 
   /// One of the two moments "automatically" means. The other is the launch, at the end of [_look].
@@ -162,17 +125,9 @@ class _ViewerHomeState extends State<ViewerHome> with WidgetsBindingObserver {
 
   Future<void> _look() async {
     final pairing = await widget.pairings.read();
-    // A pairing is this phone having been pointed at a Worker on purpose, so it settles the route
-    // — the same rule the connection screen reads by. A container nobody is taking from is not
-    // asked about: whether iCloud is signed in says nothing about a phone that has stopped
-    // reading it, and the band would be reporting a route that is not running.
-    final available = pairing == null && _takesTheFolder
-        ? (await ICloudContainer.status()).available
-        : null;
     if (!mounted) return;
     setState(() {
       _pairing = pairing;
-      _iCloudAvailable = available;
       _looked = true;
     });
     _goAndLook();
@@ -180,8 +135,8 @@ class _ViewerHomeState extends State<ViewerHome> with WidgetsBindingObserver {
 
   /// Goes and takes a round, for the pull on the front screen.
   ///
-  /// Null on a phone with no route to take — nothing paired and no container to read. A pull that
-  /// silently did nothing would be worse than a list that does not offer one.
+  /// Null on a phone with nothing to ask — one nobody has paired. A pull that silently did
+  /// nothing would be worse than a list that does not offer one.
   Future<void> Function()? get _take =>
       _rounds == null ? null : () => _round(asked: true);
 
@@ -193,51 +148,27 @@ class _ViewerHomeState extends State<ViewerHome> with WidgetsBindingObserver {
   Future<void> _round({required bool asked}) async {
     final take = _rounds;
     if (take == null || _fetching) return;
-    final folder = _pairing == null;
     _fetching = true;
     try {
       final report = await take((_) {});
       if (!mounted) return;
-      setState(() {
-        _failure = null;
-        // A round that read the folder is the container answering, whatever it said at launch.
-        if (folder) _iCloudAvailable = true;
-      });
+      setState(() => _failure = null);
       if (!asked && report.records > 0) _arrivals.tick();
     } on IntakeException catch (stopped) {
-      // Which of the two lines the band owes — signed out of iCloud, or simply not reached — is a
-      // fact about the container rather than about the round, and it can have changed since the
-      // launch asked. Both arrive here as the same failure, so the container is asked again.
-      final available = folder
-          ? (await ICloudContainer.status()).available
-          : null;
       if (!mounted) return;
       // The list keeps what it had. Which line the band shows is decided from this.
-      setState(() {
-        _failure = stopped.failure;
-        if (folder) _iCloudAvailable = available;
-      });
+      setState(() => _failure = stopped.failure);
     } finally {
       _fetching = false;
     }
   }
 
-  /// The round this phone's route takes, or null where it has no route: an Android phone nobody
-  /// has paired has neither a place to ask nor a folder to read.
-  ///
-  /// A pairing settles it — it is this phone having been pointed at a Worker on purpose — and the
-  /// same rule the connection screen reads by.
+  /// The round this phone takes, or null where it has nothing to ask: a phone nobody has paired
+  /// has no place to ask, whatever is already on it.
   TakeTheBacklog? get _rounds {
     final pairing = _pairing;
-    if (pairing != null) return _overTheNetwork(pairing);
-    return _takesTheFolder ? _overTheFolder : null;
+    return pairing == null ? null : _overTheNetwork(pairing);
   }
-
-  /// Whether the folder is a route this phone has: one to read, and the person still taking from
-  /// it. The declaration is a ceiling rather than a way on — switched on where no container
-  /// exists it does nothing, which is why both halves are asked for here.
-  bool get _takesTheFolder =>
-      widget.hasICloud && widget.settings.value.iCloud.isOn;
 
   TakeTheBacklog _overTheNetwork(Pairing pairing) =>
       widget.rounds?.call(pairing) ??
@@ -246,16 +177,11 @@ class _ViewerHomeState extends State<ViewerHome> with WidgetsBindingObserver {
         store: widget.store,
       ).run(watching: watching);
 
-  TakeTheBacklog get _overTheFolder =>
-      widget.folderRounds ??
-      (watching) => ICloudIntake(store: widget.store).run(watching: watching);
-
   /// A code was read. The first round is the one wait long enough to be worth a screen, so it gets
   /// one, and what it comes back to is the backlog rather than a report that it arrived.
   Future<void> _paired(Pairing pairing) async {
     setState(() {
       _pairing = pairing;
-      _iCloudAvailable = null;
       _failure = null;
     });
     await Navigator.of(context).push<IntakeReport>(
@@ -280,12 +206,8 @@ class _ViewerHomeState extends State<ViewerHome> with WidgetsBindingObserver {
     await _paired(pairing);
   }
 
-  /// The route is taken up again, from the guide. Setting it announces itself, and [_chosen] is
-  /// what asks the phone about itself and takes the first round.
-  void _takeTheFolderAgain() => widget.settings.setICloud(TakeFromICloud.on);
-
-  /// This phone's copy is gone, and with it the way in. What is left to show is the guide, and the
-  /// phone is asked about itself again — a phone that can read a container is back on that route.
+  /// This phone's copy is gone, and with it the way in. What is left to show is the guide, and
+  /// the phone is asked about itself again.
   void _erased() {
     setState(() {
       _pairing = null;
@@ -300,35 +222,24 @@ class _ViewerHomeState extends State<ViewerHome> with WidgetsBindingObserver {
     // later would be the app telling the person they are not set up and then taking it back.
     if (!_looked) return const Scaffold(body: SizedBox.shrink());
     final pairing = _pairing;
-    // The guide is for a phone with no way in. Rows already here are a way in of their own — the
-    // iCloud route is set up entirely on the Mac, so there is nothing this phone was asked to do.
+    // The guide is for a phone with nothing to show. Rows are worth showing whether or not
+    // anything is still reaching them — what the guide would say about them is said by the band,
+    // over the top of the list they are in.
     if (pairing == null && widget.store.latestTaskChange() == null) {
-      return PairingGuideScreen(
-        appName: widget.appName,
-        onPaired: _paired,
-        // The settings are behind the front screen, and this screen is what stands where the
-        // front screen would be. A phone that erased its copy on the iCloud route lands here with
-        // the route switched off, so without this the way back would be a reinstall.
-        iCloudSwitchedOff:
-            widget.hasICloud && !widget.settings.value.iCloud.isOn,
-        onTakeICloudBackIn: _takeTheFolderAgain,
-      );
+      return PairingGuideScreen(appName: widget.appName, onPaired: _paired);
     }
     return HomeShell(
       store: widget.store,
       settings: widget.settings,
       connection: PhoneConnection(
         store: widget.store,
-        settings: widget.settings,
         pairings: widget.pairings,
-        hasICloud: widget.hasICloud,
       ),
       appName: widget.appName,
-      hasICloud: widget.hasICloud,
+      paired: pairing != null,
       take: _take,
       arrivals: _arrivals,
       failure: _failure,
-      iCloudAvailable: _iCloudAvailable,
       onPairAgain: _pairAgain,
       onErased: _erased,
       clock: widget.clock,
@@ -344,11 +255,10 @@ class HomeShell extends StatefulWidget {
     required this.settings,
     required this.connection,
     required this.appName,
-    this.hasICloud = false,
+    this.paired = true,
     this.take,
     this.arrivals,
     this.failure,
-    this.iCloudAvailable,
     this.onPairAgain,
     this.onErased,
     this.clock = DateTime.now,
@@ -361,9 +271,9 @@ class HomeShell extends StatefulWidget {
   final ConnectionFacts connection;
   final String appName;
 
-  /// Whether this build runs somewhere with an iCloud container — iOS. All the shell does with it
-  /// is hand it to the settings, where the route is switched off and on.
-  final bool hasICloud;
+  /// Whether this phone has a pairing. All the shell does with it is hand it to the band, which
+  /// is what tells somebody reading rows that nothing newer is coming.
+  final bool paired;
 
   final Future<void> Function()? take;
 
@@ -383,7 +293,6 @@ class HomeShell extends StatefulWidget {
   final Arrivals? arrivals;
 
   final IntakeFailure? failure;
-  final bool? iCloudAvailable;
   final VoidCallback? onPairAgain;
   final VoidCallback? onErased;
   final DateTime Function() clock;
@@ -452,7 +361,6 @@ class _HomeShellState extends State<HomeShell> {
           settings: widget.settings,
           connection: widget.connection,
           appName: widget.appName,
-          hasICloud: widget.hasICloud,
         ),
       ),
     );
@@ -558,7 +466,7 @@ class _HomeShellState extends State<HomeShell> {
             take: widget.take,
             arrivals: widget.arrivals,
             failure: widget.failure,
-            iCloudAvailable: widget.iCloudAvailable,
+            paired: widget.paired,
             onOpen: (line) => _open(line.id),
             onPairAgain: widget.onPairAgain,
             onOpenSettings: _openSettings,

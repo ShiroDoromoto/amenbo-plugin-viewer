@@ -74,7 +74,7 @@ class NowScreen extends StatefulWidget {
     required this.store,
     required this.onOpen,
     this.failure,
-    this.iCloudAvailable,
+    this.paired = true,
     this.onPairAgain,
     this.onOpenSettings,
     this.take,
@@ -91,15 +91,15 @@ class NowScreen extends StatefulWidget {
   /// at the top; it never decides whether the list is drawn.
   final IntakeFailure? failure;
 
-  /// Whether the iCloud route can be read at all, or null where that is not the route.
-  final bool? iCloudAvailable;
+  /// Whether this phone has a pairing. It decides the band and nothing else — rows already here
+  /// are drawn whether or not anything is still adding to them.
+  final bool paired;
 
   final VoidCallback? onPairAgain;
   final VoidCallback? onOpenSettings;
 
-  /// Goes and fetches, on whichever route this phone is on. Null where it has no route to take —
-  /// the screen still draws what is on the device, which is the whole point of it being a local
-  /// store.
+  /// Goes and fetches. Null where there is nothing to ask — the screen still draws what is on the
+  /// device, which is the whole point of it being a local store.
   final Future<void> Function()? take;
 
   /// Ticks when a fetch this screen did not run has written rows.
@@ -294,7 +294,7 @@ class _NowScreenState extends State<NowScreen>
     final standing = standingOf(
       anythingHere: !_empty,
       failure: widget.failure,
-      iCloudAvailable: widget.iCloudAvailable,
+      paired: widget.paired,
     );
     return Scaffold(
       appBar: AppBar(
@@ -440,7 +440,6 @@ class _NowScreenState extends State<NowScreen>
   Widget _band(Standing standing, {bool whole = false}) => StateBand(
     standing: standing,
     onPairAgain: widget.onPairAgain,
-    onOpenSettings: widget.onOpenSettings,
     whole: whole,
   );
 

@@ -1,6 +1,6 @@
 // The connection screen says what this phone's connection is and offers the two things that can
-// be done to it. What is checked here is mostly what it does *not* say: no other device, no
-// button the route cannot press, and no erasing without being asked first.
+// be done to it. What is checked here is mostly what it does *not* say: no other device, no place
+// named on a phone that is paired with none, and no erasing without being asked first.
 
 import 'package:amenbo_viewer/connection.dart';
 import 'package:amenbo_viewer/connection_screen.dart';
@@ -24,7 +24,7 @@ class FakeFacts implements ConnectionFacts {
 }
 
 final _cloudflare = Connection(
-  route: ConnectionRoute.cloudflare,
+  paired: true,
   label: 'iPhone',
   host: 'amenbo.example.workers.dev',
   lastTaken: LastTaken(
@@ -35,14 +35,8 @@ final _cloudflare = Connection(
   ),
 );
 
-const _iCloud = Connection(
-  route: ConnectionRoute.iCloud,
-  iCloudAvailable: false,
-);
-
-/// The same phone, with the route switched off — the one state where naming the route is not
-/// enough on its own.
-const _iCloudStopped = Connection(route: ConnectionRoute.iCloud, taking: false);
+/// A phone holding rows that came in over a route this build no longer has.
+const _unpaired = Connection();
 
 Future<bool?> pumpConnection(WidgetTester tester, ConnectionFacts facts) async {
   bool? popped;
@@ -89,10 +83,7 @@ void main() {
     await pumpConnection(
       tester,
       FakeFacts(
-        const Connection(
-          route: ConnectionRoute.cloudflare,
-          host: 'amenbo.example.workers.dev',
-        ),
+        const Connection(paired: true, host: 'amenbo.example.workers.dev'),
       ),
     );
 
@@ -111,19 +102,14 @@ void main() {
     expect(find.textContaining('version 91'), findsOneWidget);
   });
 
-  testWidgets('the iCloud route is offered nothing it cannot do', (
-    tester,
-  ) async {
-    await pumpConnection(tester, FakeFacts(_iCloud));
+  testWidgets('a phone with no pairing names no place', (tester) async {
+    await pumpConnection(tester, FakeFacts(_unpaired));
 
-    // There is no code to read again: the container was never handed a URL, a token or a key.
-    expect(find.text(words.pairAgainTitle), findsNothing);
-    // And the way out of an unavailable container is in the phone's settings, not in this app.
-    expect(find.textContaining('Not available'), findsOneWidget);
-    expect(
-      find.textContaining('nothing to choose in this app'),
-      findsOneWidget,
-    );
+    expect(find.text(words.routeNone), findsOneWidget);
+    // Naming a host here would be the screen answering for a place nothing is coming from.
+    expect(find.text('amenbo.example.workers.dev'), findsNothing);
+    // Reading a code is still the way on, and it is the only one.
+    expect(find.text(words.pairAgainTitle), findsOneWidget);
   });
 
   testWidgets('a phone that has been fed nothing says so plainly', (
@@ -132,10 +118,7 @@ void main() {
     await pumpConnection(
       tester,
       FakeFacts(
-        const Connection(
-          route: ConnectionRoute.cloudflare,
-          host: 'amenbo.example.workers.dev',
-        ),
+        const Connection(paired: true, host: 'amenbo.example.workers.dev'),
       ),
     );
 
@@ -187,17 +170,5 @@ void main() {
 
     // The reason for the camera, before the camera — the scanning screen's own rule.
     expect(find.text(words.pairHeading), findsOneWidget);
-  });
-
-  testWidgets('a route that was switched off says so under its name', (
-    tester,
-  ) async {
-    await pumpConnection(tester, FakeFacts(_iCloudStopped));
-
-    expect(find.text(words.routeICloud), findsOneWidget);
-    // Otherwise the screen names a place while nothing is coming from it.
-    expect(find.text(words.routeStopped), findsOneWidget);
-    // And it does not answer for iCloud, which is not why anything stopped.
-    expect(find.text(words.iCloudNotAvailable), findsNothing);
   });
 }

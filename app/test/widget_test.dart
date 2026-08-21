@@ -26,11 +26,9 @@ final aPairing = Pairing(
   encryptionKey: 'AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8',
 );
 
-/// Presses the one button the screen has, which on an iPhone sits under two cards.
+/// Presses the one button the screen has.
 Future<void> tapTheAction(WidgetTester tester) async {
-  final button = find.text(
-    pairingRouteWords(words, PairingRoute.cloudflare).action!,
-  );
+  final button = find.text(pairingRouteWords(words).action);
   await tester.scrollUntilVisible(button, 200);
   await tester.ensureVisible(button);
   await tester.pumpAndSettle();
@@ -111,10 +109,7 @@ void main() {
   ) async {
     await tester.pumpWidget(guide());
 
-    for (final step in pairingRouteWords(
-      words,
-      PairingRoute.cloudflare,
-    ).steps) {
+    for (final step in pairingRouteWords(words).steps) {
       expect(find.text(step), findsOneWidget);
     }
   });
@@ -124,14 +119,10 @@ void main() {
   ) async {
     await tester.pumpWidget(guide());
 
-    // The iCloud route's whole setup is on the Mac. A button beside it would read as the app
-    // being broken rather than as the next step being somewhere else.
+    // The setup is on the PC and this phone's whole half is reading the code. A second button
+    // would read as the app being broken rather than as the next step being somewhere else.
     expect(find.byType(FilledButton), findsOneWidget);
-    expect(
-      find.text(pairingRouteWords(words, PairingRoute.cloudflare).action!),
-      findsOneWidget,
-    );
-    expect(pairingRouteWords(words, PairingRoute.iCloud).action, isNull);
+    expect(find.text(pairingRouteWords(words).action), findsOneWidget);
   });
 
   testWidgets('the privacy policy is reachable without pairing', (
@@ -192,35 +183,18 @@ void main() {
     expect(handed, 0);
   });
 
-  group('which routes a phone is offered', () {
-    // The iCloud route is not a preference — it is a capability. Only the iPhone has one, so
-    // offering it anywhere else would be an instruction that cannot be followed.
-    test('an iPhone gets both', () {
-      expect(PairingRoute.forPlatform(TargetPlatform.iOS), [
-        PairingRoute.iCloud,
-        PairingRoute.cloudflare,
-      ]);
-    });
+  testWidgets('the same one route is named on either phone', (tester) async {
+    // There is one way in and it costs the same on both, so nothing here is decided from the
+    // platform — a card that appeared on one and not the other would be a step that cannot be
+    // followed.
+    for (final platform in [TargetPlatform.iOS, TargetPlatform.android]) {
+      await tester.pumpWidget(guide(platform: platform));
 
-    test('an Android phone gets Cloudflare alone', () {
-      expect(PairingRoute.forPlatform(TargetPlatform.android), [
-        PairingRoute.cloudflare,
-      ]);
-    });
-  });
-
-  testWidgets('an Android phone is not told to open a folder it cannot open', (
-    tester,
-  ) async {
-    await tester.pumpWidget(guide(platform: TargetPlatform.android));
-
-    expect(
-      find.text(pairingRouteWords(words, PairingRoute.iCloud).name),
-      findsNothing,
-    );
-    expect(
-      find.text(pairingRouteWords(words, PairingRoute.cloudflare).name),
-      findsOneWidget,
-    );
+      expect(
+        find.text(pairingRouteWords(words).name),
+        findsOneWidget,
+        reason: '$platform',
+      );
+    }
   });
 }
