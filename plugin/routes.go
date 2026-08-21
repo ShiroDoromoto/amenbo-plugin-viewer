@@ -64,7 +64,16 @@ func routesStanding(in input) []routeStanding {
 		// difference between a choice that did nothing and a choice that did nothing visibly.
 		there.notHere = true
 	default:
-		there.missing = "open Amenbo Viewer on a phone once, and it appears"
+		// **Where to get it, not only what to do with it.** This is the one line the settings
+		// screen shows about a route nobody has yet, and telling someone to open an app they
+		// have never heard of sends them looking for it with nothing to look for. The address
+		// is what answers on both faces — the screen has the button beside it, and a terminal
+		// has neither.
+		//
+		// The address rides in brackets rather than after a dash, and what it displaces is
+		// "and it appears": the clause already opens with "Waiting on the iCloud folder", so
+		// what appears was said, and the line has a budget the address spends most of.
+		there.missing = "open Amenbo Viewer (" + appStoreLink + ") on a phone once"
 	}
 	where = append(where, there)
 
@@ -274,10 +283,15 @@ func nothingIsReaching(in input) error {
 func theWayInFromHere() string {
 	if icloudIsARoadHere() {
 		return fmt.Sprintf("run `%s setup` for the Cloudflare route,"+
-			" or open Amenbo Viewer once on a phone for this mac's iCloud folder to appear", pluginName)
+			" or open Amenbo Viewer once on a phone for this mac's iCloud folder to appear"+
+			" — the app is at %s", pluginName, appStoreLink)
 	}
+	// **The app is named here too, on the machine that has only the one road.** What is a mac's
+	// own is the folder, not the phone: whichever route carries, the thing that reads at the far
+	// end is the same app, and a reader told to stand a Worker up still has to get it.
 	return fmt.Sprintf("run `%s setup` to stand the Cloudflare route up"+
-		" (the other one, the app's iCloud folder, is a mac's own — this machine has no such thing)", pluginName)
+		" (the other one, the app's iCloud folder, is a mac's own — this machine has no such thing)"+
+		" — the app the phone reads with is at %s", pluginName, appStoreLink)
 }
 
 // errNothingTicked is every place having been ticked off. The plugin stays enabled and carries
