@@ -50,10 +50,21 @@ const amenboAppData = "work.amenbo.amenbo"
 // It stands for the machine that store is pretending to be.
 const besideTheStore = "machine"
 
+// icloudIsARoadHere says whether this OS has an app-container folder at all.
+//
+// **It is a different question from whether the folder is there.** A mac with no folder yet is a
+// mac waiting for the app to be opened once; a Windows machine has nothing to wait for, and
+// telling its user to open the app on an iPhone points at a road their machine does not have.
+// The behaviour has always split on this; only the words had not.
+//
+// It is a variable for the same reason the drop path is: the gate runs on every OS, and both
+// sides of this answer have to be walkable wherever it runs.
+var icloudIsARoadHere = func() bool { return runtime.GOOS == "darwin" }
+
 // icloudDrop is the directory a mac writes into, or "" where there is no such thing — every OS
 // but macOS, and a machine whose home directory cannot be found.
 func icloudDrop() string {
-	if runtime.GOOS != "darwin" {
+	if !icloudIsARoadHere() {
 		return ""
 	}
 	home, err := os.UserHomeDir()

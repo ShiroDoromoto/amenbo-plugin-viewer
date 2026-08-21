@@ -222,10 +222,26 @@ func trimmedToTheLine(said string) string {
 func nothingIsReaching(in input) error {
 	for _, where := range routesStanding(in) {
 		if where.declared {
-			return errNoRoute
+			return fmt.Errorf("%w — %s", errNoRoute, theWayInFromHere())
 		}
 	}
 	return errNothingTicked
+}
+
+// theWayInFromHere is what to do about having nowhere to carry to, on the machine this is running
+// on.
+//
+// **Only the roads this machine has.** The iCloud folder is a mac's app container and nothing
+// else has one, so telling a Windows user to open the app on an iPhone and wait for a folder
+// names a road that will never appear for them — and it is the first thing they read, ahead of
+// the one road they do have.
+func theWayInFromHere() string {
+	if icloudIsARoadHere() {
+		return fmt.Sprintf("run `%s setup` for the Cloudflare route,"+
+			" or open Amenbo Viewer once on a phone for this mac's iCloud folder to appear", pluginName)
+	}
+	return fmt.Sprintf("run `%s setup` to stand the Cloudflare route up"+
+		" (the other one, the app's iCloud folder, is a mac's own — this machine has no such thing)", pluginName)
 }
 
 // errNothingTicked is every place having been ticked off. The plugin stays enabled and carries

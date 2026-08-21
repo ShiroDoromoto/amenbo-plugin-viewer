@@ -52,7 +52,15 @@ const sendTimeout = 30 * time.Second
 // It is a sentinel because the two faces answer it differently: the hook stays quiet (a user who
 // has not set anything up is not failing at anything), and `push` says so (someone asked for a
 // send out loud).
-var errNoRoute = errors.New("there is nowhere to put anything yet — run setup for the Cloudflare route, or open Amenbo Viewer once on an iPhone for the mac's iCloud folder to appear")
+//
+// **What to do about it is not in here**, because the answer is not the same on every machine —
+// see `theWayInFromHere`, which wraps this one.
+var errNoRoute = errors.New("there is nowhere to put anything yet")
+
+// errNoCloudflareRoute is that one route not being there, which is a narrower thing to say and
+// the right thing to say to whoever asked. Pairing a phone and cutting one off are the Worker's
+// alone — the folder holds no tokens — so those never turn on which OS this is.
+var errNoCloudflareRoute = fmt.Errorf("there is no Cloudflare route yet — run `%s setup` to stand one up", pluginName)
 
 // What can happen to a record on its way out: it now holds something, or it is gone. These are
 // the contract's words, and both routes write them — the Worker into a row, the drop into a file.
@@ -354,7 +362,7 @@ func storeFor(in input) (store, error) {
 	url := strings.TrimRight(in.setting(configWorkerURL), "/")
 	token := secret(envAuthToken)
 	if url == "" || token == "" {
-		return store{}, errNoRoute
+		return store{}, errNoCloudflareRoute
 	}
 	return store{url: url, token: token}, nil
 }

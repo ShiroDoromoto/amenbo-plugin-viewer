@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
 )
@@ -97,8 +98,75 @@ func TestNothingSetUpIsStillTheSentenceAboutSettingUp(t *testing.T) {
 
 	err := nothingIsReaching(fired("task.done", nil))
 
-	if err != errNoRoute {
+	if !errors.Is(err, errNoRoute) {
 		t.Fatalf("%v — want the sentence about setting up", err)
+	}
+	if !strings.Contains(err.Error(), "setup") {
+		t.Errorf("%v does not say what to do about it", err)
+	}
+}
+
+// **Only the roads this machine has.** The iCloud folder is a mac's app container and nothing
+// else has one, so a line telling a Windows user to open the app on a phone and wait for a folder
+// names a road that will never appear for them — ahead of the one road they do have.
+func TestTheWayInNamesOnlyTheRoadsThisMachineHas(t *testing.T) {
+	for _, machine := range []struct {
+		what string
+		mac  bool
+	}{{"a mac", true}, {"anything else", false}} {
+		t.Run(machine.what, func(t *testing.T) {
+			was := icloudIsARoadHere
+			icloudIsARoadHere = func() bool { return machine.mac }
+			t.Cleanup(func() { icloudIsARoadHere = was })
+
+			said := theWayInFromHere()
+
+			if !strings.Contains(said, "setup") {
+				t.Errorf("%q does not name the road every machine has", said)
+			}
+			if waits := strings.Contains(said, "open Amenbo Viewer"); waits != machine.mac {
+				t.Errorf("%q tells a machine to wait for a folder it %v have", said, map[bool]string{true: "does", false: "does not"}[machine.mac])
+			}
+		})
+	}
+}
+
+// The same on the page: a paragraph about a mac's folder, printed first on a machine that has no
+// such thing, is a paragraph about somebody else's computer.
+func TestTheUsageNamesOnlyTheRoutesThisMachineHas(t *testing.T) {
+	was := icloudIsARoadHere
+	icloudIsARoadHere = func() bool { return false }
+	t.Cleanup(func() { icloudIsARoadHere = was })
+
+	_, page := capture(t, usage)
+
+	if strings.Contains(page, "Two routes carry") {
+		t.Error("a machine with one route is told it has two")
+	}
+	if !strings.Contains(page, "Cloudflare Worker") {
+		t.Error("the page does not name the route this machine does have")
+	}
+	if !strings.Contains(page, "mac") {
+		t.Error("the page never says why there is only one — a reader who has heard of the other is left guessing")
+	}
+}
+
+// Pairing and cutting a phone off are the Worker's alone, so what they say when there is no
+// Worker is about that one route — on every OS, and never about a folder that holds no tokens.
+func TestTheCloudflareOnlyCommandsSayTheCloudflareThing(t *testing.T) {
+	for _, mac := range []bool{true, false} {
+		was := icloudIsARoadHere
+		icloudIsARoadHere = func() bool { return mac }
+
+		_, err := storeFor(fired("", nil))
+
+		icloudIsARoadHere = was
+		if !errors.Is(err, errNoCloudflareRoute) {
+			t.Fatalf("%v is not the Cloudflare route's own answer", err)
+		}
+		if strings.Contains(err.Error(), "iCloud") {
+			t.Errorf("%v sends someone pairing a phone to a folder that holds no tokens", err)
+		}
 	}
 }
 
