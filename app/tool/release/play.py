@@ -11,6 +11,8 @@ expires — so a run that dies halfway leaves the store exactly as it was.
     uv run app/tool/release/play.py state
     uv run app/tool/release/play.py upload build/app/outputs/bundle/release/app-release.aab --track alpha
     uv run app/tool/release/play.py notes --track alpha --text-file /path/to/what-changed.txt
+    uv run app/tool/release/play.py graphics --show
+    uv run app/tool/release/play.py graphics
 
 Reads the service account key from `~/.config/amenbo-release/play-service-account.json`. That
 account is a user of the Play account, invited under "users and permissions" like a person — the
@@ -34,6 +36,14 @@ STORE = pathlib.Path(__file__).resolve().parents[2] / "store"
 
 # Play's locale names and the listing sheets' own are not spelled the same everywhere.
 SHEET = {"en-US": "en", "zh-CN": "zh-Hans", "zh-TW": "zh-Hant"}
+
+# The pictures Play stands beside the listing, by the name the API knows each one as. Both are
+# baked from the mark's own coordinates (`dart run tool/gen_brand_assets.dart` and
+# `make -C app feature-graphic`), so what is sent is whatever the tree holds.
+GRAPHICS = {
+    "icon": "icon-512.png",
+    "featureGraphic": "feature-graphic-1024x500.png",
+}
 
 
 def session():
@@ -135,6 +145,64 @@ def upload(args):
     print("committed")
 
 
+def graphics(args):
+    """Replaces the pictures Play stands beside the listing, in every language it has one in.
+
+    **A picture is per language, and there is no default one to inherit from.** Play keeps a set
+    per listing, so a mark changed in one language and left in eighteen others is a listing that
+    contradicts itself — which is why this walks the languages rather than taking one.
+
+    The old picture is deleted before the new one goes up. Play holds several images per type and
+    shows the first, so uploading alone would leave the old mark sitting behind the new one, ready
+    to come back the day anything reorders them.
+    """
+    talk = session()
+    edit = check(talk.post(f"{API}/applications/{PACKAGE}/edits", timeout=60), "edits.insert")["id"]
+
+    if args.show:
+        for language in languages(talk, edit):
+            for kind in GRAPHICS:
+                held = check(
+                    talk.get(
+                        f"{API}/applications/{PACKAGE}/edits/{edit}/listings/{language}/{kind}",
+                        timeout=60,
+                    ),
+                    f"images.list {language} {kind}",
+                )
+                for image in held.get("images", []):
+                    print(f"{language:8} {kind:15} {image.get('sha256', '')[:16]}  {image.get('url', '')}")
+        talk.delete(f"{API}/applications/{PACKAGE}/edits/{edit}", timeout=60)
+        return
+
+    for kind, name in GRAPHICS.items():
+        if not (STORE / "graphics" / name).exists():
+            sys.exit(f"no {STORE / 'graphics' / name} — bake it before sending it")
+
+    for language in languages(talk, edit):
+        for kind, name in GRAPHICS.items():
+            check(
+                talk.delete(
+                    f"{API}/applications/{PACKAGE}/edits/{edit}/listings/{language}/{kind}",
+                    timeout=60,
+                ),
+                f"images.deleteall {language} {kind}",
+            )
+            sent = check(
+                talk.post(
+                    f"{UPLOAD}/applications/{PACKAGE}/edits/{edit}/listings/{language}/{kind}"
+                    "?uploadType=media",
+                    data=(STORE / "graphics" / name).read_bytes(),
+                    headers={"Content-Type": "image/png"},
+                    timeout=600,
+                ),
+                f"images.upload {language} {kind}",
+            )
+            print(f"{language:8} {kind:15} {sent['image']['sha256'][:16]}")
+
+    check(talk.post(f"{API}/applications/{PACKAGE}/edits/{edit}:commit", timeout=300), "commit")
+    print("committed")
+
+
 def notes(args):
     """Rewrites what a track says about the build it is already serving. No bundle moves.
 
@@ -183,6 +251,14 @@ if __name__ == "__main__":
         help="what changed, for testers. Without it the listing sheets are used",
     )
     one.set_defaults(run=upload)
+
+    one = steps.add_parser("graphics", help="replace the listing's icon and wide picture")
+    one.add_argument(
+        "--show",
+        action="store_true",
+        help="print what Play is holding instead of sending anything",
+    )
+    one.set_defaults(run=graphics)
 
     one = steps.add_parser("notes", help="rewrite a serving release's note")
     one.add_argument("--track", required=True)

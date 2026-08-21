@@ -525,6 +525,9 @@ uv run app/tool/release/play.py state
 - リリースノートは掲載文の `release_notes` から引く。**Play に掲載の無い言語へ書くと断られる**ので、
   出す先は `listings` が答えた言語だけ。配って試す版に「何が変わったか」を出したいときは
   `play.py notes --track <t> --text-file <path>`
+- **掲載の画は版と別に差し替えられる**（`play.py graphics`）。焼き直した `store/graphics/` の2枚を
+  Play が掲載を持つ言語ぜんぶへ上げる。上げる前に何が入っているかは `graphics --show`。
+  **版もトラックも動かさない**ので、マークだけ変わったときにビルドを出し直さずに済む
 - ゲートには入れない。ネットワークと本物の口座が要るので、掲載の画を撮る道具と同じ扱い
 
 ## ストアの掲載文
