@@ -98,6 +98,9 @@
   "fileSizeMegabytes": "{megabytes} MB",
 
   "settingsTitle": "Pengaturan",
+  "routeHeading": "Jalur",
+  "takeFromICloud": "Terima dari iCloud",
+  "takeFromICloudNote": "Apa yang Mac taruh di iCloud dibaca di ponsel ini. Kalau dimatikan, ponsel ini berhenti pergi mengambil.",
   "refreshHeading": "Pergi mengambil",
   "appearanceHeading": "Tampilan",
   "refreshNote": "Otomatis berarti saat aplikasi dibuka dan saat kamu kembali ke sana. Tidak pernah berjalan di latar belakang.",
@@ -113,6 +116,7 @@
   "thisPhone": "Ponsel ini",
   "thisPhoneDetail": "Nama untuk memutus ponsel ini, dari PC.",
   "factRoute": "Jalur",
+  "routeStopped": "Dimatikan di pengaturan. Tidak ada yang diambil dari sini.",
   "factICloud": "iCloud",
   "iCloudSignedIn": "Sudah masuk",
   "iCloudNotAvailable": "Tidak tersedia di ponsel ini",
@@ -128,7 +132,7 @@
   "erase": "Hapus salinan di ponsel ini",
   "eraseDetail": "Menghapus daftar kerja yang disimpan di sini dan kunci yang membukanya. Di PC tidak ada yang berubah.",
   "eraseQuestion": "Hapus salinan di ponsel ini?",
-  "eraseDialogDetail": "Daftar kerja yang disimpan di ponsel ini dan kunci yang membukanya akan dihapus. Di PC-mu tidak ada yang berubah, dan kamu bisa memasangkan lagi kapan saja.",
+  "eraseDialogDetail": "Daftar kerja yang disimpan di ponsel ini dan kunci yang membukanya akan dihapus, dan ponsel ini berhenti menerima apa pun. Di PC-mu tidak ada yang berubah, dan kamu bisa mulai lagi kapan saja.",
   "keepIt": "Biarkan",
   "eraseConfirm": "Hapus",
 

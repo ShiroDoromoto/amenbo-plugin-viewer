@@ -143,6 +143,43 @@ void main() {
     expect(store.meta(MetaKey.version), isNull);
   });
 
+  test(
+    'a copy iCloud left in the folder is stepped over, not read as a record',
+    () async {
+      drop.place(version: 3);
+      drop.put('task/1', {'id': 1, 'title': 'よむ', 'status': 'todo'});
+      // What iCloud leaves when two machines wrote the folder at once: the file kept, and the
+      // one it displaced put beside it under a number. Neither name is a key.
+      drop.files['records/task/1 2.json'] = jsonEncode({
+        'k': 'task/1',
+        'op': 'put',
+        'r': {'id': 1, 'title': 'ふるいうつし', 'status': 'todo'},
+      });
+      drop.files['records/task 2/1.json'] = jsonEncode({
+        'k': 'task/1',
+        'op': 'put',
+        'r': {'id': 1, 'title': 'ふるいうつし', 'status': 'todo'},
+      });
+
+      final report = await intake().run();
+
+      expect(report.records, 1);
+      expect(store.heldKeys(), {'task/1'});
+    },
+  );
+
+  test('a file that is not a record at all is stepped over', () async {
+    drop.place(version: 4);
+    drop.put('task/1', {'id': 1, 'title': 'よむ', 'status': 'todo'});
+    drop.files['records/task/notes.json'] = jsonEncode({'k': 'task/notes'});
+    drop.files['records/.DS_Store'] = 'not json at all';
+
+    final report = await intake().run();
+
+    expect(report.records, 1);
+    expect(store.heldKeys(), {'task/1'});
+  });
+
   test('a record with no row in it stops the pass', () async {
     drop.place(version: 1);
     // What a sealed record looks like from here: a key, an op, and nothing this route reads.

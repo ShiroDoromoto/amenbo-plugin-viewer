@@ -115,6 +115,20 @@ class ICloudIntake {
   /// Where the records live, one file each.
   static const recordsDir = 'records';
 
+  /// What a dataset's directory is named, and what a record's file is named after its id.
+  ///
+  /// **The folder holds files nobody placed there.** iCloud settles two machines writing at once
+  /// by keeping one of them and putting the other beside it under a number — `task 2`, `1 2.json`
+  /// — and those names are not keys: read as one, `1 2.json` would land a row under `task/1 2`,
+  /// a key naming no record, which nothing on the PC could ever remove again. So the pass reads
+  /// only what the contract writes, and steps over the rest.
+  ///
+  /// It is the PC that says a copy is there, in the log of the send that found it. This side has
+  /// no way to tell a copy from any other stray file, and guessing at one in the list a person
+  /// reads their backlog in would be a worse answer than silence.
+  static final _datasetName = RegExp(r'^[A-Za-z0-9_]+$');
+  static final _recordId = RegExp(r'^[0-9]+$');
+
   /// What a round names when what it could not read was the folder itself rather than anything
   /// inside it.
   static const _container = 'iCloud';
@@ -265,7 +279,9 @@ class ICloudIntake {
       drop.entriesIn(recordsDir, within: timeout),
       recordsDir,
     )) {
-      if (!dataset.isDirectory) continue;
+      if (!dataset.isDirectory || !_datasetName.hasMatch(dataset.name)) {
+        continue;
+      }
       final within = '$recordsDir/${dataset.name}';
       for (final file in await _within(
         drop.entriesIn(within, within: timeout),
@@ -273,6 +289,7 @@ class ICloudIntake {
       )) {
         if (file.isDirectory || !file.name.endsWith('.json')) continue;
         final id = file.name.substring(0, file.name.length - '.json'.length);
+        if (!_recordId.hasMatch(id)) continue;
         files.add((key: '${dataset.name}/$id', path: '$within/${file.name}'));
       }
     }

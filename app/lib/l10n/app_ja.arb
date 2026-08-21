@@ -98,6 +98,9 @@
   "fileSizeMegabytes": "{megabytes} MB",
 
   "settingsTitle": "設定",
+  "routeHeading": "経路",
+  "takeFromICloud": "iCloud から受け取る",
+  "takeFromICloudNote": "Mac が iCloud に置いたものを、この端末で読みます。切ると、取りに行かなくなります。",
   "refreshHeading": "取りに行く",
   "appearanceHeading": "見た目",
   "refreshNote": "自動は、アプリを開いたときと、前に戻ってきたときです。裏では動きません。",
@@ -113,6 +116,7 @@
   "thisPhone": "この端末",
   "thisPhoneDetail": "PC からこの端末を切るときの名前です。",
   "factRoute": "経路",
+  "routeStopped": "設定で切ってあります。ここからは受け取っていません。",
   "factICloud": "iCloud",
   "iCloudSignedIn": "サインイン済み",
   "iCloudNotAvailable": "この端末では使えません",
@@ -128,7 +132,7 @@
   "erase": "この端末の写しを消す",
   "eraseDetail": "ここに置いてあるバックログと、それを開く鍵を消します。PC 側は変わりません。",
   "eraseQuestion": "この端末の写しを消しますか？",
-  "eraseDialogDetail": "この端末に置いてあるバックログと、それを開く鍵を消します。PC 側は変わりません。いつでもペアリングし直せます。",
+  "eraseDialogDetail": "この端末に置いてあるバックログと、それを開く鍵を消し、以後この端末は受け取りません。PC 側は変わりません。いつでもやり直せます。",
   "keepIt": "消さない",
   "eraseConfirm": "消す",
 

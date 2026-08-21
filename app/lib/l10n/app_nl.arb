@@ -98,6 +98,9 @@
   "fileSizeMegabytes": "{megabytes} MB",
 
   "settingsTitle": "Instellingen",
+  "routeHeading": "Route",
+  "takeFromICloud": "Ophalen uit iCloud",
+  "takeFromICloudNote": "Wat de Mac in iCloud zet, wordt op deze telefoon gelezen. Uit betekent dat deze telefoon niet meer gaat kijken.",
   "refreshHeading": "Gaan kijken",
   "appearanceHeading": "Weergave",
   "refreshNote": "Automatisch betekent bij het openen van de app en als je ernaar terugkeert. Er draait nooit iets op de achtergrond.",
@@ -113,6 +116,7 @@
   "thisPhone": "Deze telefoon",
   "thisPhoneDetail": "De naam waarmee je deze telefoon op de pc afsluit.",
   "factRoute": "Route",
+  "routeStopped": "Uitgezet in de instellingen. Hier wordt niets opgehaald.",
   "factICloud": "iCloud",
   "iCloudSignedIn": "Aangemeld",
   "iCloudNotAvailable": "Niet beschikbaar op deze telefoon",
@@ -128,7 +132,7 @@
   "erase": "De kopie op deze telefoon wissen",
   "eraseDetail": "Verwijdert de backlog die hier staat en de sleutel die hem opent. Op de pc verandert niets.",
   "eraseQuestion": "De kopie op deze telefoon wissen?",
-  "eraseDialogDetail": "De backlog op deze telefoon en de sleutel die hem opent worden verwijderd. Op je pc verandert niets, en je kunt altijd opnieuw koppelen.",
+  "eraseDialogDetail": "De backlog op deze telefoon en de sleutel die hem opent worden verwijderd, en deze telefoon haalt niets meer op. Op je pc verandert niets, en je kunt altijd opnieuw beginnen.",
   "keepIt": "Behouden",
   "eraseConfirm": "Wissen",
 

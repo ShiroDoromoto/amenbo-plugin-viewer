@@ -80,6 +80,9 @@ class MetaKey {
   /// Light, dark, or whatever the phone is doing.
   static const appearance = 'appearance';
 
+  /// Whether this phone still takes what the Mac leaves in iCloud — see `settings.dart`.
+  static const iCloud = 'icloud';
+
   /// The last few words typed into the search face.
   static const recentTerms = 'recent_terms';
 
@@ -90,7 +93,13 @@ class MetaKey {
   /// alone. Everything else in `meta` describes the copy being thrown away; these describe the
   /// person holding the phone, who has not changed their mind — nor forgotten what they were
   /// looking for — just because the PC re-uploaded everything.
-  static const deviceOwn = {refresh, appearance, recentTerms, recentlyViewed};
+  static const deviceOwn = {
+    refresh,
+    appearance,
+    iCloud,
+    recentTerms,
+    recentlyViewed,
+  };
 }
 
 class BacklogStore {

@@ -140,7 +140,9 @@ class _Details extends StatelessWidget {
           _Fact(
             label: words.factRoute,
             value: connectionRouteWords(words, connection.route),
-            detail: connection.host,
+            // The host on the Cloudflare route, and on the other one the sentence a route that is
+            // switched off owes: without it the screen names a place nothing is coming from.
+            detail: connection.taking ? connection.host : words.routeStopped,
           ),
           if (connection.iCloudAvailable case final available?)
             _Fact(
