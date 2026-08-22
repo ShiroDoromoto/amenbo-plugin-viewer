@@ -366,10 +366,25 @@ def bind(args):
     print(f"version {args.version} now carries build {args.build}")
 
 
-def submit(args):
-    """Puts the version back in the queue: a submission, the version inside it, then send."""
-    version = version_named(args.version)
-    sub = call(
+def open_submission():
+    """A submission to put this version in, made only if there is not one standing already.
+
+    A submission is opened before the version goes into it, so anything that stops the second step
+    leaves the first behind — and the store hands back neither a delete nor a cancel for one that
+    was never sent (`DELETE` is refused outright, and cancelling asks for a state it is not in).
+    The only way one goes away is by being used, so an empty one standing is picked up rather than
+    added to. Oldest first, so a pile drains in the order it grew.
+    """
+    empty = [
+        sid
+        for sid, state in reversed(submissions())
+        if state == "READY_FOR_REVIEW"
+        and not call("GET", f"/v1/reviewSubmissions/{sid}/items")["data"]
+    ]
+    if empty:
+        print(f"reusing the empty submission {empty[0]}")
+        return empty[0]
+    return call(
         "POST",
         "/v1/reviewSubmissions",
         {
@@ -379,7 +394,13 @@ def submit(args):
                 "relationships": {"app": {"data": {"type": "apps", "id": app()}}},
             }
         },
-    )["data"]
+    )["data"]["id"]
+
+
+def submit(args):
+    """Puts the version back in the queue: a submission, the version inside it, then send."""
+    version = version_named(args.version)
+    sub_id = open_submission()
     call(
         "POST",
         "/v1/reviewSubmissionItems",
@@ -387,7 +408,7 @@ def submit(args):
             "data": {
                 "type": "reviewSubmissionItems",
                 "relationships": {
-                    "reviewSubmission": {"data": {"type": "reviewSubmissions", "id": sub["id"]}},
+                    "reviewSubmission": {"data": {"type": "reviewSubmissions", "id": sub_id}},
                     "appStoreVersion": {"data": {"type": "appStoreVersions", "id": version}},
                 },
             }
@@ -395,10 +416,10 @@ def submit(args):
     )
     call(
         "PATCH",
-        f"/v1/reviewSubmissions/{sub['id']}",
-        {"data": {"type": "reviewSubmissions", "id": sub["id"], "attributes": {"submitted": True}}},
+        f"/v1/reviewSubmissions/{sub_id}",
+        {"data": {"type": "reviewSubmissions", "id": sub_id, "attributes": {"submitted": True}}},
     )
-    print(f"submitted {sub['id']}")
+    print(f"submitted {sub_id}")
 
 
 if __name__ == "__main__":
