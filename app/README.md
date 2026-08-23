@@ -514,6 +514,10 @@ Android の鍵はリポジトリの外にあり、`android/key.properties` が�
 機械では release ビルドが debug の鍵に落ちる**ので、`flutter run --release` はどの flavor でも動く。
 手元のもの（`local`）は debug で焼くのが常なので、鍵の話はそもそも出てこない。
 
+**鍵は2本ある。** ストアへ出すものは手元の鍵で焼き、配って試すもの（`.dev`）は **CI が secret から
+書き出した鍵**で焼く（下記）。同じ仕組みに乗っている——CI も `key.properties` を置いてから焼くだけで、
+gradle 側に分岐は無い。
+
 ## 配って試すものを、メンバーへ渡す
 
 **Android は置き場を立てない。** `.dev` の APK は CI（[`.github/workflows/ci.yml`](../.github/workflows/ci.yml)）が
@@ -534,13 +538,25 @@ gh run download -R ShiroDoromoto/amenbo-plugin-viewer <run-id> -n viewer-dev-apk
 Ad Hoc を `itms-services://` で入れてもらう形で、置き場と案内ページは**このリポジトリの外**（運営側が持つ
 配布設備）にある。
 
-### 署名は debug の鍵に落ちる
+### 署名の鍵は1本に固定してある
 
-CI には Android の鍵が無いので、`.dev` の APK は **debug の鍵で署名される**（`android/key.properties` が
-無い機械の release ビルドはそこへ落ちる）。端末に入れるぶんには足りるが、**その鍵は焼いた機械のもの**なので、
-入れ替えのときに署名が合わずに断られることがある。そのときは Amenbo Dev を消してから入れる
-（消えるのはその端末の写しだけで、取り直せる）。**ストアのものとは別のアプリ**なので、日常使っている
-Amenbo Viewer には何も起きない。
+**入れ替えは上書きで済む**——写しもペアリングも残る。鍵が run ごとに変わっていたころは、新しい APK の
+たびに消して入れ直すことになり、**そのたびに QR を読み直させていた**（手元と2つの run で署名が
+3通りに割れることを実測した）。
+
+- **鍵は CI の secret にだけ在る。** リポジトリにも手元にも置かない——公開すれば誰でも
+  「Amenbo Dev」を名乗る APK に署名でき、それは端末から見て正規の更新なので、**その端末の写しと
+  ペアリングの鍵を引き継いでしまう**
+- **配るのは CI が焼いたものだけ。** 手元で焼いた `.dev` は鍵が違うので、渡すと入れ替えが断られる
+- **fork から来た PR では署名も upload もされない**（secret が渡らない）。外からの PR を赤くしないため
+- **鍵を失うと作り直しになり、そのときだけは全員が1回消して入れ直す**（消えるのは Amenbo Dev の写し
+  だけで、取り直せる）。**ストアのものとは別のアプリ**なので、日常使っている Amenbo Viewer には
+  何も起きない
+
+鍵の実体は他のリリースの持ち物と同じ棚（`~/.config/amenbo-release/viewer-dev.keystore`、パスワードは
+その隣）。CI が読むのは secret 2つ（`VIEWER_DEV_KEYSTORE_BASE64` / `VIEWER_DEV_KEYSTORE_PASSWORD`）で、
+入れ直すときは棚のファイルから `gh secret set <名前> < <ファイル>` で流し込む（**値を引数に書かない**——
+履歴とプロセス一覧に残る）。
 
 ## ストアへ出す手は、ブラウザではなく `tool/release/`
 
