@@ -301,6 +301,21 @@ void main() {
       expect(find.byType(SearchScreen), findsOneWidget);
     });
 
+    testWidgets('the decisions are marked by the scales the desk uses', (
+      tester,
+    ) async {
+      await tester.pumpWidget(home());
+      await tester.pumpAndSettle();
+
+      // The same mark as the decisions screen on the desk. Somebody reads both in one day, and
+      // two different marks for one thing is two things to them.
+      expect(find.byIcon(Icons.balance_outlined), findsOneWidget);
+
+      await tester.tap(find.text(words.tabDecisions));
+      await tester.pumpAndSettle();
+      expect(find.byIcon(Icons.balance), findsOneWidget);
+    });
+
     testWidgets('a phone keeps them under the thumb', (tester) async {
       const narrow = Size(400, 800);
       glass(tester, narrow);
