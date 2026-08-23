@@ -39,7 +39,7 @@ typedef TakeTheBacklog =
 
 /// What stopped the round, in words.
 ///
-/// The intake carries which refusal it is and no sentence, so this is where one is chosen. Six
+/// The intake carries which refusal it is and no sentence, so this is where one is chosen. Seven
 /// of them, and no "something went wrong": the line under this one says what to do next, and it
 /// is a different thing to do in every case.
 String whatStopped(Words words, IntakeFailure failure) => switch (failure) {
@@ -48,6 +48,7 @@ String whatStopped(Words words, IntakeFailure failure) => switch (failure) {
   IntakeFailure.tooNew => words.stopTooNew,
   IntakeFailure.rebuilt => words.stopRebuilt,
   IntakeFailure.unreadable => words.stopUnreadable,
+  IntakeFailure.otherKey => words.stopOtherKey,
   IntakeFailure.placing => words.stopPlacing,
 };
 
@@ -191,6 +192,7 @@ class _FirstSyncScreenState extends State<FirstSyncScreen> {
         IntakeFailure.tooNew => words.wayOutTooNew,
         IntakeFailure.rebuilt => words.wayOutRebuilt,
         IntakeFailure.unreadable => words.wayOutUnreadable,
+        IntakeFailure.otherKey => words.wayOutOtherKey,
         IntakeFailure.placing => words.wayOutPlacing,
       };
 }

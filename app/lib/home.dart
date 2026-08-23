@@ -507,8 +507,8 @@ class _HomeShellState extends State<HomeShell> {
   /// The three ways out, down the side.
   ///
   /// The labels stay under the icons rather than being shown for the chosen one alone: a list
-  /// icon, a gavel and a magnifying glass are not three things anybody reads at a glance, and a
-  /// way out nobody can name is one they find by pressing it.
+  /// icon, a pair of scales and a magnifying glass are not three things anybody reads at a
+  /// glance, and a way out nobody can name is one they find by pressing it.
   Widget _rail(Words words) => NavigationRail(
     selectedIndex: _tab,
     onDestinationSelected: _goTo,
@@ -520,8 +520,8 @@ class _HomeShellState extends State<HomeShell> {
         label: Text(words.tabTasks),
       ),
       NavigationRailDestination(
-        icon: const Icon(Icons.gavel_outlined),
-        selectedIcon: const Icon(Icons.gavel),
+        icon: const Icon(Icons.balance_outlined),
+        selectedIcon: const Icon(Icons.balance),
         label: Text(words.tabDecisions),
       ),
       NavigationRailDestination(
@@ -543,8 +543,8 @@ class _HomeShellState extends State<HomeShell> {
         label: words.tabTasks,
       ),
       NavigationDestination(
-        icon: const Icon(Icons.gavel_outlined),
-        selectedIcon: const Icon(Icons.gavel),
+        icon: const Icon(Icons.balance_outlined),
+        selectedIcon: const Icon(Icons.balance),
         label: words.tabDecisions,
       ),
       NavigationDestination(
