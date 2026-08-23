@@ -46,6 +46,22 @@ type pretendCloudflare struct {
 	}
 	turnedOn bool
 	offered  string
+
+	// What reached the Worker itself once it was standing, in the order it landed. The only
+	// thing `setup` writes to it is the emptying, and what has to be read back off it is which
+	// door that went to and what it carried.
+	landed []landing
+
+	// The Worker turning a write down — a deploy that has not settled everywhere yet, a bad
+	// minute. Left false, it takes what it is given.
+	writesRefused bool
+}
+
+// landing is one write that reached the deployed Worker.
+type landing struct {
+	path  string
+	token string
+	body  placement
 }
 
 // answers stands the stand-in up and points setup at it. The URL it is reachable on stands in for
@@ -164,6 +180,27 @@ func answers(t *testing.T, account *pretendCloudflare) {
 		w.WriteHeader(http.StatusUnauthorized)
 	})
 
+	// Writes to the Worker, which for this run is the emptying and nothing else.
+	road.HandleFunc("PUT /worker/{rest...}", func(w http.ResponseWriter, r *http.Request) {
+		if account.writesRefused {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusServiceUnavailable)
+			json.NewEncoder(w).Encode(map[string]any{"error": "this door is not answering yet"})
+			return
+		}
+		var body placement
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		account.landed = append(account.landed, landing{
+			path:  "/" + r.PathValue("rest"),
+			token: strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer "),
+			body:  body,
+		})
+		json.NewEncoder(w).Encode(map[string]any{"seq": len(account.landed)})
+	})
+
 	server := httptest.NewServer(road)
 	t.Cleanup(server.Close)
 	t.Setenv(envStandIn, server.URL)
@@ -241,8 +278,18 @@ func watched(t *testing.T, account *pretendCloudflare) *[]keptSetting {
 		return nil
 	}
 	t.Cleanup(func() { settle = was })
+
+	asked := theStoreVersion
+	theStoreVersion = func() (int64, error) { return backlogVersion, nil }
+	t.Cleanup(func() { theStoreVersion = asked })
+
 	return &written
 }
+
+// backlogVersion is what the backlog says it is at while these run. Nothing is compared against
+// it — it is read back off what reached the Worker, to say the number travelled rather than being
+// invented at the door.
+const backlogVersion = 12345
 
 func valueOf(written []keptSetting, key string) (string, bool) {
 	for _, setting := range written {
@@ -442,6 +489,81 @@ func TestSetupForgetsWhatWasSentToTheStoreBeforeItAndNothingElse(t *testing.T) {
 	}
 	if left := remembered.Routes["a-route-this-build-does-not-have"]; left.Cursor != 42 {
 		t.Errorf("the route beside it was left at %+v, and it is owed a whole placement it has no reason for", left)
+	}
+}
+
+// A key drawn afresh leaves whatever the last one sealed unopenable by anyone — this machine
+// included — so `setup` empties the store rather than leaving a paired phone in front of a
+// backlog it is refused a row of.
+func TestSetupEmptiesTheStoreItDrewANewKeyOver(t *testing.T) {
+	account := oneAccount()
+	written := watched(t, account)
+
+	var code int
+	capture(t, func() { code = run(input{}, []string{"setup"}) })
+
+	if code != 0 {
+		t.Fatalf("exit %d", code)
+	}
+	if len(account.landed) != 1 {
+		t.Fatalf("the Worker was written to %d times, where the emptying is the only one: %+v", len(account.landed), account.landed)
+	}
+	emptying := account.landed[0]
+	if emptying.path != "/reset" {
+		t.Errorf("the emptying went to %s, and only /reset empties what is there", emptying.path)
+	}
+	if len(emptying.body.Records) != 0 {
+		t.Errorf("the emptying carried %d records, and it is a whole store of nothing", len(emptying.body.Records))
+	}
+	if emptying.body.SpecV != specVersion || emptying.body.Version != backlogVersion {
+		t.Errorf("the emptying named spec_v %d at version %d", emptying.body.SpecV, emptying.body.Version)
+	}
+	token, _ := valueOf(*written, configAuthToken)
+	if emptying.token != token || token == "" {
+		t.Errorf("the emptying was not signed with the write token this run settled: %q", emptying.token)
+	}
+}
+
+// A key that was already there is one the phones reading are paired with, and every record in the
+// store still opens under it. Emptying then would throw a working backlog away.
+func TestSetupLeavesTheStoreAloneWhenTheKeyWasKept(t *testing.T) {
+	account := oneAccount()
+	watched(t, account)
+	t.Setenv(envEncryptionKey, base64.RawURLEncoding.EncodeToString(make([]byte, keySize)))
+
+	var code int
+	capture(t, func() { code = run(input{}, []string{"setup"}) })
+
+	if code != 0 {
+		t.Fatalf("exit %d", code)
+	}
+	if len(account.landed) != 0 {
+		t.Errorf("a store every paired phone can still read was written over: %+v", account.landed)
+	}
+}
+
+// The emptying is a repair, not a step of standing the route up. A store that will not take it is
+// the store that would have been there anyway, and the next write places the whole of it — so the
+// run says what happened and ends the way it would have.
+func TestASetupIsNotEndedByAStoreThatWouldNotEmpty(t *testing.T) {
+	account := oneAccount()
+	account.writesRefused = true
+	written := watched(t, account)
+
+	var code int
+	stdout, stderr := capture(t, func() { code = run(input{}, []string{"setup"}) })
+
+	if code != 0 {
+		t.Fatalf("exit %d — the route is up and the settings are settled: %s", code, stderr)
+	}
+	if _, kept := valueOf(*written, configWorkerURL); !kept {
+		t.Error("the endpoint was not settled, and the route it points at is standing")
+	}
+	if !strings.Contains(stdout, `"url"`) {
+		t.Errorf("the run did not answer with the route it stood up: %q", stdout)
+	}
+	if !strings.Contains(stderr, "left for the next write to replace") {
+		t.Errorf("nothing said the old records are still there: %q", stderr)
 	}
 }
 

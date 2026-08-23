@@ -173,6 +173,29 @@ func setup(_ input, args []string) error {
 		return err
 	}
 
+	// A key drawn just now is one nothing already in the store can be opened with: what is in
+	// there was sealed with the key before it, and neither this machine nor the QR about to be
+	// shown carries that one any more. Records nobody holds the key to are not a backlog — a
+	// phone paired against them is told, on every row, that its key does not fit, and pairing
+	// again hands it the same key it already has.
+	//
+	// So they go, here, rather than being left for the next write to replace. The next write does
+	// put it right — the route has just been forgotten, and a forgotten route is placed whole —
+	// but nothing says when the next write is, and until it comes the only thing the user can do
+	// about the error in front of them is the thing that does not work.
+	//
+	// **Only when the key changed.** A setup that kept the key left every record in there
+	// readable by exactly the phones that could read it before.
+	//
+	// **It is emptied after the forgetting and not before.** Were it the other way round, a
+	// forgetting that failed would leave an empty store behind a memory that says the phone is
+	// level, and the next write would place the edit alone over the hole where the backlog was.
+	if !keptKey {
+		if err := emptyTheStore(endpoint, writeToken, key); err != nil {
+			logf("%s: the records the key before this one sealed could not be cleared, so they are left for the next write to replace: %v", pluginName, err)
+		}
+	}
+
 	logf("%s: %s", pluginName, say(phTheRouteIsUp, endpoint))
 	if keptKey {
 		logf("%s: %s", pluginName, say(phTheKeyWasKept))
@@ -187,6 +210,34 @@ func setup(_ input, args []string) error {
 		"database": database,
 		"keys":     kept(keptKey && keptToken),
 	})
+}
+
+// theStoreVersion is the backlog's version as this run reads it. It is a variable for the reason
+// `settle` is one: a test of `setup` must not reach an Amenbo that somebody's work is in.
+var theStoreVersion = storeVersion
+
+// emptyTheStore places a whole store of nothing, which is what `PUT /reset` empties for.
+//
+// **The version it carries is the backlog's own**, read here rather than invented, so the store
+// never names a version the backlog was never at. Nothing turns on the number afterwards — the
+// route has been forgotten, and a forgotten route is placed whole whatever version it holds — but
+// it is the one a phone reads out, and a made-up one would be read out as fact.
+//
+// **A failure here does not end the setup**, which is why what comes back is for its caller to
+// say rather than to return. The route is up and its settings are settled; a store that would not
+// empty is the same unreadable store that would have been there anyway, and the next write still
+// puts it right.
+func emptyTheStore(endpoint, writeToken, key string) error {
+	version, err := theStoreVersion()
+	if err != nil {
+		return err
+	}
+	seal, err := newSealer(key)
+	if err != nil {
+		return err
+	}
+	shop := store{url: endpoint, token: writeToken, seal: seal}
+	return shop.replace(placement{SpecV: specVersion, Version: version})
 }
 
 // endpointOn is where the Worker answers once it has been turned on: its own name under the
