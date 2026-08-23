@@ -91,11 +91,16 @@ type outgoing struct {
 // which parts are neither. They are only filled in by the route that has a limit; the folder is
 // handed the whole of a turn at once and has no use for them.
 type placement struct {
-	SpecV   int        `json:"spec_v"`
-	Version int64      `json:"version"`
-	Part    int        `json:"part,omitempty"`
-	Parts   int        `json:"parts,omitempty"`
-	Records []outgoing `json:"records"`
+	SpecV   int   `json:"spec_v"`
+	Version int64 `json:"version"`
+	Part    int   `json:"part,omitempty"`
+	Parts   int   `json:"parts,omitempty"`
+	// KeyFingerprint names the key these records were sealed with, so a phone can find out that
+	// its own key does not fit without fetching a store it cannot open a row of. It is filled in
+	// by the route that seals — the folder holds rows as they are — and it travels on every part
+	// of a turn, the store writing it down with the last one.
+	KeyFingerprint string     `json:"key_fingerprint,omitempty"`
+	Records        []outgoing `json:"records"`
 }
 
 // recordKey is what a row is filed under: its dataset and its id, as one string. The store is
@@ -332,15 +337,19 @@ func inParts(records []outgoing, most int) [][]outgoing {
 }
 
 // sealed puts every row in this body into an envelope, which is what makes it fit to leave the
-// machine.
+// machine, and names the key it did that with.
 //
 // **This is the last thing done before the bytes go out**, and it is done here rather than where
 // the records are built, because the folder on this same device has no reason to be handed a
 // ciphertext it would need a key to read.
+//
+// **The name goes on beside the sealing, not somewhere else**, so the two cannot drift: what the
+// store is told sealed these records is the key that sealed them in this same call.
 func (s store) sealed(body placement) (placement, error) {
 	if s.seal == nil {
 		return placement{}, errNoKey
 	}
+	body.KeyFingerprint = s.seal.fingerprint
 	records := make([]outgoing, 0, len(body.Records))
 	for _, record := range body.Records {
 		if record.Row != nil {
