@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -65,10 +66,14 @@ func TestThePhonesListedAreTheOnesThatWerePaired(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("exit %d", code)
 	}
-	var listed []phone
-	if err := json.Unmarshal([]byte(stdout), &listed); err != nil {
+	var answer struct {
+		Show   []shownPart `json:"show"`
+		Paired []phone     `json:"paired"`
+	}
+	if err := json.Unmarshal([]byte(stdout), &answer); err != nil {
 		t.Fatalf("stdout is the return value and it does not parse: %q", stdout)
 	}
+	listed := answer.Paired
 	if len(listed) != 2 || listed[0].Label != "iPhone" || listed[1].Label != "Pixel" {
 		t.Errorf("%+v", listed)
 	}
@@ -78,6 +83,23 @@ func TestThePhonesListedAreTheOnesThatWerePaired(t *testing.T) {
 	if !strings.Contains(stderr, "iPhone") || !strings.Contains(stderr, "Pixel") {
 		t.Errorf("nothing a person can read came out: %q", stderr)
 	}
+	// The settings screen has no log to read, so the same two names have to be drawn on it —
+	// they are what the box that unpairs one takes typed.
+	drawn := drawnText(answer.Show)
+	if !strings.Contains(drawn, "iPhone") || !strings.Contains(drawn, "Pixel") {
+		t.Errorf("the settings screen was handed %q", drawn)
+	}
+}
+
+// drawnText flattens what a run asked the settings screen to draw, so a test can ask whether a
+// name reached the form without caring which part carried it.
+func drawnText(shown []shownPart) string {
+	var said []string
+	for _, part := range shown {
+		said = append(said, part.Text, part.Heading)
+		said = append(said, part.List...)
+	}
+	return strings.Join(said, "\n")
 }
 
 // Nothing paired is not a fault — it is what every install looks like until somebody runs qr —
@@ -91,11 +113,24 @@ func TestNoPhonePairedIsAnAnswerRatherThanAFailure(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("exit %d", code)
 	}
-	if strings.TrimSpace(stdout) != "[]" {
+	var answer struct {
+		Show   []shownPart `json:"show"`
+		Paired []phone     `json:"paired"`
+	}
+	if err := json.Unmarshal([]byte(stdout), &answer); err != nil {
+		t.Fatalf("stdout is the return value and it does not parse: %q", stdout)
+	}
+	if len(answer.Paired) != 0 {
 		t.Errorf("the return value is not an empty list: %q", stdout)
 	}
-	if !strings.Contains(stderr, "qr") {
+	// How to pair one is a button, and it is said on both faces — the log for whoever typed
+	// this, the form for whoever pressed it.
+	pairing := wordings["en"][phThePairButton]
+	if !strings.Contains(stderr, pairing) {
 		t.Errorf("it does not say how to pair one: %q", stderr)
+	}
+	if !strings.Contains(drawnText(answer.Show), pairing) {
+		t.Errorf("the settings screen was not told how to pair one: %q", stdout)
 	}
 }
 
@@ -211,6 +246,102 @@ func TestALabelIsEscapedIntoThePath(t *testing.T) {
 	if tokens.asked != "my phone/2" {
 		t.Errorf("the store read the name as %q", tokens.asked)
 	}
+}
+
+// The settings screen has no command line: the name of the phone to cut off arrives in the box
+// the button declares, the way the phone's name does when one is paired.
+func TestTheNameToUnpairIsTakenFromTheSettingsScreensBox(t *testing.T) {
+	tokens := &pretendTokens{holds: map[string]bool{"iPhone": true, "Pixel": true}}
+	in := cuttingAgainst(t, tokens, "iPhone", "Pixel")
+	t.Setenv(envAskPhone, "iPhone")
+
+	var code int
+	stdout, _ := capture(t, func() { code = run(in, []string{"revoke"}) })
+
+	if code != 0 {
+		t.Fatalf("exit %d — the button was pressed with a name in its box", code)
+	}
+	if tokens.asked != "iPhone" {
+		t.Errorf("the store was asked to cut %q", tokens.asked)
+	}
+	if paired := pairedPhones(t); len(paired) != 1 || paired[0].Label != "Pixel" {
+		t.Errorf("the other phone did not stay: %+v", paired)
+	}
+	// The form draws what happened; there is no log in front of whoever pressed the button.
+	var answer struct {
+		Show []shownPart `json:"show"`
+	}
+	if err := json.Unmarshal([]byte(stdout), &answer); err != nil {
+		t.Fatalf("stdout does not parse: %q", stdout)
+	}
+	if !strings.Contains(drawnText(answer.Show), "iPhone") {
+		t.Errorf("the settings screen was handed %q", stdout)
+	}
+}
+
+// A name typed after the command wins over the box: someone at a terminal said which one out
+// loud, and an answer left in the environment from a form is not that.
+func TestANameTypedWinsOverTheBox(t *testing.T) {
+	tokens := &pretendTokens{holds: map[string]bool{"iPhone": true, "Pixel": true}}
+	in := cuttingAgainst(t, tokens, "iPhone", "Pixel")
+	t.Setenv(envAskPhone, "iPhone")
+
+	capture(t, func() { run(in, []string{"revoke", "Pixel"}) })
+
+	if tokens.asked != "Pixel" {
+		t.Errorf("the store was asked to cut %q", tokens.asked)
+	}
+}
+
+// Pressing the button with nothing in the box is the ordinary mistake, and what to do about it is
+// the other button — the one that shows the names there are to type.
+func TestUnpairingWithNoNameSaysWhereTheNamesAre(t *testing.T) {
+	in := cuttingAgainst(t, &pretendTokens{holds: map[string]bool{}}, "iPhone")
+
+	var code int
+	_, stderr := capture(t, func() { code = run(in, []string{"revoke"}) })
+
+	if code != 1 {
+		t.Fatalf("exit %d — nothing was named", code)
+	}
+	if !strings.Contains(stderr, wordings["en"][phTheSeePhonesButton]) {
+		t.Errorf("the refusal does not say where the names are: %q", stderr)
+	}
+}
+
+// **An answer too heavy for the form is dropped whole by Amenbo**, not trimmed — so a list long
+// enough to reach that weight is cut here, where there is still something to say about what was
+// cut. The log keeps every one of them.
+func TestALongListIsCutToWhatTheFormWillTakeAndSaysSo(t *testing.T) {
+	long := strings.Repeat("a-phone-with-a-very-long-name", 8)
+	paired := make([]phone, 0, 40)
+	for at := range 40 {
+		paired = append(paired, phone{Label: fmt.Sprintf("%s-%d", long, at), IssuedAt: "2026-08-09T09:00:00.000Z"})
+	}
+
+	shown := whatIsPaired(paired)
+
+	lines := 0
+	for _, part := range shown {
+		lines += len(part.List)
+	}
+	if lines == 0 || lines >= len(paired) {
+		t.Fatalf("%d of %d phones were drawn, want the list cut to fit", lines, len(paired))
+	}
+	if weighs(linesOf(shown)) > showBytes {
+		t.Errorf("what is drawn weighs %d, and Amenbo drops an answer over %d whole", weighs(linesOf(shown)), showBytes)
+	}
+	if !strings.Contains(drawnText(shown), fmt.Sprint(len(paired)-lines)) {
+		t.Errorf("nothing says how many were left out: %q", drawnText(shown))
+	}
+}
+
+func linesOf(shown []shownPart) []string {
+	var lines []string
+	for _, part := range shown {
+		lines = append(lines, part.List...)
+	}
+	return lines
 }
 
 // Revoking names exactly one phone. Nothing after `phones` means anything either, and taking a

@@ -73,9 +73,14 @@ const (
 // **The code is the text, not a picture.** Before this, a code went out as a PNG written into a
 // temporary directory and handed to whatever the system opens images with — which on a machine
 // with no such thing, or a session that cannot reach the screen, failed with nobody watching.
+// **Exactly one field per part.** Amenbo reads a part as the one key it carries, so a part with
+// two of them is one it refuses — which is why every field is `omitempty` and every part is built
+// with one of them set.
 type shownPart struct {
-	Text string `json:"text,omitempty"`
-	QR   string `json:"qr,omitempty"`
+	Text    string   `json:"text,omitempty"`
+	Heading string   `json:"heading,omitempty"`
+	List    []string `json:"list,omitempty"`
+	QR      string   `json:"qr,omitempty"`
 }
 
 // answered is what a run puts on stdout for the settings screen to draw beneath the button that
@@ -186,8 +191,10 @@ func (s store) issue(label, hash string) (string, error) {
 	answered, err := s.askTheStore(request)
 	var turnedDown storeRefused
 	if errors.As(err, &turnedDown) && turnedDown.status == http.StatusConflict {
-		return "", refuse(phPhoneAlreadyPaired,
-			label, pluginName, label)
+		// **What to do about it is a button, not a command.** Someone who only ever opens the
+		// settings screen meets this refusal the second time they pair a phone they re-installed
+		// the app on, and a sentence pointing at a terminal leaves them with nowhere to go.
+		return "", refuse(phPhoneAlreadyPaired, label, phTheUnpairButton)
 	}
 	if err != nil {
 		return "", err

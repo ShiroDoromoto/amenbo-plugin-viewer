@@ -104,6 +104,11 @@ func writePhones(known phones) error {
 // It asks nothing of the network. The store has no door that answers "who may read" — it
 // compares a hash and says yes or no — so what can be listed is what was written down here when
 // the code was issued.
+//
+// **The list is drawn on the settings screen as well as written to the log.** Naming a phone is
+// the PC's job, so by the time someone wants to cut one off they have long stopped remembering
+// what they called it — and the button that unpairs takes that name typed. Seeing the names is
+// the half that makes typing one possible.
 func listPhones(_ input, args []string) error {
 	if len(args) > 0 {
 		return fmt.Errorf("phones takes nothing after it, and %q was given", args[0])
@@ -113,24 +118,95 @@ func listPhones(_ input, args []string) error {
 		return err
 	}
 	if len(known.Paired) == 0 {
-		logf("%s: no phone is paired. `%s qr` pairs one.", pluginName, pluginName)
+		logf("%s: %s", pluginName, say(phNoPhoneIsPairedYet, phThePairButton))
 	}
 	for _, paired := range known.Paired {
 		logf("  %-20s %s", paired.Label, paired.IssuedAt)
 	}
-	return json.NewEncoder(out).Encode(known.Paired)
+	// **The answer is an object now, where it was the bare list.** A run that draws on the
+	// settings screen has to say what to draw, and there is nowhere on an array to say it; the
+	// list it used to be is still here, under a name.
+	return json.NewEncoder(out).Encode(struct {
+		answered
+		Paired []phone `json:"paired"`
+	}{
+		answered: answered{V: specVersion, OK: true, Show: whatIsPaired(known.Paired)},
+		Paired:   known.Paired,
+	})
 }
+
+// showBytes is what one answer's parts may weigh, and it is Amenbo's number rather than ours: an
+// answer heavier than this is not trimmed at the far end, it is **dropped whole**. So a long list
+// is cut here, where there is still something to say about what was cut.
+const showBytes = 4096
+
+// whatIsPaired draws the phones for the settings screen: a heading, and one line per phone.
+//
+// **A name and a day, in that order**, because the name is what the unpairing box takes and the
+// day is what tells two phones with similar names apart.
+func whatIsPaired(paired []phone) []shownPart {
+	if len(paired) == 0 {
+		return []shownPart{{Text: say(phNoPhoneIsPairedYet, phThePairButton)}}
+	}
+	lines := make([]string, 0, len(paired))
+	for _, one := range paired {
+		lines = append(lines, say(phPairedOn, one.Label, one.IssuedAt))
+	}
+	// A label is whatever somebody typed, so the weight of this is not something to reason about
+	// — it is something to measure. What will not fit is dropped, and the log still holds all of
+	// it (that is what the lines above are written there for).
+	for len(lines) > 1 && weighs(lines) > showBytes {
+		lines = lines[:len(lines)-1]
+	}
+	shown := []shownPart{{Heading: say(phPhonesThatMayRead)}, {List: lines}}
+	if len(lines) < len(paired) {
+		shown = append(shown, shownPart{Text: say(phTheRestAreInTheLog, len(paired)-len(lines))})
+	}
+	return shown
+}
+
+// weighs is what those lines cost as the JSON they travel as, which is the measure Amenbo holds
+// the answer to.
+func weighs(lines []string) int {
+	raw, err := json.Marshal(lines)
+	if err != nil {
+		return showBytes + 1
+	}
+	return len(raw)
+}
+
+// The box the settings screen asks before it runs the unpairing, and the variable Amenbo hands
+// the answer over in for that one run.
+//
+// **It is named for the phone rather than for a label**, so the two boxes on the form read apart:
+// pairing asks what to call a phone, and this asks which one to cut off.
+const (
+	askPhone    = "phone"
+	envAskPhone = "AMENBO_ASK_PHONE"
+)
 
 // revoke cuts one phone off, by the name it was paired under.
 //
 // **The store is told first.** Dropping the row here and failing at the store would leave a phone
 // still reading under a name nobody can see any more — the one state from which there is no way
 // back but re-keying everything.
+//
+// The name comes off the command line when there is one, and out of the settings screen's box
+// when the button was pressed — the same two ways pairing takes one.
 func revoke(in input, args []string) error {
-	if len(args) != 1 || strings.TrimSpace(args[0]) == "" {
+	if len(args) > 1 {
 		return errors.New("revoke takes the name of one phone — `phones` lists them")
 	}
-	label := strings.TrimSpace(args[0])
+	label := ""
+	if len(args) == 1 {
+		label = strings.TrimSpace(args[0])
+	}
+	if label == "" {
+		label = strings.TrimSpace(os.Getenv(envAskPhone))
+	}
+	if label == "" {
+		return refuse(phWhichPhoneToUnpair, phTheSeePhonesButton)
+	}
 
 	where, err := storeFor(in)
 	if err != nil {
@@ -152,12 +228,12 @@ func revoke(in input, args []string) error {
 		return err
 	}
 	if !cut && !held {
-		return fmt.Errorf("no phone is called %q — `%s phones` lists the ones that are", label, pluginName)
+		return refuse(phNoPhoneByThatName, label, phTheSeePhonesButton)
 	}
 	if !cut {
 		// The store never had it, so nothing was reading under that name. What is left is a row
 		// here that says otherwise, and tidying it is the honest end.
-		logf("%s: the store had no %q, so nothing was reading with it — the record here is tidied.", pluginName, label)
+		logf("%s: %s", pluginName, say(phNothingWasReadingAsThat, label))
 	}
 
 	kept := make([]phone, 0, len(known.Paired))
@@ -172,9 +248,26 @@ func revoke(in input, args []string) error {
 	}
 
 	if cut {
-		logf("%s: %q reads nothing from now on.", pluginName, label)
+		logf("%s: %s", pluginName, say(phPhoneReadsNothingFromNowOn, label))
 	}
-	return json.NewEncoder(out).Encode(map[string]any{"label": label, "cut": cut})
+	return json.NewEncoder(out).Encode(struct {
+		answered
+		Label string `json:"label"`
+		Cut   bool   `json:"cut"`
+	}{
+		answered: answered{V: specVersion, OK: true, Show: []shownPart{{Text: whatTheCutLeft(label, cut)}}},
+		Label:    label,
+		Cut:      cut,
+	})
+}
+
+// whatTheCutLeft is the line the settings screen draws under the button: a phone that was reading
+// and is not, or a name that named nothing and has been tidied away.
+func whatTheCutLeft(label string, cut bool) string {
+	if cut {
+		return say(phPhoneReadsNothingFromNowOn, label)
+	}
+	return say(phNothingWasReadingAsThat, label)
 }
 
 // cutOff asks the store to forget one read token. It says whether there was one to forget: the

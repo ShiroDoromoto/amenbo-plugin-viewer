@@ -216,15 +216,21 @@ func run(in input, args []string) int {
 }
 
 // settingsFace is the calls the settings screen raises: the line it asks for on its own
-// (`settings.check`) and the four buttons it offers (`settings.actions`), as `dev/manifest.json`
+// (`settings.check`) and the buttons it offers (`settings.actions`), as `dev/manifest.json`
 // declares them. They are the plugin's only face a person reads without having typed anything,
 // which is what makes them the ones worth translating.
+//
+// **`phones` and `revoke` are on both faces.** They were typed and nothing else until unpairing
+// had to be reachable without a terminal, and a call cannot answer in two languages at once — so
+// the screen wins, being where the reader who has no other way in is standing.
 var settingsFace = map[string]bool{
-	"check": true,
-	"app":   true,
-	"token": true,
-	"setup": true,
-	"qr":    true,
+	"check":  true,
+	"app":    true,
+	"token":  true,
+	"setup":  true,
+	"qr":     true,
+	"phones": true,
+	"revoke": true,
 }
 
 // do ends the command face on the verdict the exit code carries.

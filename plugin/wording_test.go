@@ -40,7 +40,11 @@ func TestEveryLanguageAmenboOffersHasARow(t *testing.T) {
 // measured against. It is written out rather than derived, so a phrase added to the code and
 // forgotten in the languages shows up here as a line nobody added.
 var everyPhrase = []phrase{
-	phCloudflareWorker, phStandTheWorkerUp, phTheSetupButton, phThePairButton,
+	phCloudflareWorker, phStandTheWorkerUp,
+	phTheSetupButton, phThePairButton, phTheSeePhonesButton, phTheUnpairButton,
+	phPhonesThatMayRead, phPairedOn, phNoPhoneIsPairedYet, phTheRestAreInTheLog,
+	phWhichPhoneToUnpair, phNoPhoneByThatName, phNothingWasReadingAsThat,
+	phPhoneReadsNothingFromNowOn,
 	phStandingWithNoKey, phStandingBadKey, phCarryingTo, phCarryingNowhere,
 	phNothingIsTicked, phWaitingOn, phNowhere, phAnd, phComma,
 	phCodeNotDrawn, phPointTheCamera, phReadThisWithTheCamera,
