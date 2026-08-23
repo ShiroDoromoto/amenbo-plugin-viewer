@@ -49,6 +49,23 @@ function sendingPart(
 	return signed(path, { method: "PUT", body: JSON.stringify({ spec_v: 1, version, part, parts, records }) });
 }
 
+/** A fingerprint the way a PC writes one: SHA-256, lower-case hex. */
+const SEALED_WITH = "a".repeat(64);
+const SEALED_WITH_ANOTHER = "b".repeat(64);
+
+/** A body naming the key its records were sealed with. */
+function sendingSealedWith(
+	path: "/records" | "/reset",
+	version: number,
+	fingerprint: unknown,
+	records: unknown[] = [],
+): Promise<Response> {
+	return signed(path, {
+		method: "PUT",
+		body: JSON.stringify({ spec_v: 1, version, key_fingerprint: fingerprint, records }),
+	});
+}
+
 /** One record sealed on the PC, as it travels. */
 function sealed(k: string): Record<string, string> {
 	return { k, op: "put", n: `nonce-for-${k}`, c: `ciphertext-for-${k}` };
@@ -75,7 +92,9 @@ async function reading(path: string): Promise<Response> {
 beforeEach(async () => {
 	await env.RECORDS.exec("DELETE FROM tokens");
 	await env.RECORDS.exec("DELETE FROM records");
-	await env.RECORDS.exec("UPDATE store SET version = NULL, updated_at = NULL, seq = 0, replacing = 0, placed_from = 0 WHERE id = 1");
+	await env.RECORDS.exec(
+		"UPDATE store SET version = NULL, updated_at = NULL, seq = 0, replacing = 0, placed_from = 0, key_fingerprint = NULL WHERE id = 1",
+	);
 });
 
 describe("the gate", () => {
@@ -477,7 +496,14 @@ describe("where the store stands", () => {
 	it("says nothing has landed yet, rather than nothing at all", async () => {
 		const answered = await reading("/meta").then((it) => it.json());
 
-		expect(answered).toEqual({ spec_v: 1, version: null, seq: 0, updated_at: null, placed_from: 0 });
+		expect(answered).toEqual({
+			spec_v: 1,
+			version: null,
+			seq: 0,
+			updated_at: null,
+			placed_from: 0,
+			key_fingerprint: null,
+		});
 	});
 
 	it("says the version and how far the order has got", async () => {
@@ -486,6 +512,107 @@ describe("where the store stands", () => {
 		const answered = await reading("/meta").then((it) => it.json());
 
 		expect(answered).toMatchObject({ spec_v: 1, version: 12345, seq: 2 });
+	});
+});
+
+describe("the key the records were sealed with", () => {
+	// A phone whose own key hashes to something else cannot open a single row here, and the whole
+	// point of naming it is that learning so costs one small answer rather than a whole fetch.
+	it("comes back on the cheap question, once a placement has named one", async () => {
+		await sendingSealedWith("/records", 1, SEALED_WITH, [sealed("task/1")]);
+
+		const answered = await reading("/meta").then((it) => it.json());
+
+		expect(answered).toMatchObject({ key_fingerprint: SEALED_WITH });
+	});
+
+	// Every send written before this field existed names no key, so refusing them would turn an
+	// upgrade of this Worker into a store nobody could write to.
+	it("is nothing at all when the sender named none", async () => {
+		await sending("/records", 1, [sealed("task/1")]);
+
+		const answered = await reading("/meta").then((it) => it.json());
+
+		expect(answered).toMatchObject({ key_fingerprint: null });
+	});
+
+	// It says what is in the records now, not what the last sender happened to say. Left standing,
+	// a phone would compare its key against an answer nothing here vouches for any more.
+	it("is let go by a turn that names none, rather than standing for the last one", async () => {
+		await sendingSealedWith("/records", 1, SEALED_WITH, [sealed("task/1")]);
+
+		await sending("/records", 2, [sealed("task/2")]);
+
+		const answered = await reading("/meta").then((it) => it.json());
+		expect(answered).toMatchObject({ key_fingerprint: null });
+	});
+
+	// The one placement that matters most: a key drawn afresh comes with the whole store placed
+	// again, and the answer has to move with it.
+	it("moves when the whole store is placed again under another key", async () => {
+		await sendingSealedWith("/records", 1, SEALED_WITH, [sealed("task/1")]);
+
+		await sendingSealedWith("/reset", 2, SEALED_WITH_ANOTHER, [sealed("task/1")]);
+
+		const answered = await reading("/meta").then((it) => it.json());
+		expect(answered).toMatchObject({ key_fingerprint: SEALED_WITH_ANOTHER });
+	});
+
+	// Settled by the last part alone, like the version — a turn cut short leaves the store naming
+	// the key it really holds rather than one that is only half placed.
+	it("is written down only once the last part has landed", async () => {
+		await signed("/reset", {
+			method: "PUT",
+			body: JSON.stringify({
+				spec_v: 1,
+				version: 7,
+				part: 1,
+				parts: 2,
+				key_fingerprint: SEALED_WITH,
+				records: [sealed("task/1")],
+			}),
+		});
+
+		const midway = await env.RECORDS.prepare("SELECT key_fingerprint FROM store WHERE id = 1").first();
+		expect(midway).toEqual({ key_fingerprint: null });
+
+		await signed("/reset", {
+			method: "PUT",
+			body: JSON.stringify({
+				spec_v: 1,
+				version: 7,
+				part: 2,
+				parts: 2,
+				key_fingerprint: SEALED_WITH,
+				records: [sealed("task/2")],
+			}),
+		});
+
+		const answered = await reading("/meta").then((it) => it.json());
+		expect(answered).toMatchObject({ key_fingerprint: SEALED_WITH });
+	});
+
+	// What is kept is a hash and never a key, so anything that is not one is turned away at the
+	// door rather than written down for a phone to compare against.
+	it("refuses anything that is not a SHA-256", async () => {
+		for (const notAHash of ["", "the-key-itself", "a".repeat(63), "z".repeat(64), 12345, {}]) {
+			const answered = await sendingSealedWith("/records", 1, notAHash, [sealed("task/1")]);
+
+			expect(answered.status, JSON.stringify(notAHash)).toBe(400);
+			expect(await answered.json<{ error: string }>()).toMatchObject({
+				error: expect.stringContaining("64 hex characters"),
+			});
+		}
+	});
+
+	// A hash is the same hash however it was spelled, and this Worker only ever compares strings
+	// — so the case is settled here rather than at both far ends.
+	it("is kept in lower case, whichever case it arrived in", async () => {
+		await sendingSealedWith("/records", 1, SEALED_WITH.toUpperCase(), [sealed("task/1")]);
+
+		const answered = await reading("/meta").then((it) => it.json());
+
+		expect(answered).toMatchObject({ key_fingerprint: SEALED_WITH });
 	});
 });
 

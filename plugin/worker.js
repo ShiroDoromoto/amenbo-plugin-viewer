@@ -90,7 +90,7 @@ async function sha256(text) {
 __name(sha256, "sha256");
 async function standing(env) {
   const row = await env.RECORDS.prepare(
-    "SELECT version, seq, updated_at, replacing, placed_from FROM store WHERE id = 1"
+    "SELECT version, seq, updated_at, replacing, placed_from, key_fingerprint FROM store WHERE id = 1"
   ).first();
   return row;
 }
@@ -113,7 +113,8 @@ async function meta(env) {
     version: now.version,
     seq: now.seq,
     updated_at: now.updated_at,
-    placed_from: now.placed_from
+    placed_from: now.placed_from,
+    key_fingerprint: now.key_fingerprint
   });
 }
 __name(meta, "meta");
@@ -167,7 +168,7 @@ async function place(env, request, placing) {
   } catch {
     return problem(400, "the body has to be a JSON object");
   }
-  const { spec_v, version, part, parts, records } = asked ?? {};
+  const { spec_v, version, part, parts, records, key_fingerprint } = asked ?? {};
   if (spec_v !== SPEC_V) {
     return problem(400, `this Worker reads spec_v ${SPEC_V}, and was sent ${JSON.stringify(spec_v) ?? "nothing"}`);
   }
@@ -191,6 +192,14 @@ async function place(env, request, placing) {
       `one write takes ${PER_WRITE} records at most, and this one carried ${records.length} \u2014 send it in parts`
     );
   }
+  const offered = key_fingerprint ?? null;
+  if (offered !== null && (typeof offered !== "string" || !HASH.test(offered))) {
+    return problem(
+      400,
+      "key_fingerprint has to be a SHA-256 as 64 hex characters \u2014 the hash of the key these records were sealed with, and never the key"
+    );
+  }
+  const sealedWith = offered === null ? null : offered.toLowerCase();
   const carrying = [];
   for (const record of records) {
     const checked = checkedRecord(record ?? {});
@@ -223,8 +232,8 @@ async function place(env, request, placing) {
     env.RECORDS.prepare("UPDATE store SET seq = seq + ? WHERE id = 1").bind(carrying.length),
     ...last ? [
       env.RECORDS.prepare(
-        placing === "replace" ? "UPDATE store SET version = ?, updated_at = ?, replacing = 0 WHERE id = 1" : "UPDATE store SET version = ?, updated_at = ? WHERE id = 1"
-      ).bind(version, (/* @__PURE__ */ new Date()).toISOString())
+        placing === "replace" ? "UPDATE store SET version = ?, updated_at = ?, key_fingerprint = ?, replacing = 0 WHERE id = 1" : "UPDATE store SET version = ?, updated_at = ?, key_fingerprint = ? WHERE id = 1"
+      ).bind(version, (/* @__PURE__ */ new Date()).toISOString(), sealedWith)
     ] : [],
     env.RECORDS.prepare("SELECT seq FROM store WHERE id = 1")
   ];
