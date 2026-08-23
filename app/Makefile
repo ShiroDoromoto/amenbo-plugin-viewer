@@ -8,7 +8,7 @@
 
 FLUTTER := flutter
 
-.PHONY: build test analyze apk ipa screen-android screen-ios shots-ios shots-ipad shots-android \
+.PHONY: build test analyze apk apk-local ipa screen-android screen-ios shots-ios shots-ipad shots-android \
 	feature-graphic clean
 
 build: analyze
@@ -22,13 +22,19 @@ test:
 	$(FLUTTER) gen-l10n
 	$(FLUTTER) test
 
-# Android. Needs the Android SDK.
+# Android. Needs the Android SDK. The store identity, because that is the one that has to be
+# buildable; the other two differ from it by an identifier and a name, and `test` checks those.
 apk:
-	$(FLUTTER) build apk --debug
+	$(FLUTTER) build apk --debug --flavor store
+
+# The one to put on the phone on the desk. It is a separate app from the store's, so it lands
+# beside whatever is already installed instead of on top of it.
+apk-local:
+	$(FLUTTER) build apk --debug --flavor local
 
 # iOS. Needs Xcode and a Mac. Unsigned — signing is the release's business, not the build's.
 ipa:
-	$(FLUTTER) build ios --no-codesign
+	$(FLUTTER) build ios --no-codesign --flavor store
 
 # What is on a phone's screen, read with nobody holding the phone. Needs that phone on a cable.
 # Neither one is part of `build` or `test`: they talk to hardware, and a machine without it would

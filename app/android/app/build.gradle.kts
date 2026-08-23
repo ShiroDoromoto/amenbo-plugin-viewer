@@ -25,7 +25,6 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "work.amenbo.viewer"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
@@ -33,6 +32,32 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+    }
+
+    // Three apps, not three builds of one: what is being tried out must never land on top of
+    // what someone uses every day. The version and the build number stay shared — only the
+    // identifier and the name on the home screen move.
+    //
+    // The namespace above stays `work.amenbo.viewer` on all three: it names the Kotlin package
+    // and the generated R class, and the method channels are written against it. Only
+    // `applicationId` — what the device installs under — takes a suffix.
+    flavorDimensions += "identity"
+
+    productFlavors {
+        create("local") {
+            dimension = "identity"
+            applicationIdSuffix = ".local"
+            manifestPlaceholders["appName"] = "Amenbo Local"
+        }
+        create("dev") {
+            dimension = "identity"
+            applicationIdSuffix = ".dev"
+            manifestPlaceholders["appName"] = "Amenbo Dev"
+        }
+        create("store") {
+            dimension = "identity"
+            manifestPlaceholders["appName"] = "Amenbo Viewer"
+        }
     }
 
     signingConfigs {

@@ -31,7 +31,9 @@
 # what lets the next screen come up. Neither side is guessing how long a debug build takes to draw.
 set -eu
 
-BUNDLE=work.amenbo.viewer
+# The local identity: the pictures come out the same, and the machine that draws them keeps
+# whatever it already had installed.
+BUNDLE=work.amenbo.viewer.local
 OUT=store/screenshots
 ADB=${ADB:-$HOME/Library/Android/sdk/platform-tools/adb}
 # 6.9 inches: 1320x2868, which is the size App Store Connect asks for. The iPhone on the cable
@@ -122,7 +124,7 @@ ios | ipad)
   xcrun simctl status_bar "$SIM" override \
     --time "9:41" --batteryState charged --batteryLevel 100 \
     --cellularMode active --cellularBars 4 --wifiMode active --wifiBars 3
-  flutter build ios --simulator --debug -t lib/shot_screen.dart
+  flutter build ios --simulator --debug --flavor local -t lib/shot_screen.dart
   xcrun simctl install "$SIM" build/ios/iphonesimulator/Runner.app
   CONTAINER=$(xcrun simctl get_app_container "$SIM" "$BUNDLE" data)
   rm -f "$CONTAINER/Library/Caches/shot-ready.txt"
@@ -147,8 +149,8 @@ android)
   fi
   # An emulator answers adb before it has finished starting, and an install into that window fails.
   while [ "$(emu shell getprop sys.boot_completed | tr -d '\r')" != "1" ]; do sleep 2; done
-  flutter build apk --debug -t lib/shot_screen.dart
-  emu install -r build/app/outputs/flutter-apk/app-debug.apk
+  flutter build apk --debug --flavor local -t lib/shot_screen.dart
+  emu install -r build/app/outputs/flutter-apk/app-local-debug.apk
   emu shell run-as "$BUNDLE" rm -f cache/shot-ready.txt 2>/dev/null || true
   # The same reason the iOS arm pins its status bar: a store listing is not the place to show what
   # the clock and the battery happened to be, and an emulator draws its own oddities up there.

@@ -8,11 +8,36 @@ iOS と Android を1本で作る。`ios/` と `android/` は Flutter がこの�
 | | 値 |
 |---|---|
 | ストア表示名 | Amenbo Viewer |
-| バンドル ID / パッケージ名 | `work.amenbo.viewer` |
+| バンドル ID / パッケージ名 | `work.amenbo.viewer`（下の3つ） |
 | Dart のパッケージ名 | `amenbo_viewer` |
 | iOS の最低対応 | 15.0 |
 
 表示名は日英どちらでも通るので、言語ごとに変えず揃える。
+
+## 識別子は3つある
+
+**試すためのものが、日常使っているものを上書きしない。** 3つは別のアプリなので、
+1台の端末に並んで入る。
+
+| 何 | flavor | 識別子 | 端末に出る名前 | 配り方 |
+|---|---|---|---|---|
+| 手元のもの | `local` | `work.amenbo.viewer.local` | Amenbo Local | 焼いて入れる |
+| 配って試すもの | `dev` | `work.amenbo.viewer.dev` | Amenbo Dev | 自前で配る（iOS は Ad Hoc、Android は APK を直接渡す） |
+| ストアのもの | `store` | `work.amenbo.viewer` | Amenbo Viewer | App Store / Google Play |
+
+**版とビルド番号は3つで共通**（`pubspec.yaml` の1か所）。分かれるのは識別子と端末に出る名前だけで、
+中身は同じものが焼ける。
+
+- **`--flavor` は省けない。** Gradle は flavor を宣言した時点でどれか1つを要求するし、iOS も
+  `--flavor` からビルド構成の名前（`Release-store` など）を引く。**ストアへ出すのは `store`**
+- **Android の `namespace` は3つとも `work.amenbo.viewer` のまま。** Kotlin のパッケージと
+  メソッドチャネルの名前がそれで書かれている。動くのは `applicationId` だけ
+- **iOS は識別子ごとに Developer Portal の登録が1回要る**（App ID と、実機に入れるなら
+  プロビジョニング）。CI は `--no-codesign` なので、要るのは実機に入れるときだけ
+- **TestFlight とストアは分けられない**——Apple の仕組みで同じ識別子になる。だから
+  「配って試すもの」は TestFlight ではなく Ad Hoc で配る
+- 4か所（Gradle・Xcode のビルド構成・スキーム・端末へ入れる道具）に同じ表が散るので、
+  **`test/flavors_test.dart` が突き合わせている**
 
 **iOS の下限を下げても、対応機種は1台も増えない。** iOS 15 は iOS 13 と同じ端末まで上がる
 （下限は iPhone 6s と第1世代 SE）。13 まで戻して届くのは5年以上 OS を更新していない利用者だけで、
@@ -360,8 +385,9 @@ iOS では DB に `NSFileProtectionComplete` を付け、**ロック中は読め
   （渡す相手が見えるように、Android のマニフェストの `queries` にブラウザを書いてある——
   書かないと押しても何も起きない）
 
-**どこから入ったかは、端末に訊く**（`lib/build_origin.dart`）。配って試す版とストアの版は識別子も版も同じなので、
-画面の他のどこを見ても見分けられない。**アプリが名乗るしかない。**
+**どこから入ったかは、端末に訊く**（`lib/build_origin.dart`）。識別子で分かれるのは `store` の外側だけで、
+**TestFlight の版とストアの版は識別子も版も同じ**——画面の他のどこを見ても見分けられない。
+**アプリが名乗るしかない。**
 
 - **iOS はレシートの名前で決まる。** `sandboxReceipt` なら TestFlight、`receipt` ならストア。
   Xcode から入れたものはレシートを持たない（URL は返るが、ファイルが無い）。中身は検めない——
@@ -462,6 +488,10 @@ CI（[`.github/workflows/ci.yml`](../.github/workflows/ci.yml)）のアプリの
 署名の情報はリポジトリに入れない。実機ビルドのときは Xcode で Team を選ぶ。
 CI は `--no-codesign`。
 
+Android の鍵はリポジトリの外にあり、`android/key.properties` がそれを指す。**そのファイルが無い
+機械では release ビルドが debug の鍵に落ちる**ので、`flutter run --release` はどの flavor でも動く。
+手元のもの（`local`）は debug で焼くのが常なので、鍵の話はそもそも出てこない。
+
 ## ストアへ出す手は、ブラウザではなく `tool/release/`
 
 ```sh
@@ -509,11 +539,19 @@ uv run app/tool/release/play.py state
 ## 動かす
 
 ```
-make build   # pub get と analyze
-make test    # flutter test
-make apk     # Android。Android SDK が要る
-make ipa     # iOS。Mac と Xcode が要る。署名はしない
+make build      # pub get と analyze
+make test       # flutter test
+make apk        # Android（store）。Android SDK が要る
+make apk-local  # 机の上の端末に入れるもの（local）
+make ipa        # iOS（store）。Mac と Xcode が要る。署名はしない
 ```
+
+**組めることを見るのは `store`**——出すのがそれだからで、他の2つはそこから識別子と名前が
+違うだけである。3つとも揃っていることは `make test` が見る。
+
+**実機へ入れる前に必ずビルドを踏む。** `flutter install` は手元に置かれている成果物を
+そのまま入れるので、`flutter build ipa` だけでは archive しか新しくならない
+（`flutter build ios --release --flavor <f>` を先に打つ。Android も `apk` で同じ）。
 
 ## 実機の画面を、誰も端末を持たずに読む
 

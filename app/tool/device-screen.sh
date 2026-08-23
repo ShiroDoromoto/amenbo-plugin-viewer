@@ -33,7 +33,8 @@
 #            attached, and there is no screenshot on this road at all.
 set -eu
 
-BUNDLE=work.amenbo.viewer
+# The local identity, so a phone that also carries the store app keeps both.
+BUNDLE=work.amenbo.viewer.local
 OUT=build/device-screen
 ADB=${ADB:-$HOME/Library/Android/sdk/platform-tools/adb}
 WAIT=${WAIT:-9}
@@ -50,8 +51,8 @@ mkdir -p "$OUT"
 case "$1" in
 android)
   [ -x "$ADB" ] || { echo "no adb at $ADB (set ADB=...)" >&2; exit 1; }
-  flutter build apk --debug -t lib/probe_screen.dart
-  "$ADB" install -r build/app/outputs/flutter-apk/app-debug.apk
+  flutter build apk --debug --flavor local -t lib/probe_screen.dart
+  "$ADB" install -r build/app/outputs/flutter-apk/app-local-debug.apk
   "$ADB" shell monkey -p "$BUNDLE" -c android.intent.category.LAUNCHER 1 >/dev/null
   # The first frame is not the answer: what a screen settles into is. A debug build has to warm
   # up before it draws anything at all, so this waits longer than it looks like it should.
@@ -66,7 +67,7 @@ ios)
   UDID=${UDID:-$(flutter devices --machine \
     | sed -n 's/.*"id": "\(000[0-9A-Za-z-]*\)".*/\1/p' | head -1)}
   [ -n "$UDID" ] || { echo "no iPhone on the cable (set UDID=...)" >&2; exit 1; }
-  flutter build ios -t lib/probe_screen.dart --release
+  flutter build ios --flavor local -t lib/probe_screen.dart --release
   xcrun devicectl device install app --device "$UDID" build/ios/iphoneos/Runner.app >/dev/null
   xcrun devicectl device process launch --device "$UDID" --terminate-existing "$BUNDLE" >/dev/null
   # The probe writes every three seconds, so waiting out more than one reading is what makes the
