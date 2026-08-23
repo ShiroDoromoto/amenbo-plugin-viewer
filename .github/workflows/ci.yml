@@ -112,7 +112,12 @@ jobs:
   #
   # **ここは配る場所でもある。** `dev` の APK は焼いたものをそのまま artifact に載せ、メンバーは
   # `gh run download` で取る。Android のために置き場を別に立てないので、配るために増える段は
-  # upload 1つだけで済む（→ `app/README.md`）。
+  # 鍵を置くのと upload の2つだけで済む（→ `app/README.md`）。
+  #
+  # **`dev` の署名鍵は1本に固定してある。** 鍵が run ごとに変わると、メンバーは新しい APK のたびに
+  # 前のものを消すことになり、**ペアリングまで消える**（実測してある）。鍵は secret にだけ在り、
+  # リポジトリにも手元にも置かない——公開すれば、誰でも「Amenbo Dev」を名乗る APK に署名でき、
+  # それは端末から見て正規の更新なので、**その端末の写しとペアリングの鍵を引き継いでしまう**。
   app-android:
     name: app — build the APK
     runs-on: ubuntu-latest
@@ -133,6 +138,34 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
+      # 鍵は secret から書き出す。gradle は触らない——`key.properties` が在れば release がそれで
+      # 署名される仕組みは `app/android/app/build.gradle.kts` に既にある（無ければ debug の鍵に落ちる）。
+      #
+      # **secret に届かない run では署名も upload もしない。** fork から来た PR には secret が渡らないので、
+      # ここで落とすと外からの PR が必ず赤くなる。落とさず「署名しなかった」を持ち回り、
+      # **配布物として上げるのは正しい鍵で署名できた run だけ**にする（同じ名前で別の鍵のものが並ばない）。
+      - name: Put the dev signing key in place
+        id: devkey
+        env:
+          KEYSTORE_BASE64: ${{ secrets.VIEWER_DEV_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.VIEWER_DEV_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ] || [ -z "$KEYSTORE_PASSWORD" ]; then
+            echo "no dev signing key in reach — the dev APK will not be signed with it, and will not be uploaded"
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          printf '%s' "$KEYSTORE_BASE64" | base64 -d > android/viewer-dev.keystore
+          # 末尾の改行は secret の入れ方で付いたり付かなかったりする。付いたまま渡すと鍵が開かない。
+          password=$(printf '%s' "$KEYSTORE_PASSWORD" | tr -d '\r\n')
+          umask 077
+          cat > android/key.properties <<EOF
+          storeFile=$PWD/android/viewer-dev.keystore
+          storePassword=$password
+          keyAlias=viewer-dev
+          keyPassword=$password
+          EOF
+          echo "signed=true" >> "$GITHUB_OUTPUT"
       - run: flutter build apk --debug --flavor store
       # **`dev` だけ release で焼く。** ここで焼いたものはゲートを通るためだけのものではなく、
       # **そのままメンバーの端末へ入る配布物**（→ `app/README.md`「配って試すものを、メンバーへ渡す」）。
@@ -144,6 +177,7 @@ jobs:
       # （ブラウザが zip に隔離を付ける）。`path` はワークスペースからの相対で、
       # このジョブの `working-directory` は効かない。
       - uses: actions/upload-artifact@v7
+        if: steps.devkey.outputs.signed == 'true'
         with:
           name: viewer-dev-apk
           path: app/build/app/outputs/flutter-apk/app-dev-release.apk
