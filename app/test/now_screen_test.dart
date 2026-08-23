@@ -6,6 +6,7 @@ import 'package:amenbo_viewer/now_screen.dart';
 import 'package:amenbo_viewer/state_band.dart';
 import 'package:amenbo_viewer/store/backlog_queries.dart';
 import 'package:amenbo_viewer/store/backlog_store.dart';
+import 'package:amenbo_viewer/ui/project_choice.dart';
 import 'package:amenbo_viewer/ui/task_row.dart';
 import 'package:amenbo_viewer/ui/theme.dart';
 import 'package:amenbo_viewer/ui/time.dart';
@@ -466,6 +467,24 @@ void main() {
       expect(find.text('viewer'), findsOneWidget);
     });
 
+    testWidgets('and it can be picked back off', (tester) async {
+      await tester.pumpWidget(screen());
+
+      await tester.tap(find.text(words.allProjects));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('viewer').last);
+      await tester.pumpAndSettle();
+      expect(find.byType(TaskRow), findsOneWidget);
+
+      await tester.tap(find.text('viewer'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(words.allProjects).last);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(TaskRow), findsNWidgets(2));
+      expect(find.text(words.allProjects), findsOneWidget);
+    });
+
     testWidgets('one project is a title, not a menu', (tester) async {
       final alone = BacklogStore.openInMemory();
       addTearDown(alone.close);
@@ -483,7 +502,7 @@ void main() {
       );
 
       expect(find.text('viewer'), findsOneWidget);
-      expect(find.byType(PopupMenuButton<int?>), findsNothing);
+      expect(find.byType(PopupMenuButton<ProjectChoice>), findsNothing);
     });
   });
 

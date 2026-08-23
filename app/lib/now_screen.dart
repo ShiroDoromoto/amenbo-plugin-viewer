@@ -32,6 +32,7 @@ import 'l10n/words.dart';
 import 'state_band.dart';
 import 'store/backlog_queries.dart';
 import 'store/backlog_store.dart';
+import 'ui/project_choice.dart';
 import 'ui/task_row.dart';
 import 'ui/theme.dart';
 import 'ui/time.dart';
@@ -399,17 +400,20 @@ class _NowScreenState extends State<NowScreen>
     final label = _projectId == null
         ? words.allProjects
         : _names[_projectId] ?? words.allProjects;
-    return PopupMenuButton<int?>(
+    return PopupMenuButton<ProjectChoice>(
       tooltip: words.chooseProject,
-      initialValue: _projectId,
+      initialValue: ProjectChoice(_projectId),
       onSelected: (chosen) => setState(() {
-        _projectId = chosen;
+        _projectId = chosen.id;
         _load();
       }),
       itemBuilder: (context) => [
-        PopupMenuItem(value: null, child: Text(words.allProjects)),
+        PopupMenuItem(value: ProjectChoice.all, child: Text(words.allProjects)),
         for (final project in _projects)
-          PopupMenuItem(value: project.id, child: Text(project.name)),
+          PopupMenuItem(
+            value: ProjectChoice(project.id),
+            child: Text(project.name),
+          ),
       ],
       child: Semantics(
         label: '$label, ${words.chooseProject}',

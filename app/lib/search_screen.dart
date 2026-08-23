@@ -27,6 +27,7 @@ import 'store/backlog_store.dart';
 import 'store/recents.dart';
 import 'ui/decision_row.dart';
 import 'ui/empty.dart';
+import 'ui/project_choice.dart';
 import 'ui/task_row.dart';
 import 'ui/theme.dart';
 import 'ui/tokens.dart';
@@ -294,18 +295,24 @@ class _SearchScreenState extends State<SearchScreen>
           // The same mouth as the front screen's title, and for the same reason: with one project
           // there is nothing to choose between.
           if (_projects.length > 1)
-            PopupMenuButton<int?>(
+            PopupMenuButton<ProjectChoice>(
               icon: const Icon(Icons.folder_outlined),
               tooltip: words.chooseProject,
-              initialValue: _projectId,
+              initialValue: ProjectChoice(_projectId),
               onSelected: (chosen) => setState(() {
-                _projectId = chosen;
+                _projectId = chosen.id;
                 _load();
               }),
               itemBuilder: (context) => [
-                PopupMenuItem(value: null, child: Text(words.allProjects)),
+                PopupMenuItem(
+                  value: ProjectChoice.all,
+                  child: Text(words.allProjects),
+                ),
                 for (final project in _projects)
-                  PopupMenuItem(value: project.id, child: Text(project.name)),
+                  PopupMenuItem(
+                    value: ProjectChoice(project.id),
+                    child: Text(project.name),
+                  ),
               ],
             ),
         ],
