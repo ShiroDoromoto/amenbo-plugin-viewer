@@ -109,6 +109,10 @@ jobs:
   # 識別子と表示名だけなので2本目からは増分で終わり、**flavor を1つしか組まないと、残り2つが壊れても
   # ここは緑を名乗る**。iOS は1本が数分かかるので、組むのは出す側（`store`）だけにし、
   # 3つの識別子が揃っていることは `app-check` の `flutter test` が見る（`test/flavors_test.dart`）。
+  #
+  # **ここは配る場所でもある。** `dev` の APK は焼いたものをそのまま artifact に載せ、メンバーは
+  # `gh run download` で取る。Android のために置き場を別に立てないので、配るために増える段は
+  # upload 1つだけで済む（→ `app/README.md`）。
   app-android:
     name: app — build the APK
     runs-on: ubuntu-latest
@@ -130,8 +134,21 @@ jobs:
           cache: true
       - run: flutter pub get
       - run: flutter build apk --debug --flavor store
-      - run: flutter build apk --debug --flavor dev
+      # **`dev` だけ release で焼く。** ここで焼いたものはゲートを通るためだけのものではなく、
+      # **そのままメンバーの端末へ入る配布物**（→ `app/README.md`「配って試すものを、メンバーへ渡す」）。
+      # 触って判断してもらうのに JIT の debug では速さの印象が別物になる。組める範囲は狭まらない
+      # ——release は AOT まで通すので、見る範囲は debug より広い側に倒れる。
+      - run: flutter build apk --release --flavor dev
       - run: flutter build apk --debug --flavor local
+      # 取り方は `gh run download`——**Web UI の「Download artifact」は手順に載せない**
+      # （ブラウザが zip に隔離を付ける）。`path` はワークスペースからの相対で、
+      # このジョブの `working-directory` は効かない。
+      - uses: actions/upload-artifact@v7
+        with:
+          name: viewer-dev-apk
+          path: app/build/app/outputs/flutter-apk/app-dev-release.apk
+          # 既定は warn。名前が変わったときに黙って空の artifact が並ぶより、ここで落ちるほうがよい。
+          if-no-files-found: error
 
   app-ios:
     name: app — build for iOS

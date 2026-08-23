@@ -22,7 +22,7 @@ iOS と Android を1本で作る。`ios/` と `android/` は Flutter がこの�
 | 何 | flavor | 識別子 | 端末に出る名前 | 配り方 |
 |---|---|---|---|---|
 | 手元のもの | `local` | `work.amenbo.viewer.local` | Amenbo Local | 焼いて入れる |
-| 配って試すもの | `dev` | `work.amenbo.viewer.dev` | Amenbo Dev | 自前で配る（iOS は Ad Hoc、Android は APK を直接渡す） |
+| 配って試すもの | `dev` | `work.amenbo.viewer.dev` | Amenbo Dev | 自前で配る（iOS は Ad Hoc、Android は CI の artifact→下記） |
 | ストアのもの | `store` | `work.amenbo.viewer` | Amenbo Viewer | App Store / Google Play |
 
 **版とビルド番号は3つで共通**（`pubspec.yaml` の1か所）。分かれるのは識別子と端末に出る名前だけで、
@@ -513,6 +513,34 @@ CI は `--no-codesign`。
 Android の鍵はリポジトリの外にあり、`android/key.properties` がそれを指す。**そのファイルが無い
 機械では release ビルドが debug の鍵に落ちる**ので、`flutter run --release` はどの flavor でも動く。
 手元のもの（`local`）は debug で焼くのが常なので、鍵の話はそもそも出てこない。
+
+## 配って試すものを、メンバーへ渡す
+
+**Android は置き場を立てない。** `.dev` の APK は CI（[`.github/workflows/ci.yml`](../.github/workflows/ci.yml)）が
+焼いたものをそのまま Actions の artifact に載せる。メンバーは `gh` で取る:
+
+```sh
+gh run list -R ShiroDoromoto/amenbo-plugin-viewer -w ci.yml -b main -L 5
+gh run download -R ShiroDoromoto/amenbo-plugin-viewer <run-id> -n viewer-dev-apk
+```
+
+- **`-R` は省けない。** メンバーは clone を持たないので、無いと `not a git repository` で落ちる
+- **ブラウザで落とさせない。** Actions の Web UI の「Download artifact」はブラウザが zip に隔離を付ける。
+  `gh run download` なら付かない（本体側で mac / Windows とも実測してある）
+- **artifact は既定90日で消える。** 古い run のものが要るときは焼き直す
+- 押したい ref があるなら `gh workflow run ci.yml --ref <branch>` で回してから取る
+
+**iOS はここに相乗りしない。** 落とした `.ipa` は、プロビジョニングに端末の UDID が並んでいなければ入らない。
+Ad Hoc を `itms-services://` で入れてもらう形で、置き場と案内ページは**このリポジトリの外**（運営側が持つ
+配布設備）にある。
+
+### 署名は debug の鍵に落ちる
+
+CI には Android の鍵が無いので、`.dev` の APK は **debug の鍵で署名される**（`android/key.properties` が
+無い機械の release ビルドはそこへ落ちる）。端末に入れるぶんには足りるが、**その鍵は焼いた機械のもの**なので、
+入れ替えのときに署名が合わずに断られることがある。そのときは Amenbo Dev を消してから入れる
+（消えるのはその端末の写しだけで、取り直せる）。**ストアのものとは別のアプリ**なので、日常使っている
+Amenbo Viewer には何も起きない。
 
 ## ストアへ出す手は、ブラウザではなく `tool/release/`
 
