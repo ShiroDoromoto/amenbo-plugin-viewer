@@ -74,7 +74,7 @@ PC が送るのは動いた行だけになる。
 |---|---|
 | リポジトリ | `amenbo-plugin-viewer` |
 | アプリ名（ストア表示） | **Amenbo Viewer** |
-| バンドル ID / パッケージ名 | `work.amenbo.viewer` |
+| バンドル ID / パッケージ名 | `work.amenbo.viewer`（ストアのもの。手元は `.local`、配って試すものは `.dev` が付く→ [app/README.md](app/README.md)） |
 
 大小は、その文字列が**実体か呼び名か**で決まる。機械がその綴りのまま解決するもの——打つコマンド、PATH に載る名前、リポジトリ名、URL、バンドル ID——は小文字の `amenbo`。文章の中で製品を指すときは `Amenbo` / `Amenbo Viewer`。迷ったら「`Amenbo` へ書き換えたら何かが動かなくなるか」を問う。なるなら小文字側で、そこは `guards/check-program-name-casing.sh` が見張っている。
 

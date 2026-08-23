@@ -90,6 +90,11 @@ jobs:
       - run: flutter test
 
   # 2つの OS 向けに実際に組めること。ここが通らないビルドは、テストが全部緑でも出せない。
+  #
+  # **識別子は3つある**（`local` / `dev` / `store`）。Android は3つとも組む。差が
+  # 識別子と表示名だけなので2本目からは増分で終わり、**flavor を1つしか組まないと、残り2つが壊れても
+  # ここは緑を名乗る**。iOS は1本が数分かかるので、組むのは出す側（`store`）だけにし、
+  # 3つの識別子が揃っていることは `app-check` の `flutter test` が見る（`test/flavors_test.dart`）。
   app-android:
     name: app — build the APK
     runs-on: ubuntu-latest
@@ -110,7 +115,9 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
-      - run: flutter build apk --debug
+      - run: flutter build apk --debug --flavor store
+      - run: flutter build apk --debug --flavor dev
+      - run: flutter build apk --debug --flavor local
 
   app-ios:
     name: app — build for iOS
@@ -129,7 +136,7 @@ jobs:
           cache: true
       - run: flutter pub get
       # 署名しない。証明書はリリースの持ち物で、組めるかどうかとは別の話。
-      - run: flutter build ios --no-codesign
+      - run: flutter build ios --no-codesign --flavor store
 
   # プラグインと Worker が回すのは**手元のゲートと同じ2行だけ**。段を CI 側にだけ足すと、
   # 手元が全部緑でも push した瞬間に赤くなる形ができる。
