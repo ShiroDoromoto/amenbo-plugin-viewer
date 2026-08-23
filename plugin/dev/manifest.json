@@ -108,6 +108,20 @@
             "label": "What to call this phone"
           }
         ]
+      },
+      {
+        "cmd": "phones",
+        "label": "5. See the phones that are paired"
+      },
+      {
+        "cmd": "revoke",
+        "label": "6. Unpair a phone",
+        "ask": [
+          {
+            "key": "phone",
+            "label": "The name of the phone to unpair"
+          }
+        ]
       }
     ]
   },
@@ -150,7 +164,7 @@
       },
       {
         "cmd": "revoke",
-        "does": "Cuts one phone off by the name it was paired under, at the store first and here after. The other phones carry on reading. Takes that name as its only argument"
+        "does": "Cuts one phone off by the name it was paired under, at the store first and here after. The other phones carry on reading. Takes that name as its only argument, or out of the settings screen's box"
       },
       {
         "cmd": "qr",

@@ -186,7 +186,9 @@ func TestPairingUnderANameThatIsTakenIsRefusedAndSaysHowToFreeIt(t *testing.T) {
 	if shown.T != first {
 		t.Error("a code was shown for a token the store never took")
 	}
-	if !strings.Contains(stderr, "revoke iPhone") {
+	// **The move that frees the name is a button now**, so what the refusal has to carry is
+	// the button's name — someone who only opens the settings screen has no other way through.
+	if !strings.Contains(stderr, wordings["en"][phTheUnpairButton]) {
 		t.Errorf("the refusal does not say how to free the name: %q", stderr)
 	}
 	if paired := pairedPhones(t); len(paired) != 1 || paired[0].Label != "iPhone" {

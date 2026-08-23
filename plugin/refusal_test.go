@@ -140,7 +140,7 @@ func TestADoorWithItsOwnReadingOfAnAnswerKeepsIt(t *testing.T) {
 
 	_, err := taken.issue("iPhone", strings.Repeat("a", 64))
 
-	if err == nil || !strings.Contains(err.Error(), "revoke") {
+	if err == nil || !strings.Contains(err.Error(), wordings["en"][phTheUnpairButton]) {
 		t.Errorf("issuing over a paired phone said %v, want the move that frees the name", err)
 	}
 

@@ -13,8 +13,8 @@ import "fmt"
 //
 // # Which sentences are here, and which are not
 //
-// Here: what `check` answers, and what the four buttons — `app`, `token`, `setup`, `qr` — write
-// for a person to read. Those five are the settings face: the screen draws the
+// Here: what `check` answers, and what the six buttons — `app`, `token`, `setup`, `qr`, `phones`,
+// `revoke` — write for a person to read. Those seven are the settings face: the screen draws the
 // check's line at the head of the form and the first line an operation wrote underneath it, and
 // for a user with no terminal they are the only way any of this is reached.
 //
@@ -22,9 +22,11 @@ import "fmt"
 //
 //   - The observation face. Nobody is waiting on it; its lines are the execution log's material
 //     read by whoever is working out why a phone is behind.
-//   - `push`, `phones`, `revoke` and the usage. They are typed, and what is typed is English:
-//     Amenbo splits its languages by who is reading, and a face reached by typing is not one a
-//     settings screen ever draws.
+//   - `push` and the usage. They are typed, and what is typed is English: Amenbo splits its
+//     languages by who is reading, and a face reached by typing is not one a settings screen ever
+//     draws. **`phones` and `revoke` used to be here** and are not any more — unpairing had to be
+//     reachable without a terminal, so the screen raises them too, and a call cannot answer in two
+//     languages at once.
 //   - The paths that only a terminal reaches — being asked to paste, being warned about
 //     scrollback. A settings screen never takes them.
 //   - What another machine said. A Cloudflare refusal and an HTTP status are quoted, not worded.
@@ -78,8 +80,10 @@ const (
 	// "press the third button" instead of naming it is the mismatch this wording exists to end
 	// (a form whose buttons read one way and whose sentences point somewhere else). So the two
 	// are kept level by hand — **a button renamed in the catalogue is renamed here**.
-	phTheSetupButton phrase = "the_setup_button"
-	phThePairButton  phrase = "the_pair_button"
+	phTheSetupButton     phrase = "the_setup_button"
+	phThePairButton      phrase = "the_pair_button"
+	phTheSeePhonesButton phrase = "the_see_phones_button"
+	phTheUnpairButton    phrase = "the_unpair_button"
 
 	// `setup` — standing the Worker and its database up.
 	phBuildingInAccount       phrase = "building_in_account"
@@ -95,6 +99,16 @@ const (
 	phTokenReachesNoAccount   phrase = "token_reaches_no_account"
 	phWorkerHasNoWriteToken   phrase = "worker_has_no_write_token"
 	phEndpointNotAnsweringYet phrase = "endpoint_not_answering_yet"
+
+	// `phones` and `revoke` — seeing which phones may read, and cutting one off.
+	phPhonesThatMayRead          phrase = "phones_that_may_read"
+	phPairedOn                   phrase = "paired_on"
+	phNoPhoneIsPairedYet         phrase = "no_phone_is_paired_yet"
+	phTheRestAreInTheLog         phrase = "the_rest_are_in_the_log"
+	phWhichPhoneToUnpair         phrase = "which_phone_to_unpair"
+	phNoPhoneByThatName          phrase = "no_phone_by_that_name"
+	phNothingWasReadingAsThat    phrase = "nothing_was_reading_as_that"
+	phPhoneReadsNothingFromNowOn phrase = "phone_reads_nothing_from_now_on"
 
 	// `qr` — pairing one phone.
 	phPhoneMayReadFromNowOn phrase = "phone_may_read_from_now_on"
