@@ -3,7 +3,9 @@ package main
 import (
 	"crypto/cipher"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"strings"
@@ -51,6 +53,25 @@ var errNoKey = errors.New("no encryption key is configured — run setup")
 // records decodes and schedules the key once.
 type sealer struct {
 	aead cipher.AEAD
+	// fingerprint names the key without being it — see `fingerprintOf`.
+	fingerprint string
+}
+
+// fingerprintOf names a key: the SHA-256 of it, as 64 lower-case hex characters.
+//
+// **It is taken over the key's bytes and never over how the key is written.** Padding is optional
+// wherever this key is copied — a QR, a settings store, an environment variable — so two correct
+// spellings of one key exist, and hashing the text would make them two different keys to whoever
+// is comparing. The bytes have one form.
+//
+// **What it is for is the phone finding out that its key does not fit before it fetches.** The
+// store names the key its records were sealed with, and a phone whose own key names something
+// else cannot open a row of it — which is a different thing from a record being damaged, and
+// calls for the opposite move (see the Worker's `key_fingerprint`). A hash is what may be said
+// out loud there: the answer is served to anyone holding a read token.
+func fingerprintOf(key []byte) string {
+	sum := sha256.Sum256(key)
+	return hex.EncodeToString(sum[:])
 }
 
 // newSealer turns the key as it is configured — 32 bytes written as base64url — into something
@@ -76,7 +97,7 @@ func newSealer(encodedKey string) (*sealer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("the encryption key was refused by the cipher: %w", err)
 	}
-	return &sealer{aead: aead}, nil
+	return &sealer{aead: aead, fingerprint: fingerprintOf(key)}, nil
 }
 
 // seal encrypts one record and hands back the two halves of its envelope, ready to be written as

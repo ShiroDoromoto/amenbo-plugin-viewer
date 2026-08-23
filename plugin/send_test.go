@@ -469,6 +469,71 @@ func TestAWholePlacementOfNothingIsStillSent(t *testing.T) {
 	}
 }
 
+// The store is told which key opens what it is being handed, so a phone can find out that its own
+// key does not fit without fetching a backlog it cannot open a row of.
+func TestEveryPlacementNamesTheKeyItWasSealedWith(t *testing.T) {
+	var seen []placement
+	answering := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body placement
+		json.NewDecoder(r.Body).Decode(&body)
+		seen = append(seen, body)
+		w.Write([]byte(`{"seq":0}`))
+	}))
+	defer answering.Close()
+
+	seal := sealerForTest(t)
+	where := store{url: answering.URL, token: "a-throwaway-token", seal: seal}
+
+	if err := where.place(placement{SpecV: specVersion, Version: 1, Records: []outgoing{{Key: "task/1", Op: opDeleted}}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := where.replace(placement{SpecV: specVersion, Version: 2}); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(seen) != 2 {
+		t.Fatalf("%d request(s), want the two doors that take a body", len(seen))
+	}
+	for at, body := range seen {
+		if body.KeyFingerprint != seal.fingerprint {
+			t.Errorf("request %d named %q, want the key it was sealed with", at+1, body.KeyFingerprint)
+		}
+	}
+}
+
+// It travels on every part for the reason the version does: the store writes it down with the
+// last one, and a part that named nothing would settle a store as sealed with no key at all.
+func TestTheKeyIsNamedOnEveryPartOfATurn(t *testing.T) {
+	var seen []placement
+	answering := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body placement
+		json.NewDecoder(r.Body).Decode(&body)
+		seen = append(seen, body)
+		w.Write([]byte(`{"seq":0}`))
+	}))
+	defer answering.Close()
+
+	records := make([]outgoing, recordsPerWrite+1)
+	for at := range records {
+		records[at] = outgoing{Key: recordKey("task", int64(at)), Op: opDeleted}
+	}
+	seal := sealerForTest(t)
+	where := store{url: answering.URL, token: "a-throwaway-token", seal: seal}
+
+	if err := where.place(placement{SpecV: specVersion, Version: 1, Records: records}); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(seen) != 2 {
+		t.Fatalf("%d request(s) for %d records, want two", len(seen), len(records))
+	}
+	for at, part := range seen {
+		if part.KeyFingerprint != seal.fingerprint {
+			t.Errorf("part %d named %q, want the key the turn was sealed with", at+1, part.KeyFingerprint)
+		}
+	}
+}
+
 // What has landed stays landed, and the parts after the one that failed are not sent on top of a
 // door that is not taking them.
 func TestAPartThatFailsStopsTheRestOfTheTurn(t *testing.T) {

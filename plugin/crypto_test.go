@@ -2,7 +2,9 @@ package main
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"strings"
 	"testing"
@@ -214,6 +216,67 @@ func TestTheKeyIsTakenPaddedOrNot(t *testing.T) {
 				t.Errorf("opened %q, sealed %q", got, record)
 			}
 		})
+	}
+}
+
+// The fingerprint names a key so the store can say which one its records were sealed with — so
+// it has to be the same on this machine and on a phone that was handed the key by QR. It is taken
+// over the bytes, and the spellings of one key are the same key.
+func TestTheFingerprintIsOfTheKeyAndNotOfHowItIsWritten(t *testing.T) {
+	unpadded := testKey(t)
+	padded := base64.URLEncoding.EncodeToString(mustDecodeKey(t, unpadded))
+
+	named := map[string]string{}
+	for name, spelling := range map[string]string{"unpadded": unpadded, "padded": padded, "with whitespace": "  " + unpadded + "\n"} {
+		sealer, err := newSealer(spelling)
+		if err != nil {
+			t.Fatal(err)
+		}
+		named[name] = sealer.fingerprint
+	}
+
+	for name, fingerprint := range named {
+		if fingerprint != named["unpadded"] {
+			t.Errorf("%s named the key %q, and the same key is one name", name, fingerprint)
+		}
+	}
+	// A phone holding the key computes this from the bytes it decoded, with nothing to read out
+	// of this build — so what it is is asserted here rather than taken from the code under test.
+	want := sha256.Sum256(mustDecodeKey(t, unpadded))
+	if named["unpadded"] != hex.EncodeToString(want[:]) {
+		t.Errorf("the key is named %q, want its SHA-256 as lower-case hex", named["unpadded"])
+	}
+}
+
+// It is what may be said out loud: the store's answer is served to anyone holding a read token,
+// so a name that carried any of the key would hand the backlog over with it.
+func TestTheFingerprintIsNotTheKey(t *testing.T) {
+	key := testKey(t)
+	sealer, err := newSealer(key)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(sealer.fingerprint) != sha256.Size*2 {
+		t.Errorf("the name is %d characters, want a SHA-256 as %d", len(sealer.fingerprint), sha256.Size*2)
+	}
+	if strings.ContainsAny(sealer.fingerprint, "ABCDEFGHIJKLMNOPQRSTUVWXYZ") {
+		t.Errorf("the name is not in lower case: %q", sealer.fingerprint)
+	}
+	if strings.Contains(sealer.fingerprint, key) || strings.Contains(sealer.fingerprint, hex.EncodeToString(mustDecodeKey(t, key))) {
+		t.Error("the name carries the key it names")
+	}
+	// Two keys that differ by one byte are two different names, which is the whole of what the
+	// phone's comparison rests on.
+	other := make([]byte, keySize)
+	copy(other, mustDecodeKey(t, key))
+	other[0]++
+	another, err := newSealer(base64.RawURLEncoding.EncodeToString(other))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if another.fingerprint == sealer.fingerprint {
+		t.Error("two different keys are named the same, so a phone comparing them learns nothing")
 	}
 }
 

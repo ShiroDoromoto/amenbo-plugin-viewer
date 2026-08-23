@@ -522,6 +522,16 @@ func TestSetupEmptiesTheStoreItDrewANewKeyOver(t *testing.T) {
 	if emptying.token != token || token == "" {
 		t.Errorf("the emptying was not signed with the write token this run settled: %q", emptying.token)
 	}
+	// An emptied store is one nothing is in, and it is sealed with the key drawn just now — so it
+	// names that key rather than leaving a phone with nothing to compare against.
+	key, _ := valueOf(*written, configEncryptionKey)
+	seal, err := newSealer(key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if emptying.body.KeyFingerprint != seal.fingerprint {
+		t.Errorf("the emptying named %q, want the key this run drew", emptying.body.KeyFingerprint)
+	}
 }
 
 // A key that was already there is one the phones reading are paired with, and every record in the
