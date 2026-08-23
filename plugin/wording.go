@@ -72,7 +72,7 @@ const (
 	phTokenPageNotOpened      phrase = "token_page_not_opened"
 	phTokenPageIsOpen         phrase = "token_page_is_open"
 
-	// The two buttons a sentence has to name, because what to do next is press one of them.
+	// The buttons a sentence has to name, because what to do next is press one of them.
 	//
 	// **The label itself is the catalogue's**, carried in the overlay files beside the manifest,
 	// and this is the plugin's own copy of it. There is nowhere else for it to be: a sentence
@@ -80,6 +80,12 @@ const (
 	// "press the third button" instead of naming it is the mismatch this wording exists to end
 	// (a form whose buttons read one way and whose sentences point somewhere else). So the two
 	// are kept level by hand — **a button renamed in the catalogue is renamed here**.
+	//
+	// **A label weighs 40 bytes at most, per language** — Amenbo's cap on what a button may
+	// carry, and the door the catalogue is held to. A Devanagari or Thai character spends three
+	// of them where a Latin one spends one, so what four languages call these buttons is shorter
+	// than the English reads: a name that will not fit is a name no button can wear, and a
+	// sentence naming it would point at nothing. `TestEveryButtonNameFitsOnAButton` measures it.
 	phTheSetupButton     phrase = "the_setup_button"
 	phThePairButton      phrase = "the_pair_button"
 	phTheSeePhonesButton phrase = "the_see_phones_button"

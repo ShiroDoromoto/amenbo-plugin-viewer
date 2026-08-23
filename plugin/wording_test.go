@@ -216,3 +216,32 @@ func TestAStoreThatWillNotAnswerLeavesTheSentencesInEnglish(t *testing.T) {
 		t.Errorf("the fallback is not English: %q", answered.Message)
 	}
 }
+
+// **A button label weighs 40 bytes at most, per language.** The cap is Amenbo's, applied to the
+// catalogue entry at the door an install comes through, and it is spent unevenly: a Devanagari or
+// Thai character costs three bytes where a Latin one costs one, so the four languages written in
+// those scripts run out of room while the English is still half empty.
+//
+// These names are the plugin's copy of that label (`wording.go`). A copy that will not fit is a
+// name no button can wear, and the sentence carrying it would point at a button nobody can find —
+// which is the whole failure this wording exists to prevent. Measured here because nothing else
+// in this repository can: the manifest beside it holds the English alone, and the other eighteen
+// live in the catalogue.
+func TestEveryButtonNameFitsOnAButton(t *testing.T) {
+	const mostBytesALabelMayWeigh = 40
+
+	for language, said := range wordings {
+		for _, button := range []phrase{
+			phTheSetupButton, phThePairButton, phTheSeePhonesButton, phTheUnpairButton,
+		} {
+			name, written := said[button]
+			if !written {
+				continue // English is the row that must be complete; the rest fall back to it.
+			}
+			if len(name) > mostBytesALabelMayWeigh {
+				t.Errorf("%s calls %s %q, which weighs %d bytes (max %d)",
+					language, button, name, len(name), mostBytesALabelMayWeigh)
+			}
+		}
+	}
+}
