@@ -177,8 +177,8 @@ void main() {
     await tapRow(tester, find.text(words.aboutTitle));
 
     expect(find.text('Version $appVersionShown'), findsOneWidget);
-    // The one thing a place and a phone can disagree about while both are working.
-    expect(find.textContaining('snapshot contract'), findsOneWidget);
+    // The one thing a server and a phone can disagree about while both are working.
+    expect(find.textContaining('data format'), findsOneWidget);
     expect(find.text(words.licences), findsOneWidget);
   });
 
