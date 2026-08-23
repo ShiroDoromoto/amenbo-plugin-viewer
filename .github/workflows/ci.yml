@@ -9,17 +9,25 @@
 # 立つ・立たなければ skip される。
 name: ci
 
+# **手で回せる口が1つ要る。** 出す日はこちらで決められないので、「今日の runner で、いまの main が
+# まだ組めるか」を訊きたい場面が来る（→ リリースの手順）。main の各コミットは push のときに一度
+# 通っているが、それは**その日の**答えでしかない——runner の像も、ネットワーク越しに引く依存も動く。
 on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 # 畳んでよいのは PR だけ。PR の run はブランチの差分全体を見るので、新しい run は古い run を包含している。
 #
 # main はそうならない——push の run が見るのはその push の差分だけなので、畳むと「畳まれた側の変更を
 # 誰も検証しないまま main が緑を名乗る」。だから main は SHA でグループを分け、どの run も畳まれない。
+#
+# **手で回した run は run_id で分ける。** SHA で分けると、同じコミットに対する push の run と
+# 同じ組に入り、**訊いた側が答えた側を打ち切る**（`cancel-in-progress`）。訊きたいのは
+# 「もう一度組めるか」なので、前の答えを消してしまっては訊いた意味が無い。
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.event_name == 'workflow_dispatch' && github.run_id || github.sha }}
   cancel-in-progress: true
 
 jobs:
@@ -33,14 +41,20 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
+    #
+    # **手で回したときは3層とも立てる。** そこには比べる差分が無い（PR でも push でもないので
+    # 基準になるコミットが無い）ので、差分を訊けば「何も動いていない」が返り、下のジョブは全部
+    # skip される——`all green` は skip を通すので、**何も検証しないまま緑を名乗る run** ができる。
+    # 訊いているのは「いまの main が丸ごと組めるか」なので、全部立てるのが答えになる。
     outputs:
-      app: ${{ steps.filter.outputs.app }}
-      plugin: ${{ steps.filter.outputs.plugin }}
-      worker: ${{ steps.filter.outputs.worker }}
+      app: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.app == 'true' }}
+      plugin: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.plugin == 'true' }}
+      worker: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.worker == 'true' }}
     steps:
       - uses: actions/checkout@v7
       - uses: dorny/paths-filter@v4
         id: filter
+        if: github.event_name != 'workflow_dispatch'
         with:
           # 層の定義は .github/paths-filters.yml が持ち主。ジョブの並びと別々に書くと離れる。
           filters: .github/paths-filters.yml
