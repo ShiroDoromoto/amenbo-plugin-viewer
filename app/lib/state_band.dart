@@ -1,4 +1,4 @@
-/// One line at the top, for the eight ways things can stand.
+/// One line at the top, for the nine ways things can stand.
 ///
 /// The promise the whole app is built on is that **it never breaks quietly**. Every state below is
 /// one the person can end up in without doing anything wrong — a train tunnel, a phone that was
@@ -33,6 +33,9 @@ enum Standing {
   /// Records arrived and this device's key did not open them.
   unreadable,
 
+  /// The records at the place were sealed with another key, and the PC is the end that ends it.
+  otherKey,
+
   /// The place turned this device away. The token was revoked, or it was never for this place.
   refused,
 
@@ -58,8 +61,9 @@ enum Standing {
 /// the person would be waiting on a PC that had already done its part.
 ///
 /// Among the causes the order is how much they take away: a contract this build cannot read stops
-/// everything, a key that does not open stops the records, a refusal stops the fetch, having no
-/// pairing stops every round there is, and being unreachable stops nothing that is already here.
+/// everything, a key that does not open and records sealed under another one both stop the
+/// records, a refusal stops the fetch, having no pairing stops every round there is, and being
+/// unreachable stops nothing that is already here.
 /// A placement stops nothing either — it is the one cause that ends by itself, and it is here rather than
 /// silent because a pull that brought nothing owes the person a reason.
 Standing standingOf({
@@ -72,6 +76,8 @@ Standing standingOf({
       return Standing.tooNew;
     case IntakeFailure.unreadable:
       return Standing.unreadable;
+    case IntakeFailure.otherKey:
+      return Standing.otherKey;
     case IntakeFailure.refused:
       return Standing.refused;
     case IntakeFailure.placing:
@@ -97,6 +103,7 @@ String standingWords(Words words, Standing standing) => switch (standing) {
   Standing.quiet => '',
   Standing.tooNew => words.standingTooNew,
   Standing.unreadable => words.standingUnreadable,
+  Standing.otherKey => words.standingOtherKey,
   Standing.refused => words.standingRefused,
   Standing.unpaired => words.standingUnpaired,
   Standing.placing => words.standingPlacing,
@@ -111,6 +118,7 @@ String standingWords(Words words, Standing standing) => switch (standing) {
 String standingDetail(Words words, Standing standing) => switch (standing) {
   Standing.tooNew => words.standingDetailTooNew,
   Standing.unreadable => words.standingDetailUnreadable,
+  Standing.otherKey => words.standingDetailOtherKey,
   Standing.refused => words.standingDetailRefused,
   Standing.unpaired => words.standingDetailUnpaired,
   Standing.placing => words.standingDetailPlacing,
@@ -128,7 +136,9 @@ String standingDetail(Words words, Standing standing) => switch (standing) {
 /// **Three is the cap, not the count so far.** Every state that is lifted makes the lifting mean
 /// less, and a band that is loud about everything is the quiet band again. The line is drawn at
 /// what the person can act on from here: a contract this build cannot read is real and is not on
-/// this list, because nothing in this app will fix it.
+/// this list, because nothing in this app will fix it. Nor are records sealed under another key —
+/// they read like the state above and are not it: pairing again would hand this device the same
+/// key it already has, and the PC ends it without being asked.
 bool standingIsLifted(Standing standing) => switch (standing) {
   Standing.unreadable || Standing.refused || Standing.unpaired => true,
   _ => false,

@@ -16,6 +16,7 @@ import 'package:http/testing.dart';
 
 import 'package:amenbo_viewer/cloudflare_intake.dart';
 import 'package:amenbo_viewer/pairing_store.dart';
+import 'package:amenbo_viewer/record_envelope.dart';
 import 'package:amenbo_viewer/store/backlog_queries.dart';
 import 'package:amenbo_viewer/store/backlog_store.dart';
 
@@ -23,6 +24,9 @@ import 'backlog_fixture.dart';
 
 /// 32 bytes. The pairing's key, in the spelling a QR carries it in.
 const key = 'AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8';
+
+/// 32 other bytes — the key a second Amenbo store on the same PC would seal with.
+const anotherKey = 'ICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj8';
 
 const readToken = 'this-devices-own-read-token';
 
@@ -73,6 +77,10 @@ class Place {
   /// Whether `GET /meta` carries that number at all — a place deployed before it existed does
   /// not, and the phone has to read that as a place nothing has overtaken.
   bool saysPlacedFrom;
+
+  /// What the place calls the key its records were sealed with. Null is a place nobody has named
+  /// a key over, which is every place written by a sender older than the field.
+  String? sealedWith;
 
   /// What `GET /records?since=` hands back, keyed by the point it was asked from.
   final pages = <int, Map<String, Object?>>{};
@@ -146,6 +154,7 @@ class Place {
           'seq': seq,
           'updated_at': '2026-08-09T12:00:00Z',
           if (saysPlacedFrom) 'placed_from': placedFrom,
+          if (sealedWith != null) 'key_fingerprint': sealedWith,
         }),
         200,
         headers: _json,
@@ -345,6 +354,71 @@ void main() {
           ),
         ),
       );
+    });
+  });
+
+  group('the key the place named', () {
+    test('a place naming another key is left unread', () async {
+      // The whole point of asking: not one record is fetched. A page would decrypt to nothing,
+      // and the answer at the end of it would be that the records are damaged, which they are
+      // not — the PC replaces them the next time it sends.
+      final place = Place(seq: 4)
+        ..sealedWith = await keyFingerprint(anotherKey)
+        ..page(
+          0,
+          seq: 4,
+          more: false,
+          records: [await sealed('task/1', task(id: 1))],
+        );
+
+      await expectLater(
+        intakeFrom(place).run(),
+        throwsA(
+          isA<IntakeException>().having(
+            (it) => it.failure,
+            'failure',
+            IntakeFailure.otherKey,
+          ),
+        ),
+      );
+      expect(place.asked, isEmpty);
+      expect(store.seq, 0);
+    });
+
+    test('a place naming this key is read as any other', () async {
+      final place = Place(seq: 1)
+        ..sealedWith = await keyFingerprint(key)
+        ..page(
+          0,
+          seq: 1,
+          more: false,
+          records: [await sealed('task/1', task(id: 1, title: '開く'))],
+        );
+
+      final report = await intakeFrom(place).run();
+
+      expect(report.records, 1);
+      expect(store.record('task', 1)!['title'], '開く');
+    });
+
+    test('a place naming nothing is not a place naming another key', () async {
+      // Every place written by a sender older than the field answers this way. There is nothing
+      // to hold this key up against, so the round carries on exactly as it always did.
+      final place = Place(seq: 1)
+        ..page(
+          0,
+          seq: 1,
+          more: false,
+          records: [await sealed('task/1', task(id: 1))],
+        );
+
+      expect((await intakeFrom(place).run()).records, 1);
+    });
+
+    test('pressing again is not the way out of it', () {
+      // The PC ends this one, not the phone: another round now asks the same question and gets
+      // the same answer.
+      expect(worthAnotherRound(IntakeFailure.otherKey), isFalse);
     });
   });
 

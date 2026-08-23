@@ -1,4 +1,4 @@
-// The eight ways things can stand, told apart. What matters here is not how the band looks but
+// The nine ways things can stand, told apart. What matters here is not how the band looks but
 // that it never says the wrong one of them — a cause reported as an absence sends the person to
 // wait on a PC that already did its part.
 
@@ -27,6 +27,7 @@ void main() {
       for (final failure in [
         IntakeFailure.tooNew,
         IntakeFailure.unreadable,
+        IntakeFailure.otherKey,
         IntakeFailure.refused,
         IntakeFailure.unreachable,
         IntakeFailure.placing,
@@ -48,6 +49,12 @@ void main() {
       expect(
         standingOf(anythingHere: true, failure: IntakeFailure.unreadable),
         Standing.unreadable,
+      );
+      // Told apart from the one above it, and that is the whole reason it exists: the records
+      // are not damaged, and pairing again would hand this phone the key it already has.
+      expect(
+        standingOf(anythingHere: true, failure: IntakeFailure.otherKey),
+        Standing.otherKey,
       );
       expect(
         standingOf(anythingHere: true, failure: IntakeFailure.refused),
@@ -147,6 +154,24 @@ void main() {
       // Not "pair again": this phone may never have read one.
       await tester.tap(find.text(words.bandPair));
       expect(paired, 1);
+    });
+
+    testWidgets('records sealed elsewhere are said without a way out', (
+      tester,
+    ) async {
+      await tester.pumpWidget(band(Standing.otherKey, onPairAgain: () {}));
+
+      expect(
+        find.text(standingWords(words, Standing.otherKey)),
+        findsOneWidget,
+      );
+      expect(
+        find.text(standingDetail(words, Standing.otherKey)),
+        findsOneWidget,
+      );
+      // Even handed one: pairing again is the way out of the state this reads like, and not of
+      // this one.
+      expect(find.byType(FilledButton), findsNothing);
     });
 
     testWidgets('with nothing underneath, the words take the screen', (

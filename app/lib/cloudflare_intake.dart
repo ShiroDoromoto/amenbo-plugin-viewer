@@ -53,6 +53,14 @@ enum IntakeFailure {
   /// The place answered, and what it said could not be read as records.
   unreadable,
 
+  /// The records at the place were sealed with a key other than this device's, and the place said
+  /// so before a single one was fetched. Not a fault at either end and not a pairing that went
+  /// wrong: two Amenbo stores share one place — the Worker and the database are named the same
+  /// whoever sets them up — so the second one to be set up seals with its own key while the
+  /// first one's records are still standing there. The next placement from the PC replaces them,
+  /// and there is nothing for this device to do in the meantime.
+  otherKey,
+
   /// The place is being written again from the beginning, and what is there now is part of a
   /// backlog. It closed its reading doors rather than answer with a fraction — a phone cannot
   /// tell that fraction from a backlog that really did shrink, and would write it down and call
@@ -62,12 +70,15 @@ enum IntakeFailure {
 
 /// Whether another round could end any differently.
 ///
-/// Two of them cannot: a refusal stands until the PC hands out a fresh code, and a contract this
-/// build does not read stands until the store hands out a newer app. Both are settled somewhere
-/// else, so a button that repeats them is a button that fails identically every time it is
-/// pressed — and the sentence beside it has already said where to go instead.
+/// Three of them cannot: a refusal stands until the PC hands out a fresh code, a contract this
+/// build does not read stands until the store hands out a newer app, and records sealed with
+/// another key stand until the PC sends again. All three are settled somewhere else, so a button
+/// that repeats them is a button that fails identically every time it is pressed — and the
+/// sentence beside it has already said where to go instead.
 bool worthAnotherRound(IntakeFailure failure) =>
-    failure != IntakeFailure.refused && failure != IntakeFailure.tooNew;
+    failure != IntakeFailure.refused &&
+    failure != IntakeFailure.tooNew &&
+    failure != IntakeFailure.otherKey;
 
 /// A round of the intake did not finish, and why.
 ///
@@ -168,6 +179,7 @@ class PlaceStanding {
     this.placedFrom = 0,
     this.version,
     this.updatedAt,
+    this.keyFingerprint,
   });
 
   final int specVersion;
@@ -188,6 +200,14 @@ class PlaceStanding {
   /// Amenbo's own version, or null when nothing has ever been placed.
   final int? version;
   final String? updatedAt;
+
+  /// The name of the key the records standing there were sealed with — what `keyFingerprint` in
+  /// `record_envelope.dart` answers, taken on the PC over the same bytes.
+  ///
+  /// **Null is not a mismatch.** It is a place nobody has named a key over, which is every place
+  /// written by a sender older than the field, so there is nothing to hold this device's key up
+  /// against and the round carries on as it always did.
+  final String? keyFingerprint;
 }
 
 /// One page of `GET /records`.
@@ -328,13 +348,41 @@ class CloudflareIntake {
       throw const IntakeException(IntakeFailure.unreadable, at: _meta);
     }
     final placedFrom = answered['placed_from'];
+    final sealedWith = answered['key_fingerprint'];
+    final named = sealedWith is String && sealedWith.isNotEmpty
+        ? sealedWith
+        : null;
+    // Held up before a single record is asked for. A place naming a key other than this device's
+    // holds nothing this device can open, and a fetch would spend the whole order finding that
+    // out — then say the records are damaged, which they are not, and offer to pair again, which
+    // would not help. The two are told apart here or not at all.
+    final ours = await _ourKeyNamed;
+    if (named != null && ours != null && named != ours) {
+      throw const IntakeException(IntakeFailure.otherKey, at: _meta);
+    }
     return PlaceStanding(
       specVersion: specVersion,
       seq: seq,
       placedFrom: placedFrom is int ? placedFrom : 0,
       version: answered['version'] as int?,
       updatedAt: answered['updated_at'] as String?,
+      keyFingerprint: named,
     );
+  }
+
+  /// What this device's own key is called, or null when it cannot be called anything.
+  ///
+  /// A key this build cannot even name is one it cannot open a record with either, and that is
+  /// already told where a record fails to open. Nothing is gained by turning it into a different
+  /// answer here, so a key that will not name itself simply leaves the comparison unmade.
+  late final Future<String?> _ourKeyNamed = _nameOurKey();
+
+  Future<String?> _nameOurKey() async {
+    try {
+      return await keyFingerprint(pairing.encryptionKey);
+    } on EnvelopeException {
+      return null;
+    }
   }
 
   /// `GET /records?since=` — one page of what came after a point in the order.
