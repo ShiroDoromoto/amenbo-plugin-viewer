@@ -24,7 +24,7 @@ HOW A REAL USER SETS IT UP
 
 What crosses the network is ciphertext. The key never travels over it, only optically in the QR code — that is why the camera is requested, and it is the only reason. There are no credentials to supply anywhere in this app.
 
-New in this version: the iCloud route is gone. There was a second way in — the computer wrote into this app's own iCloud container — and it is removed, along with the app's iCloud entitlement. Every phone now reads from the user's own Cloudflare Worker.
+New in this version: nothing about the route or the permissions changed. What moved is what the app says. The pairing guide now names the viewer plugin the computer needs before it asks for a Worker, a key that does not fit is told apart from records that are damaged, and the wording was gone over in all nineteen languages.
 
 DEVICE MODELS AND OPERATING SYSTEMS TESTED
 
