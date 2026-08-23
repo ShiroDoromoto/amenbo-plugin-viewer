@@ -327,6 +327,23 @@ void main() {
       expect(find.byType(TaskRow), findsOneWidget);
     });
 
+    testWidgets('and every project can be picked back', (tester) async {
+      await tester.pumpWidget(screen());
+
+      await tester.tap(find.byTooltip(words.chooseProject));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('むかしの').last);
+      await tester.pumpAndSettle();
+      expect(find.byType(TaskRow), findsOneWidget);
+
+      await tester.tap(find.byTooltip(words.chooseProject));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(words.allProjects).last);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(TaskRow), findsNWidgets(2));
+    });
+
     testWidgets('the project that arrived with the person comes off too', (
       tester,
     ) async {
