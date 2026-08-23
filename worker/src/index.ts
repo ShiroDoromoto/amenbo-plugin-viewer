@@ -147,7 +147,7 @@ export default {
  * |---|---|
  * | `PUT /records` | takes the records that moved, deletions among them, and answers with where the order now stands |
  * | `GET /records` | hands back everything after a point in the order, a page at a time |
- * | `GET /meta`    | the version, the order and when it last moved — what the phone asks before spending bytes on the records themselves |
+ * | `GET /meta`    | the version, the order, when it last moved and which key sealed the records — the cheap question |
  * | `PUT /reset`   | empties the store and takes the whole of it again |
  * | `PUT /tokens`  | lets one more phone read |
  */
@@ -230,12 +230,18 @@ interface Standing {
 	 * passed it holds nothing from that placement — see `read`.
 	 */
 	placed_from: number;
+	/**
+	 * The fingerprint of the key the records here were sealed with, as the sender named it, or
+	 * null for a store nobody has named one over. It is a hash and never a key — see the
+	 * migration that adds it.
+	 */
+	key_fingerprint: string | null;
 }
 
 /** Reads that row. It is there from the first migration, so there is no "no store yet" to handle. */
 async function standing(env: Env): Promise<Standing> {
 	const row = await env.RECORDS.prepare(
-		"SELECT version, seq, updated_at, replacing, placed_from FROM store WHERE id = 1",
+		"SELECT version, seq, updated_at, replacing, placed_from, key_fingerprint FROM store WHERE id = 1",
 	).first<Standing>();
 	return row!;
 }
@@ -270,6 +276,12 @@ function halfReplaced(): Response {
  * `placed_from` is the other number it compares against: a cursor that has not passed it holds
  * nothing from the placement standing here, so the answer is to throw that copy away rather than
  * read on from it. A phone that acts on it here is spared the refusal `read` would give it.
+ *
+ * `key_fingerprint` is the third, and it is the one that saves a sync rather than a page: a phone
+ * whose own key hashes to something else cannot open a single row here, and learning that costs
+ * one small answer instead of a whole fetch that decrypts to nothing. **Null is not a mismatch**
+ * — it is a store nobody has named a key over, which is every store written by a sender older
+ * than the field, so there is nothing to compare and the phone carries on.
  */
 async function meta(env: Env): Promise<Response> {
 	const now = await standing(env);
@@ -282,6 +294,7 @@ async function meta(env: Env): Promise<Response> {
 		seq: now.seq,
 		updated_at: now.updated_at,
 		placed_from: now.placed_from,
+		key_fingerprint: now.key_fingerprint,
 	});
 }
 
@@ -412,9 +425,9 @@ interface Offered {
  *
  * - **Only the first part empties.** A later part emptying again would leave the store holding
  *   whichever part arrived last, and nothing else.
- * - **Only the last part settles the turn**: the version and the time are written by that part
- *   alone, so a turn cut short leaves a store still naming the version it really holds, and the
- *   next turn is not mistaken for a repeat of it.
+ * - **Only the last part settles the turn**: the version, the time and the key the records were
+ *   sealed with are written by that part alone, so a turn cut short leaves a store still naming
+ *   what it really holds, and the next turn is not mistaken for a repeat of it.
  * - **A replacement closes the reading doors** while it is in flight (see `halfReplaced`), because
  *   emptying first is what makes the middle of one a lie. A placement that only adds needs no such
  *   thing: what has landed of it is a true prefix of what is coming, and a phone reading that is
@@ -431,12 +444,13 @@ async function place(env: Env, request: Request, placing: Placing): Promise<Resp
 	} catch {
 		return problem(400, "the body has to be a JSON object");
 	}
-	const { spec_v, version, part, parts, records } = (asked ?? {}) as {
+	const { spec_v, version, part, parts, records, key_fingerprint } = (asked ?? {}) as {
 		spec_v?: unknown;
 		version?: unknown;
 		part?: unknown;
 		parts?: unknown;
 		records?: unknown;
+		key_fingerprint?: unknown;
 	};
 
 	if (spec_v !== SPEC_V) {
@@ -464,6 +478,20 @@ async function place(env: Env, request: Request, placing: Placing): Promise<Resp
 			`one write takes ${PER_WRITE} records at most, and this one carried ${records.length} — send it in parts`,
 		);
 	}
+	// **A body that names no key is a sender that does not say, and it is taken as such.** Every
+	// send before this field existed is one of those, so refusing them would turn an upgrade of
+	// this Worker into a store nobody could write to. What it must not do is stand for the last
+	// sender's answer: the fingerprint says what is in the records *now*, so a turn that names
+	// none leaves the store naming none.
+	const offered = key_fingerprint ?? null;
+	if (offered !== null && (typeof offered !== "string" || !HASH.test(offered))) {
+		return problem(
+			400,
+			"key_fingerprint has to be a SHA-256 as 64 hex characters" +
+				" — the hash of the key these records were sealed with, and never the key",
+		);
+	}
+	const sealedWith = offered === null ? null : offered.toLowerCase();
 	const carrying: Landing[] = [];
 	for (const record of records as Offered[]) {
 		const checked = checkedRecord(record ?? {});
@@ -515,9 +543,9 @@ async function place(env: Env, request: Request, placing: Placing): Promise<Resp
 			? [
 					env.RECORDS.prepare(
 						placing === "replace"
-							? "UPDATE store SET version = ?, updated_at = ?, replacing = 0 WHERE id = 1"
-							: "UPDATE store SET version = ?, updated_at = ? WHERE id = 1",
-					).bind(version, new Date().toISOString()),
+							? "UPDATE store SET version = ?, updated_at = ?, key_fingerprint = ?, replacing = 0 WHERE id = 1"
+							: "UPDATE store SET version = ?, updated_at = ?, key_fingerprint = ? WHERE id = 1",
+					).bind(version, new Date().toISOString(), sealedWith),
 				]
 			: []),
 		env.RECORDS.prepare("SELECT seq FROM store WHERE id = 1"),
