@@ -43,7 +43,11 @@ pairingRouteWords(Words words) => (
   name: words.routeCloudflare,
   who: words.guideCloudflareWho,
   cost: words.guideCloudflareCost,
-  steps: [words.guideCloudflareStepOne, words.guideCloudflareStepTwo],
+  steps: [
+    words.guideCloudflareStepOne,
+    words.guideCloudflareStepTwo,
+    words.guideCloudflareStepThree,
+  ],
   action: words.guideCloudflareAction,
 );
 

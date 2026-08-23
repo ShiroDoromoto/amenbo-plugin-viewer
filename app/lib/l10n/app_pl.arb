@@ -168,8 +168,9 @@
   "guideOneRoute": "Przygotuj to na komputerze, na którym działa Amenbo, a twoje zadania pojawią się tutaj.",
   "guideCloudflareWho": "Każdy komputer i każdy telefon.",
   "guideCloudflareCost": "Konto Cloudflare, za darmo.",
-  "guideCloudflareStepOne": "W Amenbo na komputerze utwórz serwer w Cloudflare. Robotę robi on; ty naciskasz i wklejasz.",
-  "guideCloudflareStepTwo": "Zeskanuj tą aplikacją kod QR, który ci pokaże.",
+  "guideCloudflareStepOne": "W Amenbo na komputerze zainstaluj wtyczkę viewer i włącz ją.",
+  "guideCloudflareStepTwo": "Potem utwórz serwer w Cloudflare. Robotę robi on; ty naciskasz i wklejasz.",
+  "guideCloudflareStepThree": "Zeskanuj tą aplikacją kod QR, który ci pokaże.",
   "guideCloudflareAction": "Zeskanuj kod QR",
   "guideAssurance": "Twoje zadania trafiają tylko na twój własny serwer Cloudflare. Ta aplikacja tylko go czyta i nigdy nic nie zapisuje z powrotem.",
 

@@ -168,8 +168,9 @@
   "guideOneRoute": "Prepara esto en el PC donde corre Amenbo y tus tareas aparecerán aquí.",
   "guideCloudflareWho": "Cualquier PC y cualquier teléfono.",
   "guideCloudflareCost": "Una cuenta de Cloudflare, gratuita.",
-  "guideCloudflareStepOne": "En Amenbo en tu PC, crea un servidor en Cloudflare. Él hace el trabajo; tú pulsas y pegas.",
-  "guideCloudflareStepTwo": "Escanea con esta app el código QR que te muestra.",
+  "guideCloudflareStepOne": "En Amenbo en tu PC, instala el complemento viewer y actívalo.",
+  "guideCloudflareStepTwo": "Después, crea un servidor en Cloudflare. Él hace el trabajo; tú pulsas y pegas.",
+  "guideCloudflareStepThree": "Escanea con esta app el código QR que te muestra.",
   "guideCloudflareAction": "Escanear el código QR",
   "guideAssurance": "Tus tareas van a un servidor de Cloudflare tuyo y a ningún otro. Esta app solo lo lee, y nunca escribe nada de vuelta.",
 
