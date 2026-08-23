@@ -27,6 +27,15 @@ const goCiphertext =
 
 const goPlaintext = '{"id":2812,"title":"タスクをスマートフォンで読む"}';
 
+/// What the PC calls that key — `fingerprintOf` in the plugin's `crypto.go`, over the same 32
+/// bytes. Written down here rather than computed, for the same reason the ciphertext is: what has
+/// to hold is that the two halves name one key the same thing.
+const goKeyNamed =
+    '630dcd2966c4336691125448bbb25b4ff412a49c732db2c8abc1b8581bd710dd';
+
+/// 32 more bytes, 0x20..0x3f — another key entirely.
+const anotherKey = 'ICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj8';
+
 Map<String, Object?> sealedJson({
   String key = goRecordKey,
   String nonce = goNonce,
@@ -34,6 +43,35 @@ Map<String, Object?> sealedJson({
 }) => {'k': key, 'op': 'put', 'n': nonce, 'c': ciphertext};
 
 void main() {
+  group('naming the key', () {
+    test('calls it what the PC calls it', () async {
+      expect(await keyFingerprint(goKey), goKeyNamed);
+    });
+
+    test('one key spelled two ways is one name', () async {
+      // Padding is optional wherever a key is copied. Naming the text rather than the bytes would
+      // make these two keys to whoever is comparing, and the comparison is the whole point.
+      expect(await keyFingerprint('$goKey='), goKeyNamed);
+    });
+
+    test('another key is another name', () async {
+      expect(await keyFingerprint(anotherKey), isNot(goKeyNamed));
+    });
+
+    test('a key this build cannot use has no name', () {
+      expect(
+        keyFingerprint('AAEC'),
+        throwsA(
+          isA<EnvelopeException>().having(
+            (it) => it.problem,
+            'problem',
+            SealProblem.unusableKey,
+          ),
+        ),
+      );
+    });
+  });
+
   group('a record the PC sealed', () {
     test('opens with the key the PC used', () async {
       final cipher = RecordCipher.fromBase64Key(goKey);

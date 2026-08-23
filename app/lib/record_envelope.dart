@@ -209,6 +209,33 @@ const _tagLength = 16;
 ///
 /// [at] is the record it was read out of, carried into the refusal for whoever reads one. Null
 /// where what is being decoded is the key itself, which belongs to no record.
+/// Names the key this device holds, the way the PC names the one it sealed with.
+///
+/// The SHA-256 of the key's **bytes**, as 64 lower-case hex characters — never of how the key is
+/// written. Padding is optional wherever a key is copied, so one key has two correct spellings,
+/// and hashing the text would make them two keys to whoever is comparing.
+///
+/// This is what `GET /meta`'s `key_fingerprint` is held up against. The hash is what may be said
+/// out loud: it is served to anyone holding a read token, and the key never is.
+///
+/// Throws [EnvelopeException] if this device's key is not a 256-bit key — the same answer
+/// building a cipher out of it gives.
+Future<String> keyFingerprint(String encodedKey) async {
+  final Uint8List key;
+  try {
+    key = decodeBase64Url(encodedKey);
+  } on EnvelopeException {
+    throw const EnvelopeException(SealProblem.unusableKey);
+  }
+  if (key.length != _keyLength) {
+    throw const EnvelopeException(SealProblem.unusableKey);
+  }
+  final named = await Sha256().hash(key);
+  return [
+    for (final byte in named.bytes) byte.toRadixString(16).padLeft(2, '0'),
+  ].join();
+}
+
 Uint8List decodeBase64Url(Object? value, {String? at}) {
   if (value is! String || value.isEmpty) {
     throw EnvelopeException(SealProblem.malformed, at: at);
