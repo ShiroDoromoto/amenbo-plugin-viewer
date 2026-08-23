@@ -17,6 +17,8 @@
 // graphic.dart` hands the same points to a canvas. Two files drawing the same mark from two sets
 // of numbers is how the two would drift apart.
 
+import 'dart:math' as math;
+
 /// One drawing, in the units of the viewBox it was delivered in.
 ///
 /// The two origins are written at different scales — 64 units across for the delivered one, 16
@@ -139,6 +141,54 @@ const markTileCorner = 232 / 1024;
 /// the same way. The small drawing needs it most: it is written edge to edge in its own square,
 /// with none of the air the delivered one carries inside its viewBox.
 const markSafe = 824 / 1024;
+
+/// How far the mark's ink reaches from the centre of [markBounds].
+///
+/// **A square safe area and a round one are not the same allowance.** The mark's arms run out
+/// diagonally, so fitting its box to a square leaves the arm ends outside the circle drawn on that
+/// square — which is exactly the shape a launcher masks an adaptive icon into. Whoever is placing
+/// the mark inside a circle scales by this rather than by [markBounds].
+///
+/// It measures the shapes `gen_brand_assets.dart` actually puts down, not the boxes around them:
+/// a link is a rectangle with square ends, so its far corners are the endpoint pushed sideways by
+/// half a stroke; a node is a diamond standing on a corner, so its far points are on the axes. An
+/// outlined node's edge is offset half a stroke perpendicular to each of its four sides, which
+/// moves the point it meets at further out than that by the diagonal.
+double markRadius(MarkArt art) {
+  final bounds = markBounds(art);
+  var radius = 0.0;
+  void reach(double x, double y) {
+    final d = math.sqrt(
+      (x - bounds.centreX) * (x - bounds.centreX) +
+          (y - bounds.centreY) * (y - bounds.centreY),
+    );
+    if (d > radius) radius = d;
+  }
+
+  for (final link in art.links) {
+    final dx = link[2] - link[0], dy = link[3] - link[1];
+    final length = math.sqrt(dx * dx + dy * dy);
+    // Half a stroke, turned a quarter turn off the link's own direction.
+    final sx = -dy / length * art.stroke / 2;
+    final sy = dx / length * art.stroke / 2;
+    for (final end in <List<double>>[
+      [link[0], link[1]],
+      [link[2], link[3]],
+    ]) {
+      reach(end[0] + sx, end[1] + sy);
+      reach(end[0] - sx, end[1] - sy);
+    }
+  }
+  for (final node in art.nodes) {
+    final r =
+        art.nodeRadius + (art.nodesAreFilled ? 0 : art.stroke / 2 * math.sqrt2);
+    reach(node[0] + r, node[1]);
+    reach(node[0] - r, node[1]);
+    reach(node[0], node[1] + r);
+    reach(node[0], node[1] - r);
+  }
+  return radius;
+}
 
 /// What the mark occupies of its square, with the stroke and the nodes counted in.
 ///

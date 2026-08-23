@@ -65,9 +65,22 @@ const _androidDensities = <String, double>{
   'xxxhdpi': 4.0,
 };
 
-/// An adaptive icon's foreground may only count on the middle two thirds of its square: the
-/// launcher masks the rest away, and Android 12 and later draw this same layer on the splash.
+/// What an adaptive icon's foreground may count on: a **circle** of two thirds of its square.
+///
+/// The launcher masks whatever shape it likes, and a circle is the one every one of them fits
+/// inside — so a mark that fills the middle two thirds as a *square* has its corners cut off. This
+/// one runs its arms out diagonally, which is where a square's corners are: fitted by its box, a
+/// quarter of its ink fell outside the circle and the arms read as running off the edge (seen on a
+/// phone, 2026-08-23).
 const _adaptiveSafeFraction = 2 / 3;
+
+/// What the launch sheet may count on: two thirds of its **square**, and no mask.
+///
+/// The same number, a different shape, and that is the whole reason the two are written apart.
+/// Nothing crops the launch sheet — Android 12 and later draw the icon named in
+/// `values-v31/styles.xml` as it is, and the layer list older versions use places it in a box — so
+/// shrinking it to a circle here would only make the mark smaller for nothing.
+const _launchSafeFraction = 2 / 3;
 
 void main(List<String> args) {
   final app = File.fromUri(Platform.script).parent.parent;
@@ -137,30 +150,27 @@ void main(List<String> args) {
     );
     writePng(
       '$res/ic_launcher_foreground.png',
-      _markOnly(
+      _markInCircle(
         (108 * entry.value).round(),
         _adaptiveSafeFraction,
         ink: markInk,
       ),
       opaque: false,
     );
-    // The launch sheet is the icon's foreground everywhere but its colour: the ground under it is
-    // the app's, which follows the phone's setting, so the mark has to follow it too. A `-night`
-    // qualifier is how the same name answers with the other sheet.
+    // The launch sheet carries the same drawing, and differs from the foreground twice over: the
+    // ground under it is the app's, which follows the phone's setting, so the mark has to follow
+    // it too (a `-night` qualifier is how the same name answers with the other sheet) — and
+    // nothing masks it, so it keeps the room the foreground has to give up.
     writePng(
       '$res/launch_mark.png',
-      _markOnly(
-        (108 * entry.value).round(),
-        _adaptiveSafeFraction,
-        ink: markInk,
-      ),
+      _markOnly((108 * entry.value).round(), _launchSafeFraction, ink: markInk),
       opaque: false,
     );
     writePng(
       'android/app/src/main/res/mipmap-night-${entry.key}/launch_mark.png',
       _markOnly(
         (108 * entry.value).round(),
-        _adaptiveSafeFraction,
+        _launchSafeFraction,
         ink: markInkOnDark,
       ),
       opaque: false,
@@ -212,6 +222,27 @@ _Bitmap _markOnly(int size, double fraction, {required int ink}) {
   final art = markFor(size);
   final bounds = markBounds(art);
   final scale = fraction * size / math.max(bounds.width, bounds.height);
+  final image = _Bitmap(size);
+  _paintMark(
+    image,
+    art,
+    scale,
+    size / 2 - bounds.centreX * scale,
+    size / 2 - bounds.centreY * scale,
+    ink,
+  );
+  return image;
+}
+
+/// The mark alone, centred on the square and drawn to fit a circle of [diameter] of it.
+///
+/// The one difference from [_markOnly] is what is being fitted: its box, or the circle around it.
+/// For this mark the second is the smaller allowance by nearly a quarter, because the arms run out
+/// towards the box's corners.
+_Bitmap _markInCircle(int size, double diameter, {required int ink}) {
+  final art = markFor(size);
+  final bounds = markBounds(art);
+  final scale = diameter / 2 * size / markRadius(art);
   final image = _Bitmap(size);
   _paintMark(
     image,
