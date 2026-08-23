@@ -164,8 +164,9 @@
   "guideOneRoute": "Richt dit in op de pc waar Amenbo draait, en je taken duiken hier op.",
   "guideCloudflareWho": "Elke pc en elke telefoon.",
   "guideCloudflareCost": "Een Cloudflare-account, gratis.",
-  "guideCloudflareStepOne": "Maak in Amenbo op je pc een server bij Cloudflare. Hij doet het werk; jij drukt en plakt.",
-  "guideCloudflareStepTwo": "Scan met deze app de QR-code die hij je laat zien.",
+  "guideCloudflareStepOne": "Installeer in Amenbo op je pc de plug-in viewer en zet hem aan.",
+  "guideCloudflareStepTwo": "Maak daarna een server bij Cloudflare. Hij doet het werk; jij drukt en plakt.",
+  "guideCloudflareStepThree": "Scan met deze app de QR-code die hij je laat zien.",
   "guideCloudflareAction": "QR-code scannen",
   "guideAssurance": "Je taken gaan naar een Cloudflare-server die van jou is en nergens anders heen. Deze app leest hem alleen en schrijft nooit iets terug.",
 
