@@ -167,6 +167,9 @@ Worker には直し方が分からない（分からないほうが正しい—�
   釦は止まらない。
 - 文言は `wording.go`（仕組み）と `wordings.go`（19行）にある。**言語を足すのは行を足すこと**で、
   英語の行だけが埋まっていることを要求され、他は句ごとに英語へ落ちる。
+- **釦の名前も `wordings.go` が持つ**（`phTheSetupButton` / `phThePairButton`）。次の一手が「その釦を押す」
+  である文は、**読み手が見ているラベルのとおりに**名指さないと、どれを押すのか読み取れない。
+  ラベル自体はカタログの overlay が持つので、**カタログで釦の名前を変えたらここも変える**。
 
 **英語のままにするもの**（Amenbo は言語を読み手で割る——人が読む面だけ訳し、打つ面は英語に据え置く）:
 
@@ -248,7 +251,7 @@ Worker には直し方が分からない（分からないほうが正しい—�
 |---|---|---|---|
 | `1. Get the app on your phone` | App Store のページを QR にして出す | — | — |
 | `2. Get a Cloudflare API token` | 権限を埋めたトークン作成画面を既定のブラウザで開いて終わる | — | — |
-| `3. Set up the Cloudflare route` | Worker とデータベースを立てる | Cloudflare の API トークン（secret） | `AMENBO_ASK_API_TOKEN` |
+| `3. Set up the server on Cloudflare` | サーバーとデータベースを立てる | Cloudflare の API トークン（secret） | `AMENBO_ASK_API_TOKEN` |
 | `4. Pair a phone` | QR を出す | この端末の名前 | `AMENBO_ASK_LABEL` |
 
 訊ねた値は**その1回だけ渡して保存しない**。

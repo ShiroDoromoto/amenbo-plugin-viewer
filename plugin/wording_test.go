@@ -40,7 +40,7 @@ func TestEveryLanguageAmenboOffersHasARow(t *testing.T) {
 // measured against. It is written out rather than derived, so a phrase added to the code and
 // forgotten in the languages shows up here as a line nobody added.
 var everyPhrase = []phrase{
-	phCloudflareWorker, phStandTheWorkerUp,
+	phCloudflareWorker, phStandTheWorkerUp, phTheSetupButton, phThePairButton,
 	phStandingWithNoKey, phStandingBadKey, phCarryingTo, phCarryingNowhere,
 	phNothingIsTicked, phWaitingOn, phNowhere, phAnd, phComma,
 	phCodeNotDrawn, phPointTheCamera, phReadThisWithTheCamera,
@@ -138,7 +138,7 @@ func TestTheLogASendLeavesIsEnglishWhateverTheStoreReadsIn(t *testing.T) {
 
 	_, said := capture(t, func() { routesFor(in) })
 
-	if !strings.Contains(said, "nothing is reaching your Cloudflare Worker") {
+	if !strings.Contains(said, "nothing is reaching your server on Cloudflare") {
 		t.Errorf("the log line is not the English one: %q", said)
 	}
 }
@@ -183,7 +183,10 @@ func TestEveryLanguageFitsTheLineAFreshInstallReads(t *testing.T) {
 		if strings.HasSuffix(said, "…") {
 			t.Errorf("%s is cut at %d bytes: %q", language, checkAnswerBytes, said)
 		}
-		if !strings.Contains(said, "setup") {
+		// **The number is what every language shares.** What to do next is a button, and the
+		// button is named in the reader's own words — but it is the third one in all nineteen,
+		// so the number is what says the tail survived the cut.
+		if !strings.Contains(said, "3.") {
 			t.Errorf("%s has lost what to do next: %q", language, said)
 		}
 	}

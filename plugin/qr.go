@@ -113,14 +113,14 @@ func qr(in input, args []string) error {
 		// pairing is the fourth button, and pressing it before the third has run is the ordinary
 		// way to arrive here. They are worded rather than passed on so that the answer to "why
 		// did nothing happen" is in the language the rest of the form is in.
-		return refuse(phNoCloudflareRouteYet, pluginName)
+		return refuse(phNoCloudflareRouteYet, phTheSetupButton)
 	}
 	if err != nil {
 		return err
 	}
 	key := secret(envEncryptionKey)
 	if key == "" {
-		return refuse(phNoEncryptionKey)
+		return refuse(phNoEncryptionKey, phTheSetupButton)
 	}
 
 	named := strings.TrimSpace(*label)

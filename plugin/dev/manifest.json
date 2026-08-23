@@ -1,6 +1,6 @@
 {
   "name": "viewer",
-  "desc": "Read your backlog on your phone, from a place you own",
+  "desc": "Read your tasks on your phone, from a server you own",
   "author": "Amenbo",
   "repo": "ShiroDoromoto/amenbo-plugin-viewer",
   "os": [
@@ -42,12 +42,12 @@
     {
       "key": "routes",
       "label": "Where to carry",
-      "help": "Whether this may carry to your Cloudflare Worker. It can only take the place away: ticking it still needs the Worker to exist before anything reaches it, and setup is what stands one up. Ticking nothing is an answer and it is honoured: the plugin stays enabled and carries nowhere.",
+      "help": "Whether this may carry to your own server on Cloudflare. It can only take the place away: ticking it still needs the server to exist before anything reaches it, and \"3. Set up the server on Cloudflare\" is what makes one. Ticking nothing is an answer and it is honoured: the plugin stays enabled and carries nowhere.",
       "type": "multi",
       "options": [
         {
           "value": "cloudflare",
-          "label": "Your own Cloudflare Worker"
+          "label": "Your own server on Cloudflare"
         }
       ],
       "default": "cloudflare",
@@ -55,23 +55,23 @@
     },
     {
       "key": "worker_url",
-      "label": "Your Cloudflare Worker's URL",
-      "help": "setup writes this when it stands the Worker up. There is nothing to type.",
+      "label": "Your server's URL on Cloudflare",
+      "help": "\"3. Set up the server on Cloudflare\" writes this when it makes the server. There is nothing to type.",
       "required": false,
       "readonly": true
     },
     {
       "key": "auth_token",
-      "label": "Token the Worker lets writes in with",
-      "help": "setup generates this. There is nothing to type.",
+      "label": "API token the server takes writes with",
+      "help": "\"3. Set up the server on Cloudflare\" generates this. There is nothing to type.",
       "secret": true,
       "required": false,
       "readonly": true
     },
     {
       "key": "encryption_key",
-      "label": "Key the records are encrypted with",
-      "help": "setup generates this. There is nothing to type - the phone is given it by the QR, never over the network.",
+      "label": "Key your tasks are encrypted with",
+      "help": "\"3. Set up the server on Cloudflare\" generates this. There is nothing to type - the phone is given it by the QR, never over the network.",
       "secret": true,
       "required": false,
       "readonly": true
@@ -90,7 +90,7 @@
       },
       {
         "cmd": "setup",
-        "label": "3. Set up the Cloudflare route",
+        "label": "3. Set up the server on Cloudflare",
         "ask": [
           {
             "key": "api_token",

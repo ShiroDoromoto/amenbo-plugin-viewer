@@ -130,7 +130,7 @@ func setup(_ input, args []string) error {
 
 	subdomain, err := air.theSubdomain(where)
 	if errors.Is(err, errNoSubdomain) {
-		return refuse(phNoWorkersDevName, "https://dash.cloudflare.com/"+where+"/workers/subdomain")
+		return refuse(phNoWorkersDevName, "https://dash.cloudflare.com/"+where+"/workers/subdomain", phTheSetupButton)
 	}
 	if err != nil {
 		return err
@@ -200,7 +200,7 @@ func setup(_ input, args []string) error {
 	if keptKey {
 		logf("%s: %s", pluginName, say(phTheKeyWasKept))
 	} else {
-		logf("%s: %s", pluginName, say(phANewKeyWasGenerated, pluginName))
+		logf("%s: %s", pluginName, say(phANewKeyWasGenerated, phThePairButton))
 	}
 	logf("%s: %s", pluginName, say(phTheWorkerIsYours))
 
@@ -343,7 +343,7 @@ func token(_ input, _ []string) error {
 	if err := openInTheSystem(link); err != nil {
 		return refuse(phTokenPageNotOpened, err, link)
 	}
-	logf("%s: %s", pluginName, say(phTokenPageIsOpen))
+	logf("%s: %s", pluginName, say(phTokenPageIsOpen, phTheSetupButton))
 	return nil
 }
 
@@ -416,7 +416,7 @@ func awaitTheWorker(endpoint string) error {
 			case http.StatusUnauthorized:
 				return nil
 			case http.StatusServiceUnavailable:
-				return refuse(phWorkerHasNoWriteToken)
+				return refuse(phWorkerHasNoWriteToken, phTheSetupButton)
 			}
 			last = fmt.Errorf("%s answered %d, where a caller with no token should be turned away with 401", endpoint, answer.StatusCode)
 		} else {

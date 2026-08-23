@@ -160,7 +160,7 @@ func TestTheCheckSaysWhatATickedPlaceIsWaitingOn(t *testing.T) {
 
 	_, said := answeredCheck(t, fired("", map[string]any{configRoutes: "cloudflare"}))
 
-	if !strings.Contains(said, "Waiting on") || !strings.Contains(said, "setup") {
+	if !strings.Contains(said, "Waiting on") || !strings.Contains(said, "3.") {
 		t.Errorf("%q does not say what the Cloudflare route is waiting on", said)
 	}
 }
@@ -290,7 +290,9 @@ func TestTheLineAFreshInstallReadsFitsWhole(t *testing.T) {
 	if strings.HasSuffix(said, "…") {
 		t.Errorf("the line a fresh install reads is cut at %d bytes: %q", checkAnswerBytes, said)
 	}
-	if !strings.Contains(said, "setup") {
+	// What to do next is a button now, and the number is the half of its name every language
+	// spells the same way.
+	if !strings.Contains(said, "3.") {
 		t.Errorf("%q has lost what to do next", said)
 	}
 }
