@@ -791,7 +791,7 @@ func TestAWorkerWithNoWriteTokenIsNotReportedAsUp(t *testing.T) {
 
 	if err := awaitTheWorker(endpointOn("someone")); err == nil {
 		t.Fatal("a Worker with no write token was taken for one that is up")
-	} else if !strings.Contains(err.Error(), "write token") {
+	} else if !strings.Contains(err.Error(), "API token for writing") {
 		t.Errorf("the reason is not the one that is true: %v", err)
 	}
 }

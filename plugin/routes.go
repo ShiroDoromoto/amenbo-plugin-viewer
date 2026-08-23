@@ -65,7 +65,7 @@ func routesStanding(in input) []routeStanding {
 	worker := routeStanding{called: phCloudflareWorker, declared: allowed[routeCloudflare]}
 	switch shop, err := storeFor(in); {
 	case err != nil:
-		worker.missing = said{key: phStandTheWorkerUp, args: []any{pluginName}}
+		worker.missing = said{key: phStandTheWorkerUp, args: []any{phTheSetupButton}}
 	default:
 		// The key is what the Worker route is allowed to send with, and only it: the folder is
 		// this machine's own. A route standing without one is worth saying — the send goes on to
@@ -80,7 +80,7 @@ func routesStanding(in input) []routeStanding {
 			if errors.Is(err, errNoKey) {
 				wrong = phStandingWithNoKey
 			}
-			worker.missing, worker.stalled = said{key: wrong}, true
+			worker.missing, worker.stalled = said{key: wrong, args: []any{phTheSetupButton}}, true
 		} else {
 			shop.seal = seal
 			worker.open = shop

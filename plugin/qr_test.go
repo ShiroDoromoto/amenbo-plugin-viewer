@@ -227,7 +227,7 @@ func TestPairingRefusesBeforeItAsksForAnything(t *testing.T) {
 		var code int
 		_, stderr := capture(t, func() { code = run(input{}, []string{"qr", "--label", "iPhone"}) })
 
-		if code != 1 || !strings.Contains(stderr, "setup") {
+		if code != 1 || !strings.Contains(stderr, "3.") {
 			t.Errorf("exit %d: %q", code, stderr)
 		}
 	})
@@ -240,7 +240,7 @@ func TestPairingRefusesBeforeItAsksForAnything(t *testing.T) {
 			code = run(input{Config: map[string]any{configWorkerURL: "https://viewer.example.workers.dev"}}, []string{"qr", "--label", "iPhone"})
 		})
 
-		if code != 1 || !strings.Contains(stderr, "setup") {
+		if code != 1 || !strings.Contains(stderr, "3.") {
 			t.Errorf("exit %d: %q", code, stderr)
 		}
 	})

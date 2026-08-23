@@ -70,6 +70,17 @@ const (
 	phTokenPageNotOpened      phrase = "token_page_not_opened"
 	phTokenPageIsOpen         phrase = "token_page_is_open"
 
+	// The two buttons a sentence has to name, because what to do next is press one of them.
+	//
+	// **The label itself is the catalogue's**, carried in the overlay files beside the manifest,
+	// and this is the plugin's own copy of it. There is nowhere else for it to be: a sentence
+	// composed while the plugin runs cannot be translated in an overlay, and a sentence that says
+	// "press the third button" instead of naming it is the mismatch this wording exists to end
+	// (a form whose buttons read one way and whose sentences point somewhere else). So the two
+	// are kept level by hand — **a button renamed in the catalogue is renamed here**.
+	phTheSetupButton phrase = "the_setup_button"
+	phThePairButton  phrase = "the_pair_button"
+
 	// `setup` — standing the Worker and its database up.
 	phBuildingInAccount       phrase = "building_in_account"
 	phDatabaseCreated         phrase = "database_created"
@@ -129,7 +140,26 @@ func (w wording) say(p phrase, a ...any) string {
 	if len(a) == 0 {
 		return w.form(p)
 	}
-	return fmt.Sprintf(w.form(p), a...)
+	return fmt.Sprintf(w.form(p), w.wordedToo(a)...)
+}
+
+// wordedToo words the phrases handed in as values, in this same language, and leaves everything
+// else as it came.
+//
+// **A sentence that names a button has to name it the way its reader sees it labelled.** The same
+// standing is read out on two faces — the settings screen in the user's language, and the
+// execution log in English — so what a caller carries is the phrase rather than a finished name,
+// and it is worded here, once per face, rather than at the place it was picked.
+func (w wording) wordedToo(a []any) []any {
+	worded := make([]any, len(a))
+	for at, one := range a {
+		if named, is := one.(phrase); is {
+			worded[at] = w.form(named)
+			continue
+		}
+		worded[at] = one
+	}
+	return worded
 }
 
 // say is that, in the language the settings face is being spoken in.
@@ -138,7 +168,7 @@ func say(p phrase, a ...any) string { return screen.say(p, a...) }
 // refuse is a sentence handed back as the error that ends a call. The format is the language's,
 // so a `%w` in it wraps whatever the caller passes — which is what keeps the wrapped error
 // reachable by `errors.Is` after it has been said in another language.
-func refuse(p phrase, a ...any) error { return fmt.Errorf(screen.form(p), a...) }
+func refuse(p phrase, a ...any) error { return fmt.Errorf(screen.form(p), screen.wordedToo(a)...) }
 
 // english is the row the faces that are not the settings screen speak from — the observation
 // hook, and the commands that are typed.
