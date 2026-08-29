@@ -12,28 +12,28 @@
   "scope": "machine",
   "assets": {
     "macos-arm64": {
-      "url": "https://github.com/ShiroDoromoto/amenbo-plugin-viewer/releases/download/v4/viewer-v4-macos-arm64.tar.gz",
-      "checksum": "sha256:41d59a3c323778cf7504165c42d053bbd47ca1ceff0736a936fedefaf7458273"
+      "url": "https://github.com/ShiroDoromoto/amenbo-plugin-viewer/releases/download/v5/viewer-v5-macos-arm64.tar.gz",
+      "checksum": "sha256:dd1e61512068991ccdad4874edb18fdc34c6b0a1a3de8cee01b664819e7044d5"
     },
     "macos-x64": {
-      "url": "https://github.com/ShiroDoromoto/amenbo-plugin-viewer/releases/download/v4/viewer-v4-macos-x64.tar.gz",
-      "checksum": "sha256:fe114126f0f0e5ea26a7363a7707f8081b8a7b00e205907015be9d1bb948323c"
+      "url": "https://github.com/ShiroDoromoto/amenbo-plugin-viewer/releases/download/v5/viewer-v5-macos-x64.tar.gz",
+      "checksum": "sha256:69973c8218eef2c544d29f7f8009662de0b897176028bd048c8b78f415a4cf8d"
     },
     "linux-x64": {
-      "url": "https://github.com/ShiroDoromoto/amenbo-plugin-viewer/releases/download/v4/viewer-v4-linux-x64.tar.gz",
-      "checksum": "sha256:4f2003e25f31a3fd2ad59a625fdf81b76830a1c92d82773844b3f716abd46f45"
+      "url": "https://github.com/ShiroDoromoto/amenbo-plugin-viewer/releases/download/v5/viewer-v5-linux-x64.tar.gz",
+      "checksum": "sha256:d0814968b393f291032bb6a55eae1816d3c07ecf44f7f1d0bd85c5848135e5fb"
     },
     "linux-arm64": {
-      "url": "https://github.com/ShiroDoromoto/amenbo-plugin-viewer/releases/download/v4/viewer-v4-linux-arm64.tar.gz",
-      "checksum": "sha256:b17dbdfa0785f1ce560873d8811049746e166241d314e2fe9d4baf3e3fd4b27c"
+      "url": "https://github.com/ShiroDoromoto/amenbo-plugin-viewer/releases/download/v5/viewer-v5-linux-arm64.tar.gz",
+      "checksum": "sha256:1d7d620f25f2c418c5c54f8ed7eadd106e071247fe1b5beca37298858f6c605f"
     },
     "windows-x64": {
-      "url": "https://github.com/ShiroDoromoto/amenbo-plugin-viewer/releases/download/v4/viewer-v4-windows-x64.tar.gz",
-      "checksum": "sha256:8ea2671fb6890c3d9aabf7b640a756825db489b2ee7e8de0903b90d620596fb8"
+      "url": "https://github.com/ShiroDoromoto/amenbo-plugin-viewer/releases/download/v5/viewer-v5-windows-x64.tar.gz",
+      "checksum": "sha256:9209d6218c3e9070c677fe80d12111f2390bfac951cc2106cba4d1963a0abc9c"
     },
     "windows-arm64": {
-      "url": "https://github.com/ShiroDoromoto/amenbo-plugin-viewer/releases/download/v4/viewer-v4-windows-arm64.tar.gz",
-      "checksum": "sha256:df277dafec618677c89f06215b0b155f90823263e905e53f41280769ee69b871"
+      "url": "https://github.com/ShiroDoromoto/amenbo-plugin-viewer/releases/download/v5/viewer-v5-windows-arm64.tar.gz",
+      "checksum": "sha256:7af381bce000adf0ac3d7bb711a0f532f88bb7883bf20d787d7e640417f7de4f"
     }
   },
   "payload_v": 1,
