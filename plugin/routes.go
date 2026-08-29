@@ -254,7 +254,7 @@ func theWayInFromHere() string {
 	// thing that reads at the far end is the app, and a reader who has only done the half they
 	// were told about has nowhere for the records to be read.
 	return fmt.Sprintf("run `%s setup` to stand the Cloudflare route up"+
-		" — the app the phone reads with is at %s", pluginName, appStoreLink)
+		" — the app the phone reads with is at %s", pluginName, addressesInWords(english))
 }
 
 // errNothingTicked is every place having been ticked off. The plugin stays enabled and carries

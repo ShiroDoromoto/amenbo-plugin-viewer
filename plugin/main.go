@@ -279,14 +279,17 @@ func usage() {
 The plugin encrypts your backlog a record at a time and carries it to a place YOU own. Amenbo
 Viewer on the phone reads it there. Nothing is hosted by anyone else, and nothing is written back.
 
-The app is at %s. 'app' puts that page on a code, since the
-screen you are reading this on is not the one that installs it.
+'app' puts the store page on a code, since the screen you are reading this on is not the one that
+installs it. The app is at:
+
+%s
 
 %s
 
 Usage (through Amenbo, from the project the plugin is enabled for):
-  amenbo plugin run %s app       put the app's App Store page on a code the phone reads
-                                      --terminal      draw the code here instead of opening it
+  amenbo plugin run %s app       put the app's store page, for each kind of phone, on a
+                                    code that phone's camera reads
+                                      --terminal      draw the codes here instead of opening them
   amenbo plugin run %s token     open Cloudflare's token screen, with the permissions
                                       'setup' needs already ticked
   amenbo plugin run %s setup     stand up the Worker and its database in your own account
@@ -334,7 +337,7 @@ rather than every phone to pair again. 'qr' is how one is issued: the code it pu
 read by the camera and never goes over the network, which is what keeps the key out of the Worker.
 'revoke' is the other end of that — one phone stops reading and the rest never notice.
 `,
-		pluginName, appStoreLink, theRouteFromHere(),
+		pluginName, addressesListed(), theRouteFromHere(),
 		pluginName, pluginName, pluginName, pluginName, pluginName, pluginName, pluginName, pluginName,
 		configRoutes, configWorkerURL, configAuthToken, configEncryptionKey)
 }

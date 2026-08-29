@@ -64,7 +64,7 @@ func pairingAgainst(t *testing.T, store *pretendStore) (in input, carried *pairi
 	inATerminal(t)
 	shown := &pairing{}
 	was := present
-	present = func(what []byte, _ bool) error {
+	present = func(_ string, what []byte, _ bool) error {
 		if err := json.Unmarshal(what, shown); err != nil {
 			t.Errorf("what was about to be shown does not parse: %q", what)
 		}
@@ -321,7 +321,7 @@ func TestTheDrawnCodeKeepsItsQuietZone(t *testing.T) {
 // browser here would land the App Store on the one machine that cannot install from it, leaving
 // the person to carry the address across by hand — which is the gap the button exists to close.
 func TestTheAppButtonDrawsTheStorePageRatherThanOpeningItHere(t *testing.T) {
-	carried, secret := drawingIsHeld(t)
+	drawn, secret := drawingIsHeld(t)
 	opened := watchTheViewer(t)
 	inATerminal(t)
 
@@ -331,17 +331,28 @@ func TestTheAppButtonDrawsTheStorePageRatherThanOpeningItHere(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("exit %d", code)
 	}
-	if *carried != appStoreLink {
-		t.Errorf("the code carries %q, and the app is at %q", *carried, appStoreLink)
+	if len(*drawn) != len(theStores) {
+		t.Fatalf("%d code(s) drawn for %d store(s): %+v", len(*drawn), len(theStores), *drawn)
+	}
+	for at, store := range theStores {
+		if got := (*drawn)[at]; got.carried != store.link {
+			t.Errorf("the %s code carries %q, and the app is at %q", store.phone, got.carried, store.link)
+		}
+		// **Two codes side by side need a word each.** Without the name above it, the one a
+		// person points a camera at is whichever they guessed.
+		if got := (*drawn)[at]; got.titled != store.phone {
+			t.Errorf("a code was drawn under %q rather than %q, so nothing says which phone it is for",
+				got.titled, store.phone)
+		}
+		if !strings.Contains(stderr, store.link) {
+			t.Errorf("the %s address is nowhere for someone who would rather type it: %q", store.phone, stderr)
+		}
 	}
 	if *secret {
 		t.Error("a public page was drawn as a code carrying a secret")
 	}
 	if *opened != "" {
 		t.Errorf("the page was opened here, on the machine that cannot install it: %q", *opened)
-	}
-	if !strings.Contains(stderr, appStoreLink) {
-		t.Errorf("the address is nowhere for someone who would rather type it: %q", stderr)
 	}
 }
 
@@ -350,7 +361,7 @@ func TestTheAppButtonDrawsTheStorePageRatherThanOpeningItHere(t *testing.T) {
 // the whole of what the code was carrying. Drawing it anyway would leave a screenful of blocks
 // in a log nobody can point a camera at.
 func TestAMachineWithNothingToDrawOnIsGivenTheAddressInWords(t *testing.T) {
-	carried, _ := drawingIsHeld(t)
+	drawn, _ := drawingIsHeld(t)
 	nothingToDrawOn(t)
 
 	var code int
@@ -359,28 +370,83 @@ func TestAMachineWithNothingToDrawOnIsGivenTheAddressInWords(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("exit %d — a machine with nothing to draw on is not a failure to report", code)
 	}
-	if *carried != "" {
-		t.Errorf("a code was drawn where nothing could put it in front of a camera: %q", *carried)
+	if len(*drawn) != 0 {
+		t.Errorf("a code was drawn where nothing could put it in front of a camera: %+v", *drawn)
 	}
-	if !strings.Contains(stderr, appStoreLink) {
-		t.Errorf("the address the person has to reach by hand was not written out: %q", stderr)
+	for _, store := range theStores {
+		if !strings.Contains(stderr, store.link) {
+			t.Errorf("the %s address the person has to reach by hand was not written out: %q", store.phone, stderr)
+		}
 	}
 }
 
-// drawingIsHeld stands in for putting a code in front of a camera, and hands back what was going
-// to be on it and whether it was drawn as something carrying a secret. What comes back empty is
-// a run that drew nothing.
-func drawingIsHeld(t *testing.T) (carried *string, secret *bool) {
+// The settings screen has no terminal, so what it draws is what rides back on the answer — and
+// with two stores that is a heading and a code each. A code with nothing above it is one a person
+// holding one phone has to guess at.
+func TestTheFormIsHandedAHeadedCodeForEachStore(t *testing.T) {
+	drawn, _ := drawingIsHeld(t)
+	fromTheSettingsScreen(t)
+
+	var code int
+	stdout, _ := capture(t, func() { code = run(input{}, []string{"app"}) })
+
+	if code != 0 {
+		t.Fatalf("exit %d", code)
+	}
+	if len(*drawn) != 0 {
+		t.Errorf("a code was drawn into a terminal the settings screen does not have: %+v", *drawn)
+	}
+	var said answered
+	if err := json.Unmarshal([]byte(stdout), &said); err != nil {
+		t.Fatalf("the answer is not one the form can read: %q", stdout)
+	}
+	// The line telling the reader what to do with the codes, then the codes themselves.
+	if want := 1 + 2*len(theStores); len(said.Show) != want {
+		t.Fatalf("the answer carries %d part(s), and %d store(s) want %d: %+v",
+			len(said.Show), len(theStores), want, said.Show)
+	}
+	if said.Show[0].Text == "" {
+		t.Errorf("nothing tells the reader what the codes are for: %+v", said.Show[0])
+	}
+	for at, store := range theStores {
+		heading, drawn := said.Show[1+at*2], said.Show[2+at*2]
+		if heading.Heading != store.phone {
+			t.Errorf("the code for %s is headed %q", store.phone, heading.Heading)
+		}
+		if drawn.QR != store.link {
+			t.Errorf("the %s code carries %q, and the app is at %q", store.phone, drawn.QR, store.link)
+		}
+	}
+}
+
+// fromTheSettingsScreen is the run nobody typed: there is a display, and no terminal to draw
+// into — so what the person is shown is whatever rides back on the answer.
+func fromTheSettingsScreen(t *testing.T) {
 	t.Helper()
-	var what string
+	wasScreen, wasTerminal := thereIsAScreen, thereIsATerminal
+	thereIsAScreen, thereIsATerminal = onAScreen, func() bool { return false }
+	t.Cleanup(func() { thereIsAScreen, thereIsATerminal = wasScreen, wasTerminal })
+}
+
+// aDrawnCode is one code a run was about to put in front of a camera: the name it was drawn
+// under, and the text it carried.
+type aDrawnCode struct{ titled, carried string }
+
+// drawingIsHeld stands in for putting codes in front of a camera, and hands back the ones that
+// were going to be drawn, in order, along with whether any of them carried a secret. What comes
+// back empty is a run that drew nothing.
+func drawingIsHeld(t *testing.T) (drawn *[]aDrawnCode, secret *bool) {
+	t.Helper()
+	var codes []aDrawnCode
 	var hidden bool
 	was := present
-	present = func(bytes []byte, carriesASecret bool) error {
-		what, hidden = string(bytes), carriesASecret
+	present = func(titled string, bytes []byte, carriesASecret bool) error {
+		codes = append(codes, aDrawnCode{titled: titled, carried: string(bytes)})
+		hidden = hidden || carriesASecret
 		return nil
 	}
 	t.Cleanup(func() { present = was })
-	return &what, &hidden
+	return &codes, &hidden
 }
 
 // inATerminal is the machine somebody typed this into: there is a display, and

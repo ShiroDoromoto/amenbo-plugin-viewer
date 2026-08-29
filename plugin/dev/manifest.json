@@ -144,7 +144,7 @@
     "commands": [
       {
         "cmd": "app",
-        "does": "Puts the App Store page for Amenbo Viewer on a QR the phone's camera reads, so the address does not have to be carried from this screen to the phone by hand. Asks nothing and keeps nothing"
+        "does": "Puts the store page for Amenbo Viewer on a QR the phone's camera reads — one code for iPhone, one for Android — so the address is not carried to the phone by hand. Asks nothing and keeps nothing"
       },
       {
         "cmd": "token",
