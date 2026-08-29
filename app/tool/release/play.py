@@ -10,6 +10,7 @@ expires — so a run that dies halfway leaves the store exactly as it was.
 
     uv run app/tool/release/play.py state
     uv run app/tool/release/play.py upload build/app/outputs/bundle/release/app-release.aab --track alpha
+    uv run app/tool/release/play.py promote --from alpha --to production --countries all
     uv run app/tool/release/play.py notes --track alpha --text-file /path/to/what-changed.txt
     uv run app/tool/release/play.py graphics --show
     uv run app/tool/release/play.py graphics
@@ -145,6 +146,78 @@ def upload(args):
     print("committed")
 
 
+def source_countries(talk, edit, track):
+    """The countries a track is already serving to. Empty on a track that has served nothing."""
+    current = check(
+        talk.get(f"{API}/applications/{PACKAGE}/edits/{edit}/tracks/{track}", timeout=60),
+        "tracks.get",
+    )
+    for release in current.get("releases", []):
+        targeting = release.get("countryTargeting") or {}
+        if targeting.get("countries") or targeting.get("includeRestOfWorld"):
+            return True
+    return False
+
+
+def promote(args):
+    """Serves the build one track already carries on another track. No bundle moves.
+
+    Play has no "promote": the target track is simply told to serve the same versionCodes. Sending
+    the bundle again would be refused anyway — a versionCode is accepted once and never again. The
+    source track keeps serving what it was serving.
+    """
+    talk = session()
+    edit = check(talk.post(f"{API}/applications/{PACKAGE}/edits", timeout=60), "edits.insert")["id"]
+
+    source = check(
+        talk.get(f"{API}/applications/{PACKAGE}/edits/{edit}/tracks/{args.source}", timeout=60),
+        "tracks.get",
+    )
+    serving = next((one for one in source.get("releases", []) if one.get("versionCodes")), None)
+    if not serving:
+        sys.exit(f"track {args.source} is serving no bundle")
+    codes = serving["versionCodes"]
+
+    text = args.text_file.read_text().strip() if args.text_file else None
+    release = {
+        "name": args.name or serving.get("name") or codes[0],
+        "versionCodes": codes,
+        "releaseNotes": [
+            {"language": one, "text": text or listing_notes(one)} for one in languages(talk, edit)
+        ],
+    }
+    if args.fraction is None:
+        release["status"] = "completed"
+    else:
+        release["status"] = "inProgress"
+        release["userFraction"] = args.fraction
+
+    # A track that has never served anything targets no country, and Play refuses to commit a
+    # release into one — so the first promotion has to say where it is going.
+    if args.countries == "all":
+        release["countryTargeting"] = {"includeRestOfWorld": True}
+    elif args.countries:
+        release["countryTargeting"] = {
+            "countries": [one.strip().upper() for one in args.countries.split(",")],
+            "includeRestOfWorld": False,
+        }
+    elif not source_countries(talk, edit, args.target):
+        sys.exit(f"track {args.target} targets no country — pass --countries all, or a list")
+
+    track = check(
+        talk.put(
+            f"{API}/applications/{PACKAGE}/edits/{edit}/tracks/{args.target}",
+            json={"track": args.target, "releases": [release]},
+            timeout=120,
+        ),
+        "tracks.update",
+    )
+    print(f"track {track['track']} → {release['name']} {codes} {release['status']}")
+
+    check(talk.post(f"{API}/applications/{PACKAGE}/edits/{edit}:commit", timeout=300), "commit")
+    print("committed")
+
+
 def graphics(args):
     """Replaces the pictures Play stands beside the listing, in every language it has one in.
 
@@ -251,6 +324,27 @@ if __name__ == "__main__":
         help="what changed, for testers. Without it the listing sheets are used",
     )
     one.set_defaults(run=upload)
+
+    one = steps.add_parser("promote", help="serve a track's build on another track, no upload")
+    one.add_argument("--from", dest="source", required=True, help="the track already serving it")
+    one.add_argument("--to", dest="target", required=True, help="the track to serve it on")
+    one.add_argument("--name", help="what the release is called in the console")
+    one.add_argument(
+        "--text-file",
+        type=pathlib.Path,
+        help="what changed. Without it the listing sheets are used",
+    )
+    one.add_argument(
+        "--fraction",
+        type=float,
+        help="staged rollout share (0-1). Without it the release goes to everyone",
+    )
+    one.add_argument(
+        "--countries",
+        help="`all`, or a comma-separated list of ISO codes. Required the first time a track is "
+        "used, since a track that has served nothing targets no country",
+    )
+    one.set_defaults(run=promote)
 
     one = steps.add_parser("graphics", help="replace the listing's icon and wide picture")
     one.add_argument(

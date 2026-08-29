@@ -570,7 +570,7 @@ uv run app/tool/release/play.py state
 | ストア | 打つもの |
 |---|---|
 | App Store | `appstore.py upload <ipa>` → 版が審査に居るなら `withdraw` → `bind <版> <番号>` → `submit <版>` |
-| Play | `play.py upload <aab> --track alpha` |
+| Play | `play.py upload <aab> --track alpha` → 通ったら `play.py promote --from alpha --to production` |
 
 - **版名が動くときは `bind` の前に2つ挟まる。** 出し終えた版には二度と紐づけられないので、
   `appstore.py version <版>` で版レコードを開き、`appstore.py whatsnew <版> <file>` で
@@ -589,6 +589,14 @@ uv run app/tool/release/play.py state
 - リリースノートは掲載文の `release_notes` から引く。**Play に掲載の無い言語へ書くと断られる**ので、
   出す先は `listings` が答えた言語だけ。配って試す版に「何が変わったか」を出したいときは
   `play.py notes --track <t> --text-file <path>`
+- **昇格に上げ直しは要らない。** `play.py promote --from <t> --to <t>` は、トラックが既に serving
+  している versionCode を別のトラックにも serving させるだけ（バンドルは動かない——**一度受け付けられた
+  versionCode は二度と上げ直せない**ので、これしか道が無い）。段階公開なら `--fraction 0.2`
+- **製品版トラックの「国・地域」は API から書けない。** `countryAvailability` は GET だけで、
+  ここだけはコンソールを開くしかない。指定の無いトラックへ出すと、tracks.update は 200 で通っておいて
+  **commit が `Release in track targeting no countries` で 403** になる。
+  `--fraction` で回避もできない——**トラックの最初の版は staged にできない**（400）ので、
+  「国を入れてから completed で出す」以外の並びが無い
 - **掲載の画は版と別に差し替えられる**（`play.py graphics`）。焼き直した `store/graphics/` の2枚を
   Play が掲載を持つ言語ぜんぶへ上げる。上げる前に何が入っているかは `graphics --show`。
   **版もトラックも動かさない**ので、マークだけ変わったときにビルドを出し直さずに済む
