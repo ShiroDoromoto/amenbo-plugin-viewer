@@ -146,17 +146,19 @@ def upload(args):
     print("committed")
 
 
-def source_countries(talk, edit, track):
-    """The countries a track is already serving to. Empty on a track that has served nothing."""
-    current = check(
-        talk.get(f"{API}/applications/{PACKAGE}/edits/{edit}/tracks/{track}", timeout=60),
-        "tracks.get",
+def targets_a_country(talk, edit, track):
+    """Whether the track is available anywhere. False on one nobody has picked countries for.
+
+    This is the track's own availability, not a release's `countryTargeting` — the latter is a
+    staged rollout's narrowing, and a track that has served nothing has no release to read it off.
+    Play answers 204 with an empty body for a track with no countries.
+    """
+    answer = talk.get(
+        f"{API}/applications/{PACKAGE}/edits/{edit}/countryAvailability/{track}", timeout=60
     )
-    for release in current.get("releases", []):
-        targeting = release.get("countryTargeting") or {}
-        if targeting.get("countries") or targeting.get("includeRestOfWorld"):
-            return True
-    return False
+    if answer.status_code >= 300:
+        return False
+    return bool((answer.json() if answer.text else {}).get("countries"))
 
 
 def promote(args):
@@ -201,8 +203,11 @@ def promote(args):
             "countries": [one.strip().upper() for one in args.countries.split(",")],
             "includeRestOfWorld": False,
         }
-    elif not source_countries(talk, edit, args.target):
-        sys.exit(f"track {args.target} targets no country — pass --countries all, or a list")
+    elif not targets_a_country(talk, edit, args.target):
+        sys.exit(
+            f"track {args.target} is available in no country — pick them in the console "
+            "(there is no API for it), or pass --countries with --fraction for a staged rollout"
+        )
 
     track = check(
         talk.put(
