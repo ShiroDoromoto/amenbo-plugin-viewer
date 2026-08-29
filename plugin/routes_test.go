@@ -268,8 +268,10 @@ func TestEverySentenceThatAsksForTheAppSaysWhereToGetIt(t *testing.T) {
 		"the way in from here": theWayInFromHere(),
 		"the usage":            wayIn,
 	} {
-		if !strings.Contains(said, appStoreLink) {
-			t.Errorf("%s does not say where the app is: %q", what, said)
+		for _, store := range theStores {
+			if !strings.Contains(said, store.link) {
+				t.Errorf("%s does not say where the app is for %s: %q", what, store.phone, said)
+			}
 		}
 	}
 }

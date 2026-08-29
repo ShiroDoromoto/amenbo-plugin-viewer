@@ -152,7 +152,8 @@ func qr(in input, args []string) error {
 		return err
 	}
 	if drawnHere(*inTerminal) {
-		if err := present(carried, carriesTheKey); err != nil {
+		// One code and nothing to tell it from, so it is drawn under no name at all.
+		if err := present("", carried, carriesTheKey); err != nil {
 			return err
 		}
 	}
@@ -215,25 +216,47 @@ func hashOf(token string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// appStoreLink is where the phone's half of this is got. It is the id form and carries no
-// country: an App Store address that names one sends everybody else's phone to a page that is
-// not for their store.
-const appStoreLink = "https://apps.apple.com/app/id6800196224"
+// Where the phone's half of this is got. Both are the store's own id form and neither carries a
+// country: a store address that names one sends everybody else's phone to a page that is not for
+// their store.
+const (
+	appStoreLink  = "https://apps.apple.com/app/id6800196224"
+	playStoreLink = "https://play.google.com/store/apps/details?id=work.amenbo.viewer"
+)
 
-// getTheApp puts the App Store page on a code, for the camera that is going to install it.
+// theStores is one row per kind of phone, in the order the codes are drawn.
+//
+// **The name is a brand and is never translated.** It is the whole of what tells the two codes
+// apart — beside each code on the settings screen, above each one in the terminal, and after
+// each address in the line that reaches the log — and it is the word a reader matches against
+// the phone in their hand.
+var theStores = []struct {
+	phone string
+	link  string
+}{
+	{phone: "iPhone", link: appStoreLink},
+	{phone: "Android", link: playStoreLink},
+}
+
+// getTheApp puts each store's page on a code, for the camera that is going to install from it.
 //
 // **The link's reader is a phone, and the screen it is drawn on is a PC.** Opening the page in
 // the browser here would land it on the machine that cannot install it, leaving the person to
 // carry the address across by hand.
 //
-// Nothing on this code is a secret, and the address goes out in words as well as on the code:
-// somebody reading a log, or a terminal that cannot draw, still has the one thing they came for.
+// **One button, two codes.** The buttons are numbered in the order they are pressed, and the
+// eighteen translations of those labels live in the catalogue, so a second button here would
+// renumber every one after it — while the person pressing this is holding one phone and reads
+// one of the codes either way.
+//
+// Nothing on these codes is a secret, and the addresses go out in words as well: somebody
+// reading a log, or a terminal that cannot draw, still has the one thing they came for.
 func getTheApp(_ input, args []string) error {
 	options := flag.NewFlagSet("app", flag.ContinueOnError)
 	options.SetOutput(errOut)
 	// The same escape `qr` has, for the same machine: over SSH to a mac the image opens on the
 	// console user's screen, which is not the screen the person asking is sitting at.
-	inTerminal := options.Bool("terminal", false, "draw the code in the terminal instead of opening it as an image")
+	inTerminal := options.Bool("terminal", false, "draw the codes in the terminal instead of opening them as images")
 	if err := options.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			return nil
@@ -242,15 +265,44 @@ func getTheApp(_ input, args []string) error {
 	}
 
 	if drawnHere(*inTerminal) {
-		if err := present([]byte(appStoreLink), carriesNoSecret); err != nil {
-			return refuse(phCodeNotDrawn, err, appStoreLink)
+		for _, store := range theStores {
+			if err := present(store.phone, []byte(store.link), carriesNoSecret); err != nil {
+				return refuse(phCodeNotDrawn, err, store.link)
+			}
 		}
 	}
-	logf("%s: %s", pluginName, say(phPointTheCamera, appStoreLink))
-	return json.NewEncoder(out).Encode(answered{V: specVersion, OK: true, Show: []shownPart{
-		{Text: say(phReadThisWithTheCamera)},
-		{QR: appStoreLink},
-	}})
+	logf("%s: %s", pluginName, say(phPointTheCamera, addressesInWords(screen)))
+
+	shown := []shownPart{{Text: say(phReadThisWithTheCamera)}}
+	for _, store := range theStores {
+		shown = append(shown, shownPart{Heading: store.phone}, shownPart{QR: store.link})
+	}
+	return json.NewEncoder(out).Encode(answered{V: specVersion, OK: true, Show: shown})
+}
+
+// addressesInWords is where the app is, written out for whoever cannot point a camera at a code:
+// each address followed by the phone it is for, joined the way the reader's own language joins a
+// list.
+//
+// **The sentence around it is translated and this is not.** An address is an address in all
+// nineteen, and so is the name of a phone — which is what lets the one sentence carry a second
+// store without every language being rewritten to hold it.
+func addressesInWords(words wording) string {
+	named := make([]string, 0, len(theStores))
+	for _, store := range theStores {
+		named = append(named, fmt.Sprintf("%s (%s)", store.link, store.phone))
+	}
+	return inWords(words, named)
+}
+
+// addressesListed is the same addresses one to a line, for the usage. A terminal wraps a line
+// that runs long, and a wrapped address is one nobody can select in a single go.
+func addressesListed() string {
+	listed := make([]string, 0, len(theStores))
+	for _, store := range theStores {
+		listed = append(listed, fmt.Sprintf("  %s (%s)", store.link, store.phone))
+	}
+	return strings.Join(listed, "\n")
 }
 
 // What a code is carrying, named rather than spelled as a bare true and false at the call. What
@@ -263,17 +315,18 @@ const (
 )
 
 // present encodes what the phone is to read and draws it where the person typing is looking.
+// `titled` is the name the code is drawn under, and is empty for a run that draws only one.
 //
 // It is a variable so a test can read what was about to be drawn. The token on the code is the
 // one thing that has to match the hash the store was given, and once it has been drawn as a code
 // there is no reading it back out.
-var present = func(carried []byte, carriesASecret bool) error {
+var present = func(titled string, carried []byte, carriesASecret bool) error {
 	code, err := qrcode.Encode(string(carried), qrcode.M)
 	if err != nil {
 		return err
 	}
 	code.Scale = codeScale
-	return drawInTheTerminal(code, carriesASecret)
+	return drawInTheTerminal(titled, code, carriesASecret)
 }
 
 // thereIsAScreen says whether opening something on screen is worth trying. Everywhere but Linux
@@ -318,8 +371,14 @@ var openInTheSystem = func(target string) error {
 // It goes to the terminal itself rather than to stderr, because Amenbo holds a plugin's stderr
 // until the run is over — and a code nobody can see while the run is waiting on them is no code
 // at all.
-func drawInTheTerminal(code *qrcode.Code, carriesASecret bool) error {
+func drawInTheTerminal(titled string, code *qrcode.Code, carriesASecret bool) error {
 	drawn := blocksFor(code)
+	// **A code drawn under no name is one there is nothing to confuse it with.** Where two are
+	// drawn one after the other, the name above each is the only thing saying which phone the
+	// one below is for.
+	if titled != "" {
+		drawn = titled + "\n" + drawn
+	}
 	terminal, err := os.OpenFile(terminalPath, os.O_RDWR, 0)
 	if err != nil {
 		logf("%s: %s", pluginName, drawn)
