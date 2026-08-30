@@ -1,4 +1,4 @@
-// The nine ways things can stand, told apart. What matters here is not how the band looks but
+// The ten ways things can stand, told apart. What matters here is not how the band looks but
 // that it never says the wrong one of them — a cause reported as an absence sends the person to
 // wait on a PC that already did its part.
 
@@ -31,6 +31,7 @@ void main() {
         IntakeFailure.refused,
         IntakeFailure.unreachable,
         IntakeFailure.placing,
+        IntakeFailure.busy,
       ]) {
         expect(
           standingOf(anythingHere: false, failure: failure),
@@ -69,6 +70,12 @@ void main() {
       expect(
         standingOf(anythingHere: true, failure: IntakeFailure.placing),
         Standing.placing,
+      );
+      // The other cause that ends by itself, and told apart from the one above it: nothing is
+      // being sent, so a line about the PC would point at the one end that is not involved.
+      expect(
+        standingOf(anythingHere: true, failure: IntakeFailure.busy),
+        Standing.busy,
       );
     });
 

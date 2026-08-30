@@ -681,7 +681,7 @@ void main() {
     });
   });
 
-  group('a place that is being written again from the beginning', () {
+  group('a place that will not answer yet', () {
     /// The waits the round sat through, instead of sitting through them.
     ({List<Duration> waited, CloudflareIntake intake}) intakeCounting(
       Place place,
@@ -737,8 +737,57 @@ void main() {
       expect(counting.waited, hasLength(1));
     });
 
-    test('a wait longer than a placement is not sat through', () async {
+    test('a wait longer than a placement is another state', () async {
       final place = Place(seq: 1)
+        ..closedFor = 1
+        ..comeBackAfter = '600';
+      final counting = intakeCounting(place);
+
+      // Ten minutes is not a placement wearing the same status: it is the place saying it
+      // cannot answer right now. Calling it a placement would tell the person their PC is
+      // mid-send, and send them to watch an end that has nothing to do with it.
+      await expectLater(
+        counting.intake.run(),
+        throwsA(
+          isA<IntakeException>().having(
+            (stopped) => stopped.failure,
+            'failure',
+            IntakeFailure.busy,
+          ),
+        ),
+      );
+      expect(counting.waited, isEmpty);
+    });
+
+    test(
+      'a come-back this build cannot read is not waited on either',
+      () async {
+        final place = Place(seq: 1)
+          ..closedFor = 1
+          ..comeBackAfter = 'Wed, 21 Oct 2026 07:28:00 GMT';
+        final counting = intakeCounting(place);
+
+        await expectLater(
+          counting.intake.run(),
+          throwsA(
+            isA<IntakeException>().having(
+              (stopped) => stopped.failure,
+              'failure',
+              IntakeFailure.busy,
+            ),
+          ),
+        );
+        expect(counting.waited, isEmpty);
+      },
+    );
+
+    test('a place that cannot answer keeps what is already here', () async {
+      store.applyPage(
+        [BacklogChange.fromKey('task/1', row: task(id: 1, title: 'すでに手元'))!],
+        seq: 1,
+        version: 100,
+      );
+      final place = Place(seq: 2)
         ..closedFor = 1
         ..comeBackAfter = '600';
       final counting = intakeCounting(place);
@@ -749,12 +798,14 @@ void main() {
           isA<IntakeException>().having(
             (stopped) => stopped.failure,
             'failure',
-            IntakeFailure.placing,
+            IntakeFailure.busy,
           ),
         ),
       );
-      // Ten minutes is not the state that ends by itself, whatever status it wears.
-      expect(counting.waited, isEmpty);
+      // Nothing about a place resting says this copy is the wrong one, so it stays — and the
+      // cursor with it, so the next round asks from where this one stood.
+      expect(store.record('task', 1)!['title'], 'すでに手元');
+      expect(store.seq, 1);
     });
 
     test('a 503 with nothing to come back for is not a placement', () async {
