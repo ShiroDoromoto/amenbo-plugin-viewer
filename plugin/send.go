@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -419,16 +420,70 @@ func theLedger() ledger {
 	return ledger{whole: wholeWindow, changed: changesSince, rows: rowsIn}
 }
 
+// errSendingElsewhere is what a turn says when another run already holds the send. **It is not a
+// failure — it is this working**, so both faces answer it as the ordinary thing it is rather than
+// as a fault to be logged and worried over.
+var errSendingElsewhere = errors.New("another send is already running")
+
+// holdTheSend takes the hold that lets one send run at a time, and hands back the way to let it
+// go. A hold that is already taken comes back as errSendingElsewhere.
+//
+// **It does not wait for its turn.** Waiting would be the wrong answer to the shape this is for:
+// reading the ledger runs Amenbo as a child, and Amenbo delivers events, so the child can fire
+// this plugin again underneath the run that is already reading. That grandchild has nothing of
+// its own to carry — the run above it is carrying it — so what it should do is stop, which is
+// what "no, and do not queue" makes it do. Waiting would hold a process open for a turn that had
+// already been taken.
+//
+// **The other reason is the one that started this.** A machine that sleeps hands the same stretch
+// to two runs at once, because a lease expires by the wall clock while the heartbeat counts a
+// clock that does not run while the machine is asleep. Two runs in the send at once put an older
+// picture of a record on top of a newer one; one run in the send at a time cannot.
+func holdTheSend() (func(), error) {
+	path, err := sendingLockPath()
+	if err != nil {
+		return nil, err
+	}
+	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0o600)
+	if err != nil {
+		return nil, fmt.Errorf("the sending lock cannot be opened: %w", err)
+	}
+	taken, err := takeSendingLock(file)
+	if err != nil {
+		file.Close()
+		return nil, fmt.Errorf("the sending lock cannot be taken: %w", err)
+	}
+	if !taken {
+		file.Close()
+		return nil, errSendingElsewhere
+	}
+	return func() {
+		dropSendingLock(file)
+		file.Close()
+	}, nil
+}
+
 // carry runs one turn of the send and says how many records it placed.
 //
 // The turn is guarded by the version: nothing moved means nothing to do, and saying so costs one
 // question. `force` is what `push` passes — someone asked out loud, so the guard is skipped and
 // the ledger is read even when the version says the phone is level.
+//
+// **One turn runs at a time, machine-wide.** The hold is taken before the first question rather
+// than before the first record, because the reading is where the children are raised and where a
+// second run of this would be started; and it is let go only when the turn is over, because what
+// must not overlap is the whole of it — the reading, the placing, and the writing down of where
+// it got to.
 func carry(in input, force bool) (int, error) {
 	routes := routesFor(in)
 	if len(routes) == 0 {
 		return 0, nothingIsReaching(in)
 	}
+	letGo, err := holdTheSend()
+	if err != nil {
+		return 0, err
+	}
+	defer letGo()
 	version := in.Version
 	if version == nil {
 		asked, err := storeVersion()
