@@ -562,10 +562,11 @@ func TestATurnThatFitsIsOnePartOfOne(t *testing.T) {
 	}
 }
 
-// Emptying is one request to the one door that empties, and it is nothing the send goes through
-// any more: standing a route up under a new key is the only thing left that has to clear what is
-// in there, because a key that changed makes every row unreadable by everyone.
-func TestEmptyingTheStoreIsOneRequestToTheDoorThatEmpties(t *testing.T) {
+// **There is one door, and every record goes through it.** The other emptied the store before
+// taking the whole of it, and both ends have let it go — a store emptied to be filled again is one
+// a phone cannot read for as long as the filling takes, and a filling nobody finished shuts it for
+// good. Nothing here reaches for it any more, whatever it is carrying.
+func TestEveryRequestGoesToTheDoorThatPlacesOverWhatIsThere(t *testing.T) {
 	var paths []string
 	answering := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		paths = append(paths, r.URL.Path)
@@ -575,12 +576,15 @@ func TestEmptyingTheStoreIsOneRequestToTheDoorThatEmpties(t *testing.T) {
 
 	where := store{url: answering.URL, token: "a-throwaway-token", seal: sealerForTest(t)}
 
-	if _, err := where.replace(placement{SpecV: specVersion, Version: 1}); err != nil {
+	if _, err := where.place(placement{SpecV: specVersion, Version: 1}); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := drainTo(where, carried{Pending: keysToDrop(1)}, 2); err != nil {
 		t.Fatal(err)
 	}
 
-	if len(paths) != 1 || paths[0] != "/reset" {
-		t.Errorf("an emptying sent %v, want the one request that empties", paths)
+	if len(paths) != 2 || paths[0] != "/records" || paths[1] != "/records" {
+		t.Errorf("the requests went to %v, want the one door that places over what is there", paths)
 	}
 }
 
@@ -602,12 +606,14 @@ func TestEveryPlacementNamesTheKeyItWasSealedWith(t *testing.T) {
 	if _, err := where.place(placement{SpecV: specVersion, Version: 1, Records: []outgoing{{Key: "task/1", Op: opDeleted}}}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := where.replace(placement{SpecV: specVersion, Version: 2}); err != nil {
+	// A turn carrying nothing names it too: what the store is told sealed these records is the
+	// key that sealed them, and there being none of them does not make the answer a different one.
+	if _, err := where.place(placement{SpecV: specVersion, Version: 2}); err != nil {
 		t.Fatal(err)
 	}
 
 	if len(seen) != 2 {
-		t.Fatalf("%d request(s), want the two doors that take a body", len(seen))
+		t.Fatalf("%d request(s), want both of them", len(seen))
 	}
 	for at, body := range seen {
 		if body.KeyFingerprint != seal.fingerprint {
@@ -914,9 +920,10 @@ type aStoreAtVolume struct {
 	t     *testing.T
 	took  map[string]int
 	parts []placement
-	// emptied counts the parts that said "empty first", which the Worker only honours on the
-	// first one — a turn that emptied twice would leave the store holding its own last part.
-	emptied int
+	// wentToAnotherDoor counts the requests that arrived anywhere but the one door records go
+	// through. There is only one now, and a turn reaching for another would be a turn asking a
+	// store to close itself.
+	wentToAnotherDoor int
 	// seq is where its ordering stands, which the Worker moves on by one per record it writes and
 	// answers with. Emptying does not wind it back there, so it does not here either.
 	seq int64
@@ -935,9 +942,8 @@ func (s *aStoreAtVolume) handler() http.HandlerFunc {
 			http.Error(w, `{"error":"too many records"}`, http.StatusRequestEntityTooLarge)
 			return
 		}
-		if r.URL.Path == "/reset" && body.Part <= 1 {
-			s.emptied++
-			s.took = map[string]int{}
+		if r.URL.Path != "/records" {
+			s.wentToAnotherDoor++
 		}
 		for _, record := range body.Records {
 			s.took[record.Key]++
@@ -979,8 +985,8 @@ func TestAWholeBacklogReachesTheStoreOnceEach(t *testing.T) {
 	// **Nothing is emptied.** The whole store goes through the door that places over what is
 	// there, so the door a phone reads through never closes — which is what a store emptied to be
 	// filled again does for as long as the filling takes.
-	if answered.emptied != 0 {
-		t.Errorf("the turn emptied the store %d times, want the door that empties left alone", answered.emptied)
+	if answered.wentToAnotherDoor != 0 {
+		t.Errorf("%d request(s) went somewhere other than the one door records go through", answered.wentToAnotherDoor)
 	}
 	if want := (aRealBacklog + recordsPerWrite - 1) / recordsPerWrite; len(answered.parts) != want {
 		t.Errorf("the turn went in %d parts, want %d of at most %d records", len(answered.parts), want, recordsPerWrite)
