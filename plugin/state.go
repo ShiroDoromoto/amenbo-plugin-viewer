@@ -28,6 +28,14 @@ import (
 // stateName is the file, inside the plugin's own directory.
 const stateName = "sync-state.json"
 
+// sendingLockName is the file two runs contend for while one of them is sending. It lies beside
+// the memory it guards, so an uninstall takes it away with everything else.
+//
+// **Nothing is ever written into it.** What says a send is in flight is the kernel's hold on the
+// open file, not anything in it: a run that dies leaves its bytes behind saying "in flight"
+// forever, while the hold goes with the process however the process ends.
+const sendingLockName = "sending.lock"
+
 // The names the routes are remembered under. They are written into a file that outlives the
 // process, so they are spelled once here rather than at each route — a route renamed in two
 // places and not the third would silently start again from nothing.
@@ -89,6 +97,16 @@ var pluginDir = func() (string, error) {
 		return "", fmt.Errorf("the plugin cannot find its own directory: %w", err)
 	}
 	return filepath.Dir(program), nil
+}
+
+// sendingLockPath is where that file lies, which is wherever the memory lies — the same
+// directory, found the same way, so a test that redirects one redirects both.
+func sendingLockPath() (string, error) {
+	dir, err := pluginDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, sendingLockName), nil
 }
 
 // readState reads what was left last time. A file that is not there is the first run and not a

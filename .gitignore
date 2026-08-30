@@ -22,6 +22,8 @@ Thumbs.db
 # プラグインが自分のディレクトリに残す覚え。手元で直接動かすとここに出る
 /plugin/sync-state.json
 /plugin/paired-phones.json
+# 送信の錠。中身は無く、あるだけで送信中を意味しもしない（意味を持つのはカーネルの保持のほう）
+/plugin/sending.lock
 
 # --- Worker（Node / wrangler）
 node_modules/

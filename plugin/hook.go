@@ -1,5 +1,7 @@
 package main
 
+import "errors"
+
 // hook is the observation face: Amenbo fired an event and moved on.
 //
 // What an event means to this plugin is narrow and the same for all of them — **the store
@@ -23,7 +25,12 @@ func hook(in input) {
 	// falling further behind with every write. One line, naming the route and what it said,
 	// because the user's question in that state — "why is my phone not updating?" — is answered
 	// in `amenbo plugin log viewer` and nowhere else.
-	if _, err := carry(in, false); err != nil {
+	//
+	// **A turn that found the send already held is not that.** It means a run beside this one is
+	// carrying the very stretch this one would have carried, so the phone is not falling behind
+	// and there is nothing for the user to read. Amenbo delivers one event per run and there are
+	// many of them, so a line for each would bury the one line that means something.
+	if _, err := carry(in, false); err != nil && !errors.Is(err, errSendingElsewhere) {
 		logf("%s: %s — %v", pluginName, in.Event, err)
 	}
 }

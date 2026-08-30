@@ -34,6 +34,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -250,6 +251,13 @@ func do(err error) int {
 // what makes it skip the version guard and read the ledger regardless.
 func push(in input, _ []string) error {
 	placed, err := carry(in, true)
+	// **Being turned away is not a failure to report as one.** Another run holds the send, and it
+	// is reading the same store this one would have read, so what was asked for is on its way —
+	// which makes a non-zero exit a lie about what happened.
+	if errors.Is(err, errSendingElsewhere) {
+		logf("%s: a send is already running — what you asked for is going with it", pluginName)
+		return nil
+	}
 	if err != nil {
 		return err
 	}
