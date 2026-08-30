@@ -63,6 +63,19 @@ export interface Env extends Cloudflare.Env {
 const SPEC_V = 1;
 
 /**
+ * Which build of this Worker this is.
+ *
+ * **It is here because this is the one part that cannot be updated.** It runs in the user's own
+ * Cloudflare account and changes only when they press setup, so a sender has to be able to find
+ * out what it is talking to — and it has to find out with the token it holds, which is the write
+ * one. So the number travels on the answer to a write.
+ *
+ * **`1` is every Worker deployed before this field existed.** A sender that reads no number at
+ * all is talking to one of those, which is exactly what it needs to know.
+ */
+const BUILD = 2;
+
+/**
  * How many records one read hands back before saying there are more.
  *
  * A phone reads a page, writes it, and comes back for the next — so this bounds what has to be
@@ -81,6 +94,17 @@ const PER_PAGE = 200;
  * `place`.
  */
 const PER_WRITE = 500;
+
+/**
+ * How many keys one `?keys=1` read hands back before saying there are more.
+ *
+ * It is larger than a page of records because a key is a fraction of one: what comes back is a
+ * string and a word, not an envelope, so the same answer size carries far more of them. Reading
+ * the whole store's keys is what a sender does to find out what is here that the backlog no
+ * longer has, and doing it a page of two hundred at a time would be a hundred and twenty requests
+ * for something a dozen can carry.
+ */
+const PER_KEY_PAGE = 2000;
 
 /** Which kind of token a request has to be carrying. */
 type Kind = "write" | "read";
@@ -120,20 +144,29 @@ export default {
 			return problem(403, `this endpoint takes the ${wanted} token, and a ${carrying} token was offered`);
 		}
 
-		if (labelled) {
-			return revoke(env, decodeURIComponent(labelled[1]));
-		}
-		switch (pathname) {
-			case "/records":
-				return request.method === "PUT" ? place(env, request, "add") : read(env, url);
-			case "/reset":
-				return place(env, request, "replace");
-			case "/meta":
-				return meta(env);
-			default:
-				// The routes are the four above and `/tokens`, and anything else was turned away
-				// as a missing endpoint before it got here.
-				return issue(env, request);
+		// **Anything thrown is answered the same way, and the answer carries what was said.**
+		// Telling one failure from another meant reading the sentence D1 threw, and the reading
+		// was wrong in the direction that costs money: a database briefly unreachable came back
+		// as "buy more storage". This Worker cannot be updated when that reading turns out to be
+		// wrong, so it does not read — it hands the sentence on to the part that can be.
+		try {
+			if (labelled) {
+				return await revoke(env, decodeURIComponent(labelled[1]));
+			}
+			switch (pathname) {
+				case "/records":
+					return request.method === "PUT" ? await place(env, request) : await read(env, url);
+				case "/reset":
+					return gone();
+				case "/meta":
+					return await meta(env);
+				default:
+					// The routes are the four above and `/tokens`, and anything else was turned
+					// away as a missing endpoint before it got here.
+					return await issue(env, request);
+			}
+		} catch (thrown) {
+			return unavailable(thrown);
 		}
 	},
 } satisfies ExportedHandler<Env>;
@@ -146,9 +179,9 @@ export default {
  * | | |
  * |---|---|
  * | `PUT /records` | takes the records that moved, deletions among them, and answers with where the order now stands |
- * | `GET /records` | hands back everything after a point in the order, a page at a time |
+ * | `GET /records` | hands back everything after a point in the order, a page at a time — or, with `keys=1`, the keys alone |
  * | `GET /meta`    | the version, the order, when it last moved and which key sealed the records — the cheap question |
- * | `PUT /reset`   | empties the store and takes the whole of it again |
+ * | `PUT /reset`   | **gone.** It is still routed so that what a caller gets is a sentence rather than a guess — see `gone` |
  * | `PUT /tokens`  | lets one more phone read |
  */
 const ROUTES: Record<string, Record<string, Kind>> = {
@@ -223,8 +256,6 @@ interface Standing {
 	version: number | null;
 	seq: number;
 	updated_at: string | null;
-	/** 1 while a replacement is half placed — see `halfReplaced`. */
-	replacing: number;
 	/**
 	 * The point the placement now standing in the records began above. A cursor that has not
 	 * passed it holds nothing from that placement — see `read`.
@@ -241,29 +272,56 @@ interface Standing {
 /** Reads that row. It is there from the first migration, so there is no "no store yet" to handle. */
 async function standing(env: Env): Promise<Standing> {
 	const row = await env.RECORDS.prepare(
-		"SELECT version, seq, updated_at, replacing, placed_from, key_fingerprint FROM store WHERE id = 1",
+		"SELECT version, seq, updated_at, placed_from, key_fingerprint FROM store WHERE id = 1",
 	).first<Standing>();
 	return row!;
 }
 
 /**
- * The refusal for a store that is mid-replacement.
+ * The answer `PUT /reset` gives now: it is gone, and it is not coming back.
  *
- * `PUT /reset` empties the records before it takes the first part of the whole store, so between
- * that and the last part landing, what is here is a fraction of the backlog. A phone cannot tell
- * that fraction from a backlog that really did shrink — it would write it down, see nothing more
- * to fetch, and call itself level with a store it holds a tenth of.
+ * **It emptied the records before taking the first part of the whole store**, so between that and
+ * the last part landing, what was here was a fraction of a backlog — which is why both reading
+ * doors closed for the length of it. On a slow send that is hours of a phone reading nothing, and
+ * a placement nobody finished left the doors shut for good: the flag came down with the last part
+ * alone, and after an abandonment that part never arrives. A store like that is writable and
+ * permanently unreadable, and nothing in it can put itself right.
  *
- * So both reading doors close for the length of the placement, and say when to come back. It is a
- * few seconds on an ordinary backlog, and the only alternative is answering with something untrue.
+ * What replaced it places over what is there, key by key, and never closes anything.
+ *
+ * **410 and not 404.** A sender told there is no such endpoint reads a Worker it does not
+ * recognise and says to press setup, which on an old plugin deploys the Worker that has this door
+ * — round and round. A sender told the door is gone reads the sentence.
+ *
+ * **The door is not simply removed, either.** Removing it would answer 404, which is the reading
+ * above; and leaving it routed but doing nothing would be worse than both, because a sender would
+ * believe a store it asked to empty had been emptied.
  */
-function halfReplaced(): Response {
+function gone(): Response {
 	return problem(
-		503,
-		"the whole of this store is being placed again, and what is here is part of it" +
-			" — this door answers once the last part has landed",
-		{ "Retry-After": "5" },
+		410,
+		"this store is no longer emptied and filled again — records are placed over what is here," +
+			" key by key, through `PUT /records`. Nothing has to be done to a store to make it take them",
 	);
+}
+
+/**
+ * The answer to anything thrown, whatever threw it.
+ *
+ * **This Worker does not read the sentence.** Telling a full database from an unreachable one
+ * meant matching on the text D1 threw, because the binding throws a plain `Error` with no code
+ * and no status; and a reading that is wrong sends someone to buy storage they do not need. The
+ * Worker in the user's account is the one part that cannot be corrected when a reading like that
+ * turns out to be wrong, so it hands the sentence to the sender, whose build can be.
+ *
+ * **`Retry-After` is longer than ten seconds on purpose.** The phone reads the number, not the
+ * reason: ten or under means "the PC is still sending", and anything above means the store cannot
+ * answer right now. A full database answered as the first would have every phone saying the PC is
+ * busy, forever.
+ */
+function unavailable(thrown: unknown): Response {
+	const said = thrown instanceof Error ? thrown.message : String(thrown);
+	return problem(503, `this store could not answer: ${said}`, { "Retry-After": "60" });
 }
 
 /**
@@ -285,9 +343,6 @@ function halfReplaced(): Response {
  */
 async function meta(env: Env): Promise<Response> {
 	const now = await standing(env);
-	if (now.replacing) {
-		return halfReplaced();
-	}
 	return Response.json({
 		spec_v: SPEC_V,
 		version: now.version,
@@ -333,6 +388,18 @@ interface Stored extends Landing {
  * **Being refused is not left to the phone to avoid.** `GET /meta` carries `placed_from` so a
  * phone can check before asking, but a phone that does not check must not be handed a quiet
  * wrong answer for it. `since=0` is the phone having thrown its copy away, and is served.
+ *
+ * ## `keys=1` — the same read, without the envelopes
+ *
+ * **What is here that the backlog no longer has cannot be worked out from this end.** This Worker
+ * does not know what a key means, so the sender is the only one that can compare, and comparing
+ * means reading every key. The whole answer is 27 MB of envelopes for a question that turns on
+ * the strings alone.
+ *
+ * So `keys=1` hands back `k` and `op` and nothing else, a larger page at a time. **`op` travels
+ * because a deletion is a row here**: a key whose last word was `del` is a headstone, not
+ * something the store holds, and a sender that could not tell them apart would send a delete for
+ * every one of them, every time.
  */
 async function read(env: Env, url: URL): Promise<Response> {
 	const asked = url.searchParams.get("since") ?? "0";
@@ -340,11 +407,9 @@ async function read(env: Env, url: URL): Promise<Response> {
 		return problem(400, "since has to be a whole number — the point in the order to read on from");
 	}
 	const since = Number(asked);
+	const keysOnly = url.searchParams.get("keys") === "1";
 
 	const now = await standing(env);
-	if (now.replacing) {
-		return halfReplaced();
-	}
 	if (since > now.seq) {
 		return problem(
 			409,
@@ -361,22 +426,32 @@ async function read(env: Env, url: URL): Promise<Response> {
 	}
 
 	// One more than a page is asked for, so whether there is a next page is answered by the same
-	// read rather than by a second one counting what is left.
+	// read rather than by a second one counting what is left. The envelope columns are left out
+	// of the keys-only read as well as out of its answer: reading 27 MB out of the database to
+	// throw it away here would buy nothing.
+	const most = keysOnly ? PER_KEY_PAGE : PER_PAGE;
 	const { results } = await env.RECORDS.prepare(
-		"SELECT seq, k, op, nonce, ciphertext FROM records WHERE seq > ? ORDER BY seq LIMIT ?",
+		keysOnly
+			? "SELECT seq, k, op FROM records WHERE seq > ? ORDER BY seq LIMIT ?"
+			: "SELECT seq, k, op, nonce, ciphertext FROM records WHERE seq > ? ORDER BY seq LIMIT ?",
 	)
-		.bind(since, PER_PAGE + 1)
+		.bind(since, most + 1)
 		.all<Stored>();
 
-	const more = results.length > PER_PAGE;
-	const page = more ? results.slice(0, PER_PAGE) : results;
+	const more = results.length > most;
+	const page = more ? results.slice(0, most) : results;
 	return Response.json({
 		spec_v: SPEC_V,
 		version: now.version,
 		seq: page.length ? page[page.length - 1].seq : since,
 		more,
-		records: page.map(travelling),
+		records: page.map(keysOnly ? keyOnly : travelling),
 	});
+}
+
+/** One record with its envelope left off: what it is filed under, and its last word. */
+function keyOnly(row: Stored): Record<string, string> {
+	return { k: row.k, op: row.op };
 }
 
 /**
@@ -391,9 +466,6 @@ function travelling(row: Stored): Record<string, string> {
 	return { k: row.k, op: row.op, n: row.nonce ?? "", c: row.ciphertext ?? "" };
 }
 
-/** What a write does to what is already there: takes its place beside it, or takes its place. */
-type Placing = "add" | "replace";
-
 /** One record as it arrives, before anything has been checked about it. */
 interface Offered {
 	k?: unknown;
@@ -403,41 +475,42 @@ interface Offered {
 }
 
 /**
- * `PUT /records` and `PUT /reset` — the two ways records land here, which differ in one line.
+ * `PUT /records` — the one way records land here.
  *
- * `/records` carries what moved; `/reset` carries the whole store and empties what is here first,
- * which is what a first run, a restore and a sender that lost its place all come down to.
+ * Each one takes its place beside what is already filed, or takes the place of the row under the
+ * same key. **Nothing is emptied first**, so a whole store and a single edit are the same road:
+ * the difference is how many records travel, not what happens to the ones already here.
  *
- * **The version is what makes a repeat harmless.** A sender that did not hear the answer sends
- * again, and the same version means the same records: `/records` lets that through untouched
- * rather than moving every one of them to the front of the order for nothing. `/reset` is the
- * repair path and always does the work — the version is what a phone reads, so a store that
- * somehow disagrees with it has to be able to be put right.
+ * **It writes what it is handed, always.** It used to drop a turn whose version the store already
+ * stood at, on the reasoning that the same number means the same records — and answer `200` to it,
+ * because a repeat it recognised was a repeat it had already written. Both halves were wrong. The
+ * backlog's version is too coarse a name for a turn: a send made while the backlog has not moved
+ * carries the number the store is standing at without being a repeat of anything, and every one of
+ * those was thrown away and reported as landed. **Three months of edits went missing behind that
+ * `200`, and the one command for sending them again was killed by the same line.** Recognising a
+ * repeat is the sender's job now — it is the end that knows what it sent.
  *
  * ## More than one request's worth
  *
- * One write takes `PER_WRITE` records, and a backlog outgrows that the first time it is placed
+ * One write takes `PER_WRITE` records, and a backlog outgrows that the first time it is sent
  * whole. So a body says which part of a turn it is: `{"part":2,"parts":5}`, both defaulting to 1,
  * and the same version travels on every part.
  *
- * Three things follow, and each of them is what keeps a phone from reading half a turn as a whole
- * one:
+ * **Only the last part settles the turn**: the version, the time and the key the records were
+ * sealed with are written by that part alone, so a turn cut short leaves a store still naming
+ * what it really holds, and the next turn is not mistaken for a repeat of it. What has landed of
+ * an unfinished turn is a true prefix of what is coming, so a phone reading it is behind rather
+ * than wrong — which is why nothing has to close while one is in flight.
  *
- * - **Only the first part empties.** A later part emptying again would leave the store holding
- *   whichever part arrived last, and nothing else.
- * - **Only the last part settles the turn**: the version, the time and the key the records were
- *   sealed with are written by that part alone, so a turn cut short leaves a store still naming
- *   what it really holds, and the next turn is not mistaken for a repeat of it.
- * - **A replacement closes the reading doors** while it is in flight (see `halfReplaced`), because
- *   emptying first is what makes the middle of one a lie. A placement that only adds needs no such
- *   thing: what has landed of it is a true prefix of what is coming, and a phone reading that is
- *   behind rather than wrong.
+ * ## What the answer carries
  *
- * **A placement that adds never lowers that flag**, so a replacement nobody finished leaves the
- * doors closed until another whole placement puts the store right — which is what the sender
- * reaches for when a whole placement of its own did not land.
+ * `seq` is where the order now stands, and the sender checks it: a store that wrote what it was
+ * handed stands exactly the record count further on. `rows_written` is what the database actually
+ * did, which is what lets a sender keep a budget against a daily limit in measured rows rather
+ * than in guesses. `build` says which Worker this is, and it is on this answer rather than on a
+ * read because the sender holds the write token and nothing else.
  */
-async function place(env: Env, request: Request, placing: Placing): Promise<Response> {
+async function place(env: Env, request: Request): Promise<Response> {
 	let asked: unknown;
 	try {
 		asked = await request.json();
@@ -501,13 +574,6 @@ async function place(env: Env, request: Request, placing: Placing): Promise<Resp
 		carrying.push(checked);
 	}
 
-	const now = await standing(env);
-	// The version is written by the last part alone, so this recognises a turn that finished and
-	// never a turn that is still arriving.
-	if (placing === "add" && now.version === version) {
-		return Response.json({ seq: now.seq });
-	}
-	const first = at === 1;
 	const last = at === of;
 
 	// Every statement in one batch, so a write either lands whole or not at all: half a turn in
@@ -523,78 +589,40 @@ async function place(env: Env, request: Request, placing: Placing): Promise<Resp
 			" seq = excluded.seq, op = excluded.op, nonce = excluded.nonce, ciphertext = excluded.ciphertext",
 	);
 	const statements = [
-		// Only the first part empties: the ones after it are the rest of the same store, and
-		// emptying again would leave the store holding whichever part arrived last.
-		...(placing === "replace" && first
-			? [
-					env.RECORDS.prepare("DELETE FROM records"),
-					// Where this placement begins, taken before the rows it places move the order
-					// on. It is written with the emptying rather than after it, so there is no
-					// moment where the records are gone and nothing says they were.
-					env.RECORDS.prepare("UPDATE store SET placed_from = seq WHERE id = 1"),
-				]
-			: []),
-		...(placing === "replace" && first && !last
-			? [env.RECORDS.prepare("UPDATE store SET replacing = 1 WHERE id = 1")]
-			: []),
 		...carrying.map((record, offset) => upsert.bind(record.k, offset + 1, record.op, record.nonce, record.ciphertext)),
 		env.RECORDS.prepare("UPDATE store SET seq = seq + ? WHERE id = 1").bind(carrying.length),
 		...(last
 			? [
 					env.RECORDS.prepare(
-						placing === "replace"
-							? "UPDATE store SET version = ?, updated_at = ?, key_fingerprint = ?, replacing = 0 WHERE id = 1"
-							: "UPDATE store SET version = ?, updated_at = ?, key_fingerprint = ? WHERE id = 1",
+						"UPDATE store SET version = ?, updated_at = ?, key_fingerprint = ? WHERE id = 1",
 					).bind(version, new Date().toISOString(), sealedWith),
 				]
 			: []),
 		env.RECORDS.prepare("SELECT seq FROM store WHERE id = 1"),
 	];
-	let done: D1Result<{ seq: number }>[];
-	try {
-		done = await env.RECORDS.batch<{ seq: number }>(statements);
-	} catch (thrown) {
-		if (!outOfRoom(thrown)) {
-			throw thrown;
-		}
-		return full();
-	}
+	const done = await env.RECORDS.batch<{ seq: number }>(statements);
 
-	return Response.json({ seq: done[done.length - 1].results[0].seq });
+	return Response.json({
+		seq: done[done.length - 1].results[0].seq,
+		rows_written: rowsWritten(done),
+		build: BUILD,
+	});
 }
 
 /**
- * What D1 says when the database has no room left, and the only thing that says it.
+ * What the database actually wrote for one turn, added up over the batch.
  *
- * The binding throws a plain `Error` carrying this in its message: no code, no status, and the
- * `7500` the REST API answers with does not reach a Worker. So the sentence is the whole of the
- * telling-apart, and every other failure has to keep falling through — a database that was
- * briefly unreachable, answered as "buy more storage", sends someone to pay for nothing.
+ * **It is measured and not worked out.** A sender keeping a budget against a daily limit has to
+ * count rows, and counting them from this end means knowing that an upsert onto a key already
+ * here costs a different number from one onto a key that is not — which is a model of D1 living
+ * in the sender, going stale the day the database changes. The number is here for the asking, so
+ * it is handed over.
+ *
+ * A statement whose result says nothing about rows contributes nothing, which is what the reads
+ * in the batch are.
  */
-const OUT_OF_ROOM = "Exceeded maximum DB size";
-
-/** Whether what was thrown is D1 saying there is no room left. */
-function outOfRoom(thrown: unknown): boolean {
-	return thrown instanceof Error && thrown.message.includes(OUT_OF_ROOM);
-}
-
-/**
- * The refusal for a store that is full.
- *
- * There is no reading of how much room is left — the number would say "fine" every day until the
- * one nobody is looking — so this sentence is the whole of what a person is told, and it has to
- * carry the next move as well as the fact.
- *
- * **Not everything stops.** Reading goes on, and so do the writes that need no new page: cutting
- * a phone off, and placing the whole store again, which empties the records first and is what
- * puts a full store right.
- */
-function full(): Response {
-	return problem(
-		507,
-		"there is no room left in this store — a D1 database holds 500 MB on Cloudflare's free plan" +
-			" and 10 GB on the paid one, so raising the account it lives in is what makes room",
-	);
+function rowsWritten(done: D1Result<unknown>[]): number {
+	return done.reduce((all, one) => all + (one.meta?.rows_written ?? 0), 0);
 }
 
 /**
@@ -656,26 +684,19 @@ async function issue(env: Env, request: Request): Promise<Response> {
 
 	const named = label.trim();
 	const issued_at = new Date().toISOString();
-	try {
-		// Nothing happens on a name that is taken, and the row count is what says so — reading the
-		// table first and inserting after would leave a window for two sends to both find it free.
-		const landed = await env.RECORDS.prepare(
-			"INSERT INTO tokens (label, hash, issued_at) VALUES (?, ?, ?) ON CONFLICT (label) DO NOTHING",
-		)
-			.bind(named, hash.toLowerCase(), issued_at)
-			.run();
-		if (!landed.meta.changes) {
-			return problem(
-				409,
-				`a phone is already paired as ${JSON.stringify(named)}` +
-					" — cut that one off first, and pair again under the name once it is free",
-			);
-		}
-	} catch (thrown) {
-		if (!outOfRoom(thrown)) {
-			throw thrown;
-		}
-		return full();
+	// Nothing happens on a name that is taken, and the row count is what says so — reading the
+	// table first and inserting after would leave a window for two sends to both find it free.
+	const landed = await env.RECORDS.prepare(
+		"INSERT INTO tokens (label, hash, issued_at) VALUES (?, ?, ?) ON CONFLICT (label) DO NOTHING",
+	)
+		.bind(named, hash.toLowerCase(), issued_at)
+		.run();
+	if (!landed.meta.changes) {
+		return problem(
+			409,
+			`a phone is already paired as ${JSON.stringify(named)}` +
+				" — cut that one off first, and pair again under the name once it is free",
+		);
 	}
 
 	return Response.json({ label: named, issued_at });
