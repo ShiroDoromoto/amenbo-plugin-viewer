@@ -15,9 +15,15 @@ import (
 
 // The send: work out what the phone is missing, and put it where the phone reads.
 //
-// The ordinary turn carries only what moved. Every write moves the store version, so one cheap
+// **It is in two halves, and they are not the same speed.** One copies what moved out of the
+// ledger into a queue the route keeps; the other empties that queue into the place, oldest first.
+// The ledger's window turns — five thousand rows and then the oldest go — so the copying has to
+// keep up with the backlog whatever the network is doing, and the sending has to be free to fall
+// behind without dragging the copying back to where it stands.
+//
+// The ordinary turn copies only what moved. Every write moves the store version, so one cheap
 // question answers "is there anything to do", and the ledger answers "what" — which is why the
-// whole window is taken only on a first run, on a reset, and after a gap.
+// whole window is taken only on a first run, on a route just stood up, and after a gap.
 //
 // **What is placed is what the store holds, one record per row.** How much of it a route may read
 // is the route's own answer, and the two differ because the places do: the Worker runs somewhere
@@ -318,11 +324,13 @@ type route interface {
 	// holdsNothing says the place has never been written into, so it needs the whole window
 	// rather than what moved since the last send.
 	holdsNothing() bool
-	// place puts what moved, told where this route's ordering was last seen, and answers where it
-	// stands now — which is how the next turn finds out whether this one was written.
-	place(body placement, from int64) (int64, error)
-	// replace makes the place hold exactly what it is given, and nothing that was there before.
-	replace(body placement, from int64) (int64, error)
+	// place puts one request's worth of a queue, and answers where this route's ordering stands
+	// afterwards — which is how the turn finds out whether what it sent was written.
+	//
+	// **One request, not one turn.** Cutting a queue into requests is the send's business, since
+	// the send is what drops what landed and keeps what did not; a route that swallowed a whole
+	// turn could only say "some of it" when a part of it failed.
+	place(body placement) (int64, error)
 }
 
 // store is the place the records are put: the user's own Worker, the token that opens its writing
@@ -344,61 +352,33 @@ func (s store) String() string { return "the Cloudflare Worker" }
 // beside the records.
 func (s store) holdsNothing() bool { return false }
 
-// place puts what moved into the store.
-func (s store) place(body placement, from int64) (int64, error) {
-	return s.putInParts("/records", body, from)
-}
+// place puts one request's worth of a queue into the store.
+func (s store) place(body placement) (int64, error) { return s.sealAndPut("/records", body) }
 
-// replace empties the store and places everything.
-func (s store) replace(body placement, from int64) (int64, error) {
-	return s.putInParts("/reset", body, from)
-}
+// replace empties the store and places what it is handed, which is what standing a route up with
+// a new key needs and what nothing else does.
+//
+// **The send does not come through here.** Emptying a store to fill it again shuts the door a
+// phone reads through for as long as the filling takes, and the filling is the slow half; the
+// send places over what is there instead, and never closes anything. What is left of this is the
+// one case where the records genuinely have to go: a key that changed makes every row in there
+// unreadable by anyone, this machine included.
+func (s store) replace(body placement) (int64, error) { return s.sealAndPut("/reset", body) }
 
-// putInParts sends one turn, in as many requests as it takes.
+// sealAndPut puts every row in one body into an envelope and sends it to one door.
 //
-// **One turn, however many requests.** The store is told how many parts are coming and which one
-// each is, so it knows which part empties and which part settles the version — and so a turn that
-// stops half way is one the store can tell from a finished one, rather than one it has already
-// written the version of.
-//
-// A turn carrying nothing is still a turn: a whole placement of an empty store is what says the
-// store holds nothing, and skipping the request would leave whatever is there standing.
-//
-// **A part that fails stops the rest.** What has landed stays landed, which is why nothing is
-// remembered until the whole turn is through — the next turn sends the same records again, and a
-// replacement re-empties before it does.
-//
-// **Every part is read back as well as sent.** The store answers each one with where its ordering
-// stands, and a store that wrote what it was handed stands exactly the record count further on —
-// so a part that was taken in and dropped is a part whose answer did not move. Saying "sent" of
-// one of those is the quiet way a backlog loses a record for good, and it is how three months of
-// edits went missing: the send believed a `200`, forgot the records, and nothing was ever written.
-//
-// `from` is where this route's ordering was last seen, and `orderingUnknown` says it was not —
-// which leaves the first answer unchecked and every one after it checked against it.
-func (s store) putInParts(path string, body placement, from int64) (int64, error) {
+// **The answer is read as well as sent.** The store answers with where its ordering stands, and a
+// store that wrote what it was handed stands exactly the record count further on — so a request
+// that was taken in and dropped is one whose answer did not move. Saying "sent" of one of those is
+// the quiet way a backlog loses a record for good, and it is how three months of edits went
+// missing: the send believed a `200`, dropped the records, and nothing was ever written. Checking
+// that answer is the caller's, since the caller is what holds the records until it is satisfied.
+func (s store) sealAndPut(path string, body placement) (int64, error) {
 	sealed, err := s.sealed(body)
 	if err != nil {
-		return from, err
+		return 0, err
 	}
-	parts := inParts(sealed.Records, recordsPerWrite)
-	standing := from
-	for at, records := range parts {
-		part := sealed
-		part.Part, part.Parts, part.Records = at+1, len(parts), records
-		answered, err := s.put(path, part)
-		if err != nil {
-			return standing, err
-		}
-		if expected := standing + int64(len(records)); standing != orderingUnknown && answered != expected {
-			return standing, fmt.Errorf("%s took part %d of %d and did not write it:"+
-				" %d records should have carried the ordering to %d, and the store answered %d"+
-				" — nothing this turn carried can be taken as placed",
-				path, at+1, len(parts), len(records), expected, answered)
-		}
-		standing = answered
-	}
-	return standing, nil
+	return s.put(path, sealed)
 }
 
 // theNumberToSend is the version one turn travels under: the backlog's own, except where that is
@@ -611,23 +591,25 @@ func carry(in input, force bool) (int, error) {
 	return placed, err
 }
 
-// carryTurn is one turn: what each route is owed, the reading it takes to answer that, and what
-// is remembered when it is over.
+// carryTurn is one turn: what each route has yet to be told, the reading it takes to copy that
+// into the route's queue, and as much of that queue as the place will take.
+//
+// **The two halves are apart on purpose.** Copying is answerable to this machine — the ledger's
+// window turns, so what is not read out of it in time is not read at all — and sending is
+// answerable to a network and a place that may be refusing everything. Held together, the slow
+// one drags the fast one: a route that would not take anything for a day kept the reading where
+// it stood, and the window turned over what was never read. Apart, the reading keeps up with the
+// backlog whatever the sending is doing, and the sending catches up whenever it can.
 //
 // **Every route is asked its own question, and answered on its own.** One may have never been
 // written into while the other is level; one may refuse everything while the other takes it all.
-// A route that fails keeps the place it had — the next turn carries the same stretch to it again,
-// which it takes twice as well as once, being addressed by key — and the routes beside it move on.
+// A route that fails keeps its queue — the next turn offers the same records again, which the
+// place takes twice as well as once, being addressed by key — and the routes beside it move on.
 //
 // The version is read before the picture is taken, never after: a write landing in between makes
 // a remembered version one turn stale, which costs a turn that finds nothing. Remembering a
 // version newer than the picture would instead skip whatever landed in that gap, and the phone
 // would never learn of it.
-//
-// **What travels is not always that version** — see `theNumberToSend` — and what is remembered is
-// both: the backlog's version, which says whether there is anything to do, and the number the
-// place was actually left standing at, which is what keeps the next turn from being read as this
-// one repeated.
 func carryTurn(routes []route, version int64, force bool, remembered state, from ledger) (int, state, error) {
 	settled := state{Routes: map[string]carried{}}
 	for name, left := range remembered.Routes {
@@ -635,80 +617,120 @@ func carryTurn(routes []route, version int64, force bool, remembered state, from
 	}
 
 	whole, changed := whatEachRouteIsOwed(routes, version, force, remembered)
-	placed := 0
-	var refusals []error
 
 	// The stretches are walked in cursor order so that one turn always reads the same way, and
 	// each stretch is read once however many routes are waiting on it.
 	for _, cursor := range inOrder(changed) {
 		records, moved, err := from.since(cursor)
 		if errors.Is(err, errSyncGap) {
-			logf("%s: the ledger no longer reaches back to where a route left off — placing the whole store there again", pluginName)
+			logf("%s: the ledger no longer reaches back to where a route left off — copying the whole store out again", pluginName)
 			whole = append(whole, changed[cursor]...)
 			continue
 		}
 		if err != nil {
-			return placed, settled, err
+			return 0, settled, err
 		}
-		took := false
 		for _, where := range changed[cursor] {
-			left := remembered.Routes[where.name()]
-			landed := left
-			if len(records) > 0 {
-				sending := theNumberToSend(version, left)
-				answered, err := where.place(placement{SpecV: specVersion, Version: sending, Records: records}, left.Seq)
-				if err != nil {
-					refusals = append(refusals, fmt.Errorf("nothing reached %s: %w", where, err))
-					continue
-				}
-				landed.Placed, landed.Seq = sending, answered
-			}
-			// A stretch that turns out to hold nothing to carry is still a turn: the cursor
-			// moves, so the next one does not read it again. What the place was left standing at
-			// is carried over untouched — a turn that sent no request landed nothing.
-			landed.Version, landed.Cursor = version, moved
-			settled.Routes[where.name()] = landed
-			took = true
-		}
-		if took {
-			placed += len(records)
+			settled.Routes[where.name()] = queued(settled.Routes[where.name()], records, version, moved)
 		}
 	}
 
-	if len(whole) == 0 {
-		return placed, settled, errors.Join(refusals...)
+	if len(whole) > 0 {
+		picture, err := from.whole()
+		if err != nil {
+			return 0, settled, err
+		}
+		records, err := carryWindow(picture)
+		if err != nil {
+			return 0, settled, err
+		}
+		// **What was already queued stays in front of it.** The picture says what the store holds
+		// now, and a record it does not name is one the store no longer has — but the place does,
+		// and only a delete already in the queue will say so. Dropping the queue for the picture
+		// would leave those behind for good.
+		for _, where := range whole {
+			settled.Routes[where.name()] = queued(settled.Routes[where.name()], records, version, picture.Header.Cursor)
+		}
 	}
-	picture, err := from.whole()
-	if err != nil {
-		return placed, settled, err
-	}
-	records, err := carryWindow(picture)
-	if err != nil {
-		return placed, settled, err
-	}
-	took := false
-	for _, where := range whole {
-		// A route with nothing remembered comes in at nothing placed and no ordering known, which
-		// is what a first run is and what a whole placement is for.
-		left := remembered.Routes[where.name()]
-		sending := theNumberToSend(version, left)
-		answered, err := where.replace(placement{SpecV: specVersion, Version: sending, Records: records}, left.Seq)
+
+	placed := 0
+	var refusals []error
+	for _, where := range routes {
+		// The number to carry is read off what was remembered rather than off what this turn has
+		// just written down: copying a stretch out moves the version field, and the number turns
+		// on where the place was left standing before any of that.
+		sending := theNumberToSend(version, remembered.Routes[where.name()])
+		left, landed, err := drainTo(where, settled.Routes[where.name()], sending)
+		settled.Routes[where.name()] = left
+		placed += landed
 		if err != nil {
 			refusals = append(refusals, fmt.Errorf("nothing reached %s: %w", where, err))
-			// **A whole placement stops part way through the store, not before it.** That route
-			// is left holding a fraction of a backlog, and any place it had points well past the
-			// hole — so carrying what moved since then would leave the middle missing for good.
-			// Forgetting puts it back where a first run is, and a first run is placed whole.
-			delete(settled.Routes, where.name())
-			continue
 		}
-		settled.Routes[where.name()] = carried{Version: version, Cursor: picture.Header.Cursor, Placed: sending, Seq: answered}
-		took = true
-	}
-	if took {
-		placed += len(records)
 	}
 	return placed, settled, errors.Join(refusals...)
+}
+
+// queued puts a stretch of records on the back of one route's queue and writes down how far the
+// ledger has now been copied out.
+//
+// **The two go together and that is the whole of the rule.** A cursor written on its own says a
+// stretch was dealt with when it was not, and nothing goes back for it; a queue written on its
+// own costs the same stretch being read a second time, which is a duplicate and not a hole. They
+// are fields of one struct written by one call for exactly that reason.
+//
+// A stretch that turns out to hold nothing is still copied out: the cursor moves, so the next
+// turn does not read it again.
+func queued(left carried, records []outgoing, version, cursor int64) carried {
+	left.Pending = append(left.Pending[:len(left.Pending):len(left.Pending)], records...)
+	left.Version, left.Cursor = version, cursor
+	return left
+}
+
+// drainTo sends the front of one route's queue, in as many requests as it takes, and answers what
+// is left of it.
+//
+// **What the place took is dropped, and what it did not is kept.** A request that fails stops the
+// rest and leaves everything from it onwards where it is, so nothing is offered as sent that was
+// not — a refusal costs the turn and no records. This is why there is no send position: the queue
+// is the position, and there is nothing for a second number to disagree with.
+//
+// **The version is settled by the last request alone.** The store writes the version down with
+// the part that says it is the last of its turn, so a queue emptied to the end is the only thing
+// that leaves the place standing at the number this turn carried — and only then is that number
+// remembered as where the place stands.
+//
+// `sending` is that number, worked out before anything was read out — see `theNumberToSend`, and
+// the reason it is not worked out here: what it turns on is where the place was left standing,
+// and copying a stretch out moves the fields it would read that from.
+func drainTo(where route, left carried, sending int64) (carried, int, error) {
+	if len(left.Pending) == 0 {
+		return left, 0, nil
+	}
+	parts := inParts(left.Pending, recordsPerWrite)
+	landed := 0
+	for at, records := range parts {
+		answered, err := where.place(placement{
+			SpecV:   specVersion,
+			Version: sending,
+			Part:    at + 1,
+			Parts:   len(parts),
+			Records: records,
+		})
+		if err != nil {
+			return left, landed, err
+		}
+		if expected := left.Seq + int64(len(records)); left.Seq != orderingUnknown && answered != expected {
+			return left, landed, fmt.Errorf("the store took part %d of %d and did not write it:"+
+				" %d records should have carried the ordering to %d, and the store answered %d"+
+				" — what it did not write is still queued",
+				at+1, len(parts), len(records), expected, answered)
+		}
+		left.Seq = answered
+		left.Pending = left.Pending[len(records):]
+		landed += len(records)
+	}
+	left.Placed = sending
+	return left, landed, nil
 }
 
 // since reads one stretch of the ledger into the records it comes to.
@@ -724,13 +746,17 @@ func (l ledger) since(cursor int64) ([]outgoing, int64, error) {
 	return records, moved, nil
 }
 
-// whatEachRouteIsOwed sorts the open routes into the ones to place whole and the ones to carry a
-// stretch to, the latter gathered by where each is reading on from.
+// whatEachRouteIsOwed sorts the open routes into the ones to copy the whole store out for and the
+// ones to copy a stretch out for, the latter gathered by where each is reading on from.
 //
-// **What this plugin remembers is what it sent, not what a place holds.** The iCloud folder comes
-// into being when the user first opens the app on their phone, which can be any number of sends
-// later, and handing that folder only what has moved since would leave a phone reading this
-// week's edits with no backlog behind them.
+// **It says nothing about sending**, which is the other half and answers to nothing here: a route
+// this leaves out because the backlog has not moved may still have a queue behind it from a turn
+// that could not land, and that queue is offered again whether or not there is anything new to
+// put on the back of it.
+//
+// **What this plugin remembers is what it read, not what a place holds.** A route stood up anew
+// is empty behind a memory that says the phone is level, and handing it only what has moved since
+// would leave a phone reading this week's edits with no backlog behind them.
 func whatEachRouteIsOwed(routes []route, version int64, force bool, remembered state) ([]route, map[int64][]route) {
 	var whole []route
 	changed := map[int64][]route{}

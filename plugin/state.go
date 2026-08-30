@@ -7,9 +7,15 @@ import (
 	"path/filepath"
 )
 
-// What the plugin remembers between runs: how far each route was left. Four integers per route —
-// where the ledger was read to, and what the place itself was left standing at — and none of them
-// means anything without the others.
+// What the plugin remembers between runs: how far each route was left, and what it has yet to be
+// told. Four integers and a queue per route — where the ledger was read to, what the place itself
+// was left standing at, and the records copied out of the ledger that have not landed yet — and
+// none of them means anything without the others.
+//
+// **They move together or not at all.** The whole of it is one file, written whole and moved into
+// place, because a cursor that moved without the records it read is a stretch of the backlog
+// nothing will ever read again. That was measured: a cursor written ahead of the queue lost a
+// task for good, and no later send went looking for it.
 //
 // **It is per route because routes fail apart.** There is one today and there were two, and what
 // the shape is for is the case where one of them will not take anything while the next does: a
@@ -24,6 +30,12 @@ import (
 //
 // **Losing it is not damage.** A route that comes back with no memory is placed whole, which is
 // exactly what a first run does, so a wiped directory costs one large send and nothing else.
+//
+// **What is queued is damage, though**, and it is the one thing here that cannot be worked out
+// again: the cursor above it says the ledger was already read that far. A build that drops the
+// queue and keeps the cursor — an older one, which knows nothing of the field — loses whatever
+// had been copied out and not yet sent. Pressing setup puts it right, since a route stood up
+// anew is placed whole.
 
 // stateName is the file, inside the plugin's own directory.
 const stateName = "sync-state.json"
@@ -63,6 +75,13 @@ type carried struct {
 	Version int64 `json:"version"`
 	// Cursor is where to read changes on from. It is the ledger's, not ours: it comes from the
 	// snapshot header on a whole placement and from each changes answer after that.
+	//
+	// **It says how far the ledger has been copied out, not how far the place has been told.**
+	// The two used to be one number, and holding them together is what made a place that would
+	// not take anything drag the reading back with it: the ledger's window is five thousand rows
+	// wide and it turns, so a send that could not land for a day was read out of the window
+	// altogether. What is copied out is safe in Pending whether or not it can be sent, so this
+	// moves at the speed of this machine and nothing else.
 	Cursor int64 `json:"cursor"`
 	// Placed is the number this route's store was last left standing at, which is Version except
 	// where that number was already the one standing there (see `theNumberToSend`). It is what
@@ -76,6 +95,17 @@ type carried struct {
 	// has nothing behind it to have been dropped, and the answer it comes back with makes the
 	// next turn checkable.
 	Seq int64 `json:"seq"`
+	// Pending is what has been copied out of the ledger for this route and has not landed there
+	// yet, oldest first. A turn sends from the front and drops what the place took, so there is
+	// no separate mark for how far it got — the queue itself is the mark, and a mark that could
+	// disagree with it is a mark that can lose a record. That was measured too: a send position
+	// left behind a queue that emptied skipped the records between them for good.
+	//
+	// **It holds the rows themselves, not the keys to read them back by.** Sending then needs
+	// nothing but this — no second reading of a backlog that has moved on, and no guessing that a
+	// row which cannot be read back must have been deleted. What it costs is the room, and the
+	// rows lying here in the open until they are sealed on their way out.
+	Pending []outgoing `json:"pending,omitempty"`
 }
 
 // orderingUnknown is a place whose ordering this machine has not been told — a first run, a route
