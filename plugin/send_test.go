@@ -412,10 +412,7 @@ type refusing struct {
 func (r refusing) name() string       { return r.called }
 func (r refusing) String() string     { return r.called }
 func (r refusing) holdsNothing() bool { return false }
-func (r refusing) place(placement, int64) (int64, error) {
-	return 0, errors.New("it did not take it")
-}
-func (r refusing) replace(placement, int64) (int64, error) {
+func (r refusing) place(placement) (int64, error) {
 	return 0, errors.New("it did not take it")
 }
 
@@ -443,35 +440,24 @@ func TestARouteThatFailsDoesNotStopTheOthers(t *testing.T) {
 // ordering that moves the way a store's does — one per record — so a turn checked against the
 // answer reads as one that landed.
 type stub struct {
-	called   string
-	empty    bool
-	placed   int
-	replaced int
-	seq      int64
-	sent     []placement
-	told     []int64
+	called string
+	empty  bool
+	placed int
+	// seq is where this place's ordering stands. A test that hands the send a memory saying the
+	// place was left at a number seeds it here too, since the check the send makes is between the
+	// two — a stub standing somewhere else would read as a store that dropped the turn.
+	seq  int64
+	sent []placement
 }
 
 func (s *stub) name() string       { return s.called }
 func (s *stub) String() string     { return s.called }
 func (s *stub) holdsNothing() bool { return s.empty }
-func (s *stub) place(body placement, from int64) (int64, error) {
+func (s *stub) place(body placement) (int64, error) {
 	s.placed++
-	return s.took(body, from), nil
-}
-func (s *stub) replace(body placement, from int64) (int64, error) {
-	s.replaced++
-	return s.took(body, from), nil
-}
-
-// took writes down what it was handed and answers where its ordering stands afterwards.
-func (s *stub) took(body placement, from int64) int64 {
-	s.sent, s.told = append(s.sent, body), append(s.told, from)
-	if s.seq < from {
-		s.seq = from
-	}
+	s.sent = append(s.sent, body)
 	s.seq += int64(len(body.Records))
-	return s.seq
+	return s.seq, nil
 }
 
 // levelAt is a memory that has every named route reading on from the same place.
@@ -515,26 +501,27 @@ func TestATrailingSlashOnTheUrlIsNotCarriedIntoThePath(t *testing.T) {
 	}
 }
 
-// A turn that outgrows one request is what a whole placement of any real backlog is, so the send
+// A queue that outgrows one request is what a whole store is on any real backlog, so the drain
 // has to split it rather than hand the door more than it takes and read back a 413 it can do
 // nothing with.
-func TestATurnTooBigForOneRequestIsSentInParts(t *testing.T) {
+func TestAQueueTooBigForOneRequestIsSentInParts(t *testing.T) {
 	var seen []placement
 	answering := aStoreTaking(&seen)
 	defer answering.Close()
 
-	records := make([]outgoing, recordsPerWrite+1)
-	for at := range records {
-		records[at] = outgoing{Key: recordKey("task", int64(at)), Op: opDeleted}
-	}
 	where := store{url: answering.URL, token: "a-throwaway-token", seal: sealerForTest(t)}
 
-	if _, err := where.place(placement{SpecV: specVersion, Version: 12345, Records: records}, orderingUnknown); err != nil {
+	left, _, err := drainTo(where, carried{Pending: keysToDrop(recordsPerWrite + 1)}, 12345)
+
+	if err != nil {
 		t.Fatal(err)
+	}
+	if len(left.Pending) != 0 {
+		t.Errorf("%d record(s) were left queued after a drain that landed", len(left.Pending))
 	}
 
 	if len(seen) != 2 {
-		t.Fatalf("%d request(s) for %d records, want two", len(seen), len(records))
+		t.Fatalf("%d request(s) for %d records, want two", len(seen), recordsPerWrite+1)
 	}
 	if got := len(seen[0].Records); got != recordsPerWrite {
 		t.Errorf("the first part carried %d records, want a full %d", got, recordsPerWrite)
@@ -566,7 +553,7 @@ func TestATurnThatFitsIsOnePartOfOne(t *testing.T) {
 
 	where := store{url: answering.URL, token: "a-throwaway-token", seal: sealerForTest(t)}
 
-	if _, err := where.place(placement{SpecV: specVersion, Version: 1, Records: []outgoing{{Key: "task/1", Op: opDeleted}}}, orderingUnknown); err != nil {
+	if _, _, err := drainTo(where, carried{Pending: keysToDrop(1)}, 1); err != nil {
 		t.Fatal(err)
 	}
 
@@ -575,9 +562,10 @@ func TestATurnThatFitsIsOnePartOfOne(t *testing.T) {
 	}
 }
 
-// A whole placement of a store that holds nothing is what says the store holds nothing. Sending
-// no request at all would leave whatever is there standing, and the phone reading it.
-func TestAWholePlacementOfNothingIsStillSent(t *testing.T) {
+// Emptying is one request to the one door that empties, and it is nothing the send goes through
+// any more: standing a route up under a new key is the only thing left that has to clear what is
+// in there, because a key that changed makes every row unreadable by everyone.
+func TestEmptyingTheStoreIsOneRequestToTheDoorThatEmpties(t *testing.T) {
 	var paths []string
 	answering := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		paths = append(paths, r.URL.Path)
@@ -587,12 +575,12 @@ func TestAWholePlacementOfNothingIsStillSent(t *testing.T) {
 
 	where := store{url: answering.URL, token: "a-throwaway-token", seal: sealerForTest(t)}
 
-	if _, err := where.replace(placement{SpecV: specVersion, Version: 1}, orderingUnknown); err != nil {
+	if _, err := where.replace(placement{SpecV: specVersion, Version: 1}); err != nil {
 		t.Fatal(err)
 	}
 
 	if len(paths) != 1 || paths[0] != "/reset" {
-		t.Errorf("an empty whole placement sent %v, want the one request that empties", paths)
+		t.Errorf("an emptying sent %v, want the one request that empties", paths)
 	}
 }
 
@@ -611,10 +599,10 @@ func TestEveryPlacementNamesTheKeyItWasSealedWith(t *testing.T) {
 	seal := sealerForTest(t)
 	where := store{url: answering.URL, token: "a-throwaway-token", seal: seal}
 
-	if _, err := where.place(placement{SpecV: specVersion, Version: 1, Records: []outgoing{{Key: "task/1", Op: opDeleted}}}, orderingUnknown); err != nil {
+	if _, err := where.place(placement{SpecV: specVersion, Version: 1, Records: []outgoing{{Key: "task/1", Op: opDeleted}}}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := where.replace(placement{SpecV: specVersion, Version: 2}, orderingUnknown); err != nil {
+	if _, err := where.replace(placement{SpecV: specVersion, Version: 2}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -635,19 +623,15 @@ func TestTheKeyIsNamedOnEveryPartOfATurn(t *testing.T) {
 	answering := aStoreTaking(&seen)
 	defer answering.Close()
 
-	records := make([]outgoing, recordsPerWrite+1)
-	for at := range records {
-		records[at] = outgoing{Key: recordKey("task", int64(at)), Op: opDeleted}
-	}
 	seal := sealerForTest(t)
 	where := store{url: answering.URL, token: "a-throwaway-token", seal: seal}
 
-	if _, err := where.place(placement{SpecV: specVersion, Version: 1, Records: records}, orderingUnknown); err != nil {
+	if _, _, err := drainTo(where, carried{Pending: keysToDrop(recordsPerWrite + 1)}, 1); err != nil {
 		t.Fatal(err)
 	}
 
 	if len(seen) != 2 {
-		t.Fatalf("%d request(s) for %d records, want two", len(seen), len(records))
+		t.Fatalf("%d request(s) for %d records, want two", len(seen), recordsPerWrite+1)
 	}
 	for at, part := range seen {
 		if part.KeyFingerprint != seal.fingerprint {
@@ -656,9 +640,10 @@ func TestTheKeyIsNamedOnEveryPartOfATurn(t *testing.T) {
 	}
 }
 
-// What has landed stays landed, and the parts after the one that failed are not sent on top of a
-// door that is not taking them.
-func TestAPartThatFailsStopsTheRestOfTheTurn(t *testing.T) {
+// **What the door took is dropped and what it would not take is kept.** The parts after the one
+// that failed are not sent on top of a door that is not taking them, and everything from it
+// onwards stays queued for the next turn — a refusal costs the turn and no records.
+func TestAPartThatFailsStopsTheRestAndKeepsWhatItCouldNotSend(t *testing.T) {
 	taken := 0
 	refusing := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		taken++
@@ -670,28 +655,44 @@ func TestAPartThatFailsStopsTheRestOfTheTurn(t *testing.T) {
 	}))
 	defer refusing.Close()
 
-	records := make([]outgoing, recordsPerWrite*2+1)
-	for at := range records {
-		records[at] = outgoing{Key: recordKey("task", int64(at)), Op: opDeleted}
-	}
 	where := store{url: refusing.URL, token: "a-throwaway-token", seal: sealerForTest(t)}
 
-	_, err := where.place(placement{SpecV: specVersion, Version: 1, Records: records}, orderingUnknown)
+	left, landed, err := drainTo(where, carried{Pending: keysToDrop(recordsPerWrite*2 + 1)}, 1)
 
 	if err == nil {
-		t.Fatal("a turn whose second part was refused read as a successful one")
+		t.Fatal("a drain whose second part was refused read as a successful one")
 	}
 	if taken != 2 {
 		t.Errorf("%d part(s) were sent, want the send to stop at the one that failed", taken)
 	}
+	if landed != recordsPerWrite {
+		t.Errorf("%d record(s) were reported as landed, want the one part that did", landed)
+	}
+	if len(left.Pending) != recordsPerWrite+1 {
+		t.Errorf("%d record(s) were left queued, want everything from the part that failed onwards", len(left.Pending))
+	}
+	if left.Pending[0].Key != recordKey("task", recordsPerWrite) {
+		t.Errorf("the queue starts at %q, want the first record the door would not take", left.Pending[0].Key)
+	}
 }
 
-// A whole placement stops part way through the store, not before it: the routes hold part of a
-// backlog, and the cursor remembered from an older send points far beyond the hole. Carrying what
-// moved since then would lay this week's edits on top of a store missing its middle, so what a
-// failed whole placement leaves behind is nothing — which is the state a first run is in, and a
-// first run places the whole store again.
-func TestAWholePlacementThatFailedLeavesNothingRemembered(t *testing.T) {
+// keysToDrop is a queue of that many deletes, which is the cheapest record to make a lot of: what
+// these tests are about is how a queue is cut up and what happens to the pieces, not what is in
+// them.
+func keysToDrop(many int) []outgoing {
+	queued := make([]outgoing, many)
+	for at := range queued {
+		queued[at] = outgoing{Key: recordKey("task", int64(at)), Op: opDeleted}
+	}
+	return queued
+}
+
+// **A whole store that could not be sent is kept, not forgotten.** The place holds part of a
+// backlog and the rest is still queued, so the next turn offers the rest of the same records
+// rather than reading the whole store out a second time. What the old shape did here — throw the
+// route's place away so a first run would build it again — cost a whole placement for every
+// refusal, and a place refusing everything for a day cost one a minute.
+func TestAWholeStoreThatCouldNotBeSentIsKeptQueued(t *testing.T) {
 	failing := refusing{called: "a place that will not take it"}
 	beside := &stub{called: "a place that takes anything"}
 	routes := []route{failing, beside}
@@ -704,11 +705,18 @@ func TestAWholePlacementThatFailedLeavesNothingRemembered(t *testing.T) {
 	if err == nil {
 		t.Fatal("a whole placement that was refused read as one that landed")
 	}
-	if _, remembered := settled.Routes[failing.name()]; remembered {
-		t.Error("a route left holding part of a backlog kept its place, and the next turn would carry only what moved")
+	left, remembered := settled.Routes[failing.name()]
+	if !remembered {
+		t.Fatal("a route that would not take the whole store lost its place, and the whole store would be read out again")
 	}
-	if left := settled.Routes[beside.name()]; left.Cursor != 99 {
-		t.Errorf("the route beside it was left at %+v, want the whole picture's own cursor", left)
+	if len(left.Pending) == 0 {
+		t.Error("the whole store it would not take was dropped rather than kept for the next turn")
+	}
+	if left.Cursor != 99 {
+		t.Errorf("the route that failed was left at %+v, want the picture's cursor — it was read out, whatever the place did", left)
+	}
+	if beside := settled.Routes[beside.name()]; beside.Cursor != 99 || len(beside.Pending) != 0 {
+		t.Errorf("the route beside it was left at %+v, want it read out and sent", beside)
 	}
 }
 
@@ -746,11 +754,13 @@ func TestARouteThatFailsKeepsItsPlaceAndTheOthersMoveOn(t *testing.T) {
 	if err == nil {
 		t.Fatal("a route that took nothing read as a send that landed")
 	}
-	if left := settled.Routes["cloudflare"]; left.Cursor != 7 || left.Version != 1 {
-		t.Errorf("the route that failed was left at %+v, want the place it already had", left)
+	// **Both were read out**, because reading is answerable to the ledger's window and not to a
+	// door: the one that failed keeps the records in its queue instead of keeping the cursor.
+	if left := settled.Routes["cloudflare"]; left.Cursor != 8 || len(left.Pending) != 1 {
+		t.Errorf("the route that failed was left at %+v, want the stretch read out and still queued", left)
 	}
-	if left := settled.Routes["icloud"]; left.Cursor != 8 || left.Version != 2 {
-		t.Errorf("the route that took it was left at %+v, want it moved on", left)
+	if left := settled.Routes["icloud"]; left.Cursor != 8 || left.Version != 2 || len(left.Pending) != 0 {
+		t.Errorf("the route that took it was left at %+v, want it moved on and its queue empty", left)
 	}
 }
 
@@ -796,8 +806,9 @@ func TestOneStretchIsReadOnceHoweverManyRoutesAreWaitingOnIt(t *testing.T) {
 	if first.placed != 1 || second.placed != 1 {
 		t.Errorf("placed %d and %d times", first.placed, second.placed)
 	}
-	// What is reported is what moved, not what moved times the number of places it went.
-	if placed != 1 {
+	// What is reported is what reached a place, counted per place: the two drains are separate,
+	// and one that landed while the other was refused is a turn that did put a record somewhere.
+	if placed != 2 {
 		t.Errorf("one record carried to two routes was reported as %d", placed)
 	}
 }
@@ -815,11 +826,14 @@ func TestARouteThatHoldsNothingIsPlacedWholeWhileTheOtherTakesTheDifference(t *t
 	if err != nil {
 		t.Fatal(err)
 	}
-	if fresh.replaced != 1 || fresh.placed != 0 {
-		t.Errorf("the route holding nothing was replaced %d and placed to %d times", fresh.replaced, fresh.placed)
+	// **Both go through the one door that places over what is there.** A store emptied to be
+	// filled again is one a phone cannot read for as long as the filling takes, and the filling
+	// is the slow half.
+	if fresh.placed != 1 || going.placed != 1 {
+		t.Errorf("the route holding nothing was sent to %d times and the one already going %d", fresh.placed, going.placed)
 	}
-	if going.placed != 1 || going.replaced != 0 {
-		t.Errorf("the route already going was placed to %d and replaced %d times", going.placed, going.replaced)
+	if len(fresh.sent) != 1 || fresh.sent[0].Records[0].Key != recordKey("task", 1) {
+		t.Errorf("the route holding nothing was handed %+v, want the whole picture", fresh.sent)
 	}
 	if settled.Routes["icloud"].Cursor != 99 {
 		t.Errorf("the whole placement was remembered at %+v, want the picture's own cursor", settled.Routes["icloud"])
@@ -962,10 +976,11 @@ func TestAWholeBacklogReachesTheStoreOnceEach(t *testing.T) {
 			t.Fatalf("%s reached the store %d times, want once", key, times)
 		}
 	}
-	// The store empties on the first part alone: emptying again would leave it holding whichever
-	// part arrived last.
-	if answered.emptied != 1 {
-		t.Errorf("the turn emptied the store %d times, want once", answered.emptied)
+	// **Nothing is emptied.** The whole store goes through the door that places over what is
+	// there, so the door a phone reads through never closes — which is what a store emptied to be
+	// filled again does for as long as the filling takes.
+	if answered.emptied != 0 {
+		t.Errorf("the turn emptied the store %d times, want the door that empties left alone", answered.emptied)
 	}
 	if want := (aRealBacklog + recordsPerWrite - 1) / recordsPerWrite; len(answered.parts) != want {
 		t.Errorf("the turn went in %d parts, want %d of at most %d records", len(answered.parts), want, recordsPerWrite)
@@ -983,13 +998,14 @@ func TestAWholeBacklogReachesTheStoreOnceEach(t *testing.T) {
 	}
 }
 
-// A backlog that stops part way through leaves the route with no place at all, so the next turn
-// places the whole of it again rather than carrying the difference over a hole.
+// A backlog that stops part way through leaves the rest of it queued, so the next turn carries
+// the quarter that did not land rather than the whole store a second time.
 //
-// **The hole is what makes this the failure that matters.** A turn cut off at part 30 of 40 has
-// put three quarters of a backlog in the store; a route remembered at the picture's cursor would
-// carry only what moved after it, and the missing quarter would never be sent again.
-func TestABacklogCutOffPartWayLeavesTheRouteWithNoPlace(t *testing.T) {
+// **This is what the queue is for.** The old shape had to throw the route's place away here — the
+// store held three quarters of a backlog and the cursor pointed past the hole — which cost a
+// whole placement for every refusal. What did not land never left the queue, so there is no hole
+// to place over.
+func TestABacklogCutOffPartWayKeepsTheRestQueued(t *testing.T) {
 	answered := &aStoreAtVolume{t: t, took: map[string]int{}}
 	takes := answered.handler()
 	stopAfter := 30
@@ -1010,8 +1026,12 @@ func TestABacklogCutOffPartWayLeavesTheRouteWithNoPlace(t *testing.T) {
 	if err == nil {
 		t.Fatal("a backlog that was refused part way through read as one that landed")
 	}
-	if _, remembered := settled.Routes[where.name()]; remembered {
-		t.Error("a route holding three quarters of a backlog kept its place, and the missing quarter would never be sent again")
+	left, remembered := settled.Routes[where.name()]
+	if !remembered {
+		t.Fatal("a route holding three quarters of a backlog lost its place, and the whole store would be read out again")
+	}
+	if want := aRealBacklog - stopAfter*recordsPerWrite; len(left.Pending) != want {
+		t.Errorf("%d record(s) were left queued, want the %d that never left", len(left.Pending), want)
 	}
 	if len(answered.parts) != stopAfter {
 		t.Errorf("the turn went on to %d parts, want it to stop at the refusal on %d", len(answered.parts), stopAfter)
@@ -1022,6 +1042,7 @@ func TestABacklogCutOffPartWayLeavesTheRouteWithNoPlace(t *testing.T) {
 func TestATurnCarriesTheBacklogsOwnVersion(t *testing.T) {
 	where := &stub{called: "cloudflare"}
 
+	where.seq = 40
 	_, settled, err := carryTurn([]route{where}, 9, false, state{Routes: map[string]carried{
 		where.name(): {Version: 1, Cursor: 7, Placed: 1, Seq: 40},
 	}}, oneChange(t))
@@ -1046,6 +1067,7 @@ func TestATurnTheStoreIsAlreadyStandingAtCarriesTheNextNumber(t *testing.T) {
 
 	// Asked for by hand, with nothing having moved in the backlog since the last send: the
 	// version to carry and the number the store is standing at are the same one.
+	where.seq = 5
 	_, settled, err := carryTurn([]route{where}, 49460, true, state{Routes: map[string]carried{
 		where.name(): {Version: 49460, Cursor: 7, Placed: 49460, Seq: 5},
 	}}, oneChange(t))
@@ -1068,6 +1090,7 @@ func TestATurnTheStoreIsAlreadyStandingAtCarriesTheNextNumber(t *testing.T) {
 func TestTheTurnAfterThatCarriesTheBacklogsNumberAgain(t *testing.T) {
 	where := &stub{called: "cloudflare"}
 
+	where.seq = 6
 	_, settled, err := carryTurn([]route{where}, 49460, true, state{Routes: map[string]carried{
 		where.name(): {Version: 49460, Cursor: 7, Placed: 49461, Seq: 6},
 	}}, oneChange(t))
@@ -1143,8 +1166,10 @@ func TestAStoreThatAnsweredWithoutWritingIsNotTakenAsASend(t *testing.T) {
 	if !strings.Contains(err.Error(), "did not write it") {
 		t.Errorf("%v does not say what happened", err)
 	}
-	if left := settled.Routes[where.name()]; left.Cursor != 7 {
-		t.Errorf("the route was left at %+v, want the place it had — the next turn carries the same stretch", left)
+	// The stretch was read out, so the cursor moved; what the store would not write is still in
+	// the queue, which is where the next turn gets it from.
+	if left := settled.Routes[where.name()]; len(left.Pending) != 1 || left.Placed != 1 {
+		t.Errorf("the route was left at %+v, want the record still queued and the place unmoved", left)
 	}
 }
 
@@ -1158,19 +1183,20 @@ func TestAPartThatWasNotWrittenIsSeenPartWayThroughATurn(t *testing.T) {
 	}))
 	defer dropping.Close()
 
-	records := make([]outgoing, recordsPerWrite*3)
-	for at := range records {
-		records[at] = outgoing{Key: recordKey("task", int64(at)), Op: opDeleted}
-	}
 	where := store{url: dropping.URL, token: "a-throwaway-token", seal: sealerForTest(t)}
 
-	_, err := where.place(placement{SpecV: specVersion, Version: 1, Records: records}, orderingUnknown)
+	left, _, err := drainTo(where, carried{Pending: keysToDrop(recordsPerWrite * 3)}, 1)
 
 	if err == nil {
-		t.Fatal("a turn whose parts were dropped read as one that landed")
+		t.Fatal("a drain whose parts were dropped read as one that landed")
 	}
 	if taken != 2 {
-		t.Errorf("%d part(s) were sent, want the turn to stop at the one that was not written", taken)
+		t.Errorf("%d part(s) were sent, want the drain to stop at the one that was not written", taken)
+	}
+	// The first part's answer is what made the second one checkable, so only that first part is
+	// taken as landed and everything after it stays queued.
+	if len(left.Pending) != recordsPerWrite*2 {
+		t.Errorf("%d record(s) were left queued, want everything from the part that was dropped onwards", len(left.Pending))
 	}
 }
 
@@ -1183,14 +1209,13 @@ func TestAPlaceWhoseOrderingIsNotKnownIsStillSentTo(t *testing.T) {
 	defer answering.Close()
 
 	where := store{url: answering.URL, token: "a-throwaway-token", seal: sealerForTest(t)}
-	standing, err := where.place(placement{SpecV: specVersion, Version: 1,
-		Records: []outgoing{{Key: "task/1", Op: opDeleted}}}, orderingUnknown)
+	left, _, err := drainTo(where, carried{Seq: orderingUnknown, Pending: keysToDrop(1)}, 1)
 
 	if err != nil {
 		t.Fatal(err)
 	}
-	if standing != 1 {
-		t.Errorf("the store was left standing at %d, want where its answer put it", standing)
+	if left.Seq != 1 {
+		t.Errorf("the store was left standing at %d, want where its answer put it", left.Seq)
 	}
 }
 
@@ -1218,5 +1243,144 @@ func TestAMemoryFromBeforeThisBuildStillSaysWhatTheStoreIsStandingAt(t *testing.
 func TestAFirstTurnCarriesTheBacklogsVersionAsItIs(t *testing.T) {
 	if got := theNumberToSend(49460, carried{}); got != 49460 {
 		t.Errorf("a first turn carried %d, want the backlog's own version", got)
+	}
+}
+
+// **A queue left over from a refusal is offered again even when nothing has moved since.** The
+// version guard is about reading, not sending: a route the backlog has nothing new for may still
+// be holding everything the last turn could not land, and a turn that skipped it over the version
+// would leave those records where they are until somebody edits something.
+func TestAQueueLeftFromARefusalIsOfferedAgainWithNothingNewToRead(t *testing.T) {
+	var asked []int64
+	where := &stub{called: "cloudflare"}
+
+	placed, settled, err := carryTurn([]route{where}, 1, false, state{Routes: map[string]carried{
+		where.name(): {Version: 1, Cursor: 7, Pending: keysToDrop(2)},
+	}}, asking(t, &asked))
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(asked) != 0 {
+		t.Errorf("a route level with the backlog was read for: %v", asked)
+	}
+	if placed != 2 || len(where.sent) != 1 {
+		t.Errorf("the queue was sent as %d record(s) in %d request(s), want both in one", placed, len(where.sent))
+	}
+	if left := settled.Routes[where.name()]; len(left.Pending) != 0 {
+		t.Errorf("%d record(s) were left queued after a turn that landed", len(left.Pending))
+	}
+}
+
+// **What is copied out goes behind what is already queued, and the whole of it goes in one
+// order.** The place is addressed by key and a later write lands on top of an earlier one, so the
+// order the records are offered in is the order the store ends up agreeing with.
+func TestWhatIsCopiedOutGoesBehindWhatIsAlreadyQueued(t *testing.T) {
+	where := &stub{called: "cloudflare"}
+
+	_, _, err := carryTurn([]route{where}, 2, false, state{Routes: map[string]carried{
+		where.name(): {Version: 1, Cursor: 7, Pending: []outgoing{{Key: "task/9", Op: opDeleted}}},
+	}}, oneChange(t))
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(where.sent) != 1 {
+		t.Fatalf("the queue went in %d request(s), want one", len(where.sent))
+	}
+	sent := where.sent[0].Records
+	if len(sent) != 2 || sent[0].Key != "task/9" || sent[1].Key != recordKey("task", 1) {
+		t.Errorf("the queue was sent as %+v, want what was already there first", sent)
+	}
+}
+
+// **A whole picture goes behind the queue too, and does not replace it.** The picture says what
+// the store holds now, so a record it does not name is one the backlog no longer has — but the
+// place still does, and the only thing that will say so is a delete already in the queue.
+func TestAWholePictureDoesNotThrowAwayTheDeletesAlreadyQueued(t *testing.T) {
+	where := &stub{called: "cloudflare"}
+
+	_, _, err := carryTurn([]route{where}, 2, false, state{Routes: map[string]carried{
+		where.name(): {Version: 1, Cursor: 7, Pending: []outgoing{{Key: "task/9", Op: opDeleted}}},
+	}}, gapping(t))
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(where.sent) != 1 {
+		t.Fatalf("the queue went in %d request(s), want one", len(where.sent))
+	}
+	sent := where.sent[0].Records
+	if len(sent) != 2 || sent[0].Key != "task/9" {
+		t.Errorf("the queue was sent as %+v, want the delete the picture cannot express kept in front", sent)
+	}
+}
+
+// **The cursor moves whether or not the place took anything.** That is the whole of what the two
+// halves are for: the ledger's window turns, so what is not read out of it in time is not read at
+// all, and a place refusing everything must not hold the reading where it stands.
+func TestTheCursorMovesEvenWhenNothingCouldBeSent(t *testing.T) {
+	where := refusing{called: "cloudflare"}
+
+	_, settled, err := carryTurn([]route{where}, 2, false, levelAt(1, 7, where), oneChange(t))
+
+	if err == nil {
+		t.Fatal("a route that took nothing read as a send that landed")
+	}
+	left := settled.Routes[where.name()]
+	if left.Cursor != 8 || left.Version != 2 {
+		t.Errorf("the route was left at %+v, want the stretch read out however the door answered", left)
+	}
+	if len(left.Pending) != 1 {
+		t.Errorf("%d record(s) were queued, want the stretch nobody took", len(left.Pending))
+	}
+}
+
+// **A queue that emptied part way leaves the place standing where it already was.** The store
+// writes the version down with the last part alone, so a turn that stopped before it left the
+// store at the number it was at — and remembering the number this turn carried would be a note
+// about a write that never happened.
+func TestAQueueThatEmptiedPartWayDoesNotMoveWhereThePlaceStands(t *testing.T) {
+	taken := 0
+	refusingAfterOne := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		taken++
+		if taken == 1 {
+			w.Write([]byte(`{"seq":500}`))
+			return
+		}
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer refusingAfterOne.Close()
+
+	where := store{url: refusingAfterOne.URL, token: "a-throwaway-token", seal: sealerForTest(t)}
+
+	left, _, err := drainTo(where, carried{Placed: 3, Seq: 0, Pending: keysToDrop(recordsPerWrite + 1)}, 9)
+
+	if err == nil {
+		t.Fatal("a drain that stopped part way read as one that landed")
+	}
+	if left.Placed != 3 {
+		t.Errorf("the place was left standing at %d, want the number it was already at", left.Placed)
+	}
+	if left.Seq != 500 {
+		t.Errorf("the ordering was left at %d, want where the part that landed put it", left.Seq)
+	}
+}
+
+// A route with nothing queued costs no request at all: the hook fires on every write, and a turn
+// that found nothing to say should say nothing.
+func TestARouteWithAnEmptyQueueIsNotSentTo(t *testing.T) {
+	where := &stub{called: "cloudflare"}
+
+	left, landed, err := drainTo(where, carried{Version: 1, Cursor: 7}, 1)
+
+	if err != nil || landed != 0 {
+		t.Fatalf("landed %d, err %v", landed, err)
+	}
+	if where.placed != 0 {
+		t.Errorf("an empty queue cost %d request(s)", where.placed)
+	}
+	if left.Placed != 0 {
+		t.Errorf("an empty queue moved where the place stands to %d", left.Placed)
 	}
 }

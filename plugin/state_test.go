@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -199,5 +201,59 @@ func TestForgettingARouteThatWasNeverRememberedIsNotAFault(t *testing.T) {
 
 	if err := forgetRoute(routeCloudflare); err != nil {
 		t.Errorf("forgetting a route with nothing to forget failed: %v", err)
+	}
+}
+
+// **The queue and the cursor come back together or not at all.** The cursor says the ledger was
+// read that far, so a queue that did not survive the write is a stretch of the backlog nothing
+// will go back for — which is why they are fields of one file written whole and moved into place,
+// rather than two things written one after the other.
+func TestTheQueueComesBackWithTheCursorItWasWrittenWith(t *testing.T) {
+	remembering(t)
+
+	queued := []outgoing{
+		{Key: "task/1", Op: opPlaced, Row: json.RawMessage(`{"id":1}`)},
+		{Key: "task/2", Op: opDeleted},
+	}
+	if err := writeState(state{Routes: map[string]carried{
+		routeCloudflare: {Version: 5, Cursor: 12, Placed: 5, Seq: 40, Pending: queued},
+	}}); err != nil {
+		t.Fatal(err)
+	}
+
+	back, found, err := readState()
+	if err != nil || !found {
+		t.Fatalf("found %v, err %v", found, err)
+	}
+	left := back.Routes[routeCloudflare]
+	if left.Cursor != 12 || len(left.Pending) != 2 {
+		t.Fatalf("read back %+v, want the cursor and the queue it was written with", left)
+	}
+	if left.Pending[0].Key != "task/1" || string(left.Pending[0].Row) != `{"id":1}` {
+		t.Errorf("the first record came back as %+v, want the row it went in with", left.Pending[0])
+	}
+	if left.Pending[1].Key != "task/2" || left.Pending[1].Op != opDeleted || left.Pending[1].Row != nil {
+		t.Errorf("the delete came back as %+v, want a key and no row", left.Pending[1])
+	}
+}
+
+// An empty queue is not written at all, so a memory from before this build and one this build
+// wrote with nothing waiting are the same bytes — there is nothing to tell apart and no migration
+// to run.
+func TestAnEmptyQueueIsNotWrittenDown(t *testing.T) {
+	dir := remembering(t)
+
+	if err := writeState(state{Routes: map[string]carried{
+		routeCloudflare: {Version: 5, Cursor: 12},
+	}}); err != nil {
+		t.Fatal(err)
+	}
+
+	raw, err := os.ReadFile(filepath.Join(dir, stateName))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(raw), "pending") {
+		t.Errorf("a memory with nothing queued was written as %s", raw)
 	}
 }
