@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 // answering stands a door up that turns everything down the way the test asks it to, and hands
@@ -164,5 +165,59 @@ func TestARefusalCanBeAskedWhatItWas(t *testing.T) {
 	}
 	if turnedDown.status != http.StatusConflict || turnedDown.path != "/records" {
 		t.Errorf("the refusal says %d at %q", turnedDown.status, turnedDown.path)
+	}
+}
+
+// The connection is what a send is slow without, so the reuse is worth a test rather than a
+// reading of the code: three sends in one run leave from one socket.
+func TestEverySendInOneRunGoesOutOnOneConnection(t *testing.T) {
+	var callers []string
+	door := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		callers = append(callers, r.RemoteAddr)
+		w.Write([]byte(`{"seq":1}`))
+	}))
+	t.Cleanup(door.Close)
+	where := store{url: door.URL, token: "a-throwaway-token"}
+
+	for range 3 {
+		if _, err := where.put("/records", placement{SpecV: specVersion}); err != nil {
+			t.Fatalf("a send the door answered read as a failure: %v", err)
+		}
+	}
+
+	if len(callers) != 3 {
+		t.Fatalf("the door was asked %d times, where three sends were made", len(callers))
+	}
+	for _, caller := range callers[1:] {
+		if caller != callers[0] {
+			t.Errorf("the sends came from %v — a second connection means the first was not kept", callers)
+			break
+		}
+	}
+}
+
+// Holding the client must not lose what it was carrying: a hook nobody is waiting on still has to
+// end, so a door that never answers has to give the run back rather than hold it.
+func TestACallToTheStoreIsStillGivenBack(t *testing.T) {
+	silence := make(chan struct{})
+	door := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		<-silence
+	}))
+	t.Cleanup(func() { close(silence); door.Close() })
+
+	if overTheWire.Timeout != sendTimeout {
+		t.Fatalf("the held client waits %v, where a send is bounded at %v", overTheWire.Timeout, sendTimeout)
+	}
+	held := overTheWire
+	overTheWire = &http.Client{Timeout: 50 * time.Millisecond}
+	t.Cleanup(func() { overTheWire = held })
+
+	_, err := store{url: door.URL, token: "a-throwaway-token"}.put("/records", placement{SpecV: specVersion})
+
+	if err == nil {
+		t.Fatal("a door that never answered read as a send that landed")
+	}
+	if !strings.Contains(err.Error(), "did not answer") {
+		t.Errorf("%v does not say the door left the call hanging", err)
 	}
 }

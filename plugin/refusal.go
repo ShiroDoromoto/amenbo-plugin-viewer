@@ -97,6 +97,20 @@ func whatToDoAbout(status int, waitFor string) string {
 // carry a fault number and a lot of markup around it.
 const bodyOfOneLine = 200
 
+// overTheWire is the one client every call to the store goes out on.
+//
+// **It is held so that the pooling is stated rather than inherited.** A client built per call
+// keeps a connection open just as well — its `Transport` is nil, so it borrows the process-wide
+// `http.DefaultTransport` and the pool that hangs off it — but that reuse is a side effect of a
+// field nobody set, and the day one of these clients is given a `Transport` of its own it goes
+// away without a word. One client named here is the thing to give that `Transport` to.
+//
+// **What it does not buy is the first handshake.** Amenbo starts the plugin once per write and
+// the process ends with the hook, so the pool it filled goes with it: a hook that sends once pays
+// the TLS setup every time, and no client held in here can carry a connection across two runs.
+// What amortises that is sending more per run, which is the queue's business, not this one's.
+var overTheWire = &http.Client{Timeout: sendTimeout}
+
 // askTheStore sends one request to the user's own Worker and hands back the body of a good
 // answer. A refusal comes back as a storeRefused, so every door reads one the same way.
 //
@@ -106,7 +120,7 @@ const bodyOfOneLine = 200
 func (s store) askTheStore(request *http.Request) ([]byte, error) {
 	request.Header.Set("Authorization", "Bearer "+s.token)
 
-	answer, err := (&http.Client{Timeout: sendTimeout}).Do(request)
+	answer, err := overTheWire.Do(request)
 	if err != nil {
 		return nil, fmt.Errorf("%s did not answer: %w", request.URL.Path, err)
 	}
