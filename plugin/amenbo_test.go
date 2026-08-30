@@ -57,3 +57,47 @@ func TestARowIsReadForItsIdAndNothingElse(t *testing.T) {
 		t.Error("something that is not a row was accepted")
 	}
 }
+
+// The name a record is filed under is the answer's, not the question's. `sync changes` says
+// `dependency` and the read-back road answers under `task_dependency`; reading the answer back
+// under the asked name found nothing there and called it "no rows" — three months of dependency
+// edits never left the machine that way.
+func TestRecordsAreReadUnderTheNameTheAnswerFilesThemUnder(t *testing.T) {
+	table, rows, err := rowsRead("dependency", []byte(`{"amenbo_sync":{"cursor":9},"tables":{"task_dependency":[{"id":1,"task_id":2}]}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if table != "task_dependency" {
+		t.Errorf("table = %q, want the one the answer named", table)
+	}
+	if len(rows) != 1 {
+		t.Errorf("rows = %v", rows)
+	}
+}
+
+// An answer that carries no rows still names its table, which is what lets a delete — the one op
+// with nothing to read back — be filed under the same name as the write before it.
+func TestAnAnswerWithNoRowsStillNamesItsTable(t *testing.T) {
+	table, rows, err := rowsRead("dependency", []byte(`{"tables":{"task_dependency":[]}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if table != "task_dependency" || len(rows) != 0 {
+		t.Errorf("table = %q, rows = %v", table, rows)
+	}
+}
+
+// One question is answered by one table. Anything else is a road this build does not read, and
+// picking one of them would file half a dataset under a name the phone never sees again.
+func TestAnAnswerThatIsNotOneTableIsRefused(t *testing.T) {
+	for name, answered := range map[string]string{
+		"no table at all": `{"tables":{}}`,
+		"two tables":      `{"tables":{"task_dependency":[],"task":[]}}`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			if _, _, err := rowsRead("dependency", []byte(answered)); err == nil {
+				t.Errorf("%s was read as an answer to one question", name)
+			}
+		})
+	}
+}

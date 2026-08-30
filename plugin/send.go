@@ -154,93 +154,147 @@ func carryWindow(whole window) ([]outgoing, error) {
 	return placed, nil
 }
 
+// moving is one record inside a stretch of the ledger: the dataset the ledger named it by, and
+// its id. It is how a record is recognised while a stretch is being reduced — deliberately not
+// the key it will travel under, which is the read-back road's answer rather than the ledger's
+// word.
+type moving struct {
+	dataset string
+	id      int64
+}
+
 // collapse reduces a stretch of the ledger to what has to be carried.
 //
 // One record can move several times inside one stretch, and the phone needs where it ended up,
 // not how it got there — so the last word about a record is the only one kept. A record deleted
 // after being written is a delete; one written after being deleted is a write.
 //
-// What comes back is the ids to read back per dataset, and the keys to drop, both in a settled
-// order so one stretch always produces one body.
-func collapse(changes []change) (read map[string][]int64, dropped []string) {
-	last := make(map[string]string)
+// What comes back is the ids to read back and the ids to drop, both gathered by dataset and both
+// in a settled order so one stretch always produces one body. **The drops are ids and not keys**:
+// what a record is filed under is not known here, only what the ledger called it.
+func collapse(changes []change) (read, dropped map[string][]int64) {
+	last := make(map[moving]string)
 	for _, moved := range changes {
-		last[recordKey(moved.Dataset, moved.RecordID)] = moved.Op
+		last[moving{moved.Dataset, moved.RecordID}] = moved.Op
 	}
 
-	read = make(map[string][]int64)
+	read, dropped = make(map[string][]int64), make(map[string][]int64)
 	for _, moved := range changes {
 		if neverCarried[moved.Dataset] {
 			continue
 		}
-		key := recordKey(moved.Dataset, moved.RecordID)
-		op, unsettled := last[key]
+		which := moving{moved.Dataset, moved.RecordID}
+		op, unsettled := last[which]
 		if !unsettled {
 			continue
 		}
-		delete(last, key)
+		delete(last, which)
 		if op == opDelete {
-			dropped = append(dropped, key)
+			dropped[moved.Dataset] = append(dropped[moved.Dataset], moved.RecordID)
 			continue
 		}
 		read[moved.Dataset] = append(read[moved.Dataset], moved.RecordID)
 	}
-	for dataset := range read {
-		sort.Slice(read[dataset], func(a, b int) bool { return read[dataset][a] < read[dataset][b] })
+	for _, gathered := range []map[string][]int64{read, dropped} {
+		for dataset := range gathered {
+			ids := gathered[dataset]
+			sort.Slice(ids, func(a, b int) bool { return ids[a] < ids[b] })
+		}
 	}
-	sort.Strings(dropped)
 	return read, dropped
 }
 
-// readBack is how the rows behind a stretch of the ledger are fetched. It is a parameter so the
-// walk over a stretch can be exercised without a store standing behind it — what it stands for
-// in a running plugin is always rowsIn.
-type readBack func(dataset string, ids []int64) ([]json.RawMessage, error)
+// readBack is how the rows behind a stretch of the ledger are fetched, and what the answer files
+// them under. It is a parameter so the walk over a stretch can be exercised without a store
+// standing behind it — what it stands for in a running plugin is always rowsIn.
+type readBack func(dataset string, ids []int64) (string, []json.RawMessage, error)
+
+// leftBehind says whether a read was turned down because that dataset does not travel, saying so
+// on the way past.
+//
+// The ledger names every dataset Amenbo holds and the read-back road carries fewer, so a stretch
+// touching one of the others would otherwise stop every send after it — the phone would fall
+// behind for good over a row it was never going to receive.
+func leftBehind(dataset string, err error) bool {
+	var turnedDown refused
+	if errors.As(err, &turnedDown) && turnedDown.code == codeNotCarried {
+		logf("%s: %s does not travel, so it is being left behind — %s", pluginName, dataset, turnedDown.message)
+		return true
+	}
+	return false
+}
 
 // changedRecords reads back what moved, alongside the deletes that need no read.
+//
+// **A record is filed under the name the read-back road answered with, not the one the ledger
+// asked by**. The two part company at least once — the ledger says `dependency` and the answer
+// comes back as `task_dependency` — and filing under the question's name put the same record in
+// the store under two keys, so the phone kept a copy no later write could reach.
+//
+// A delete carries no row, so there is nothing to read back for it — but what it is filed under
+// is still the road's to say. A dataset holding nothing but deletes therefore costs one call,
+// whose answer names the table and carries no rows.
 //
 // An id that comes back absent is one that went away between the ledger naming it and this read
 // — it is left out rather than guessed at, because the change that says so is still ahead of the
 // cursor and will carry the delete on the next turn.
-//
-// **A dataset the road cannot answer for is left behind, not fatal.** The ledger names every
-// dataset Amenbo holds and the read-back road carries fewer, so a stretch touching one of the
-// others would otherwise stop every send after it — the phone would fall behind for good over a
-// row it was never going to receive.
 func changedRecords(changes []change, rows readBack) ([]outgoing, error) {
 	read, dropped := collapse(changes)
 
-	datasets := make([]string, 0, len(read))
+	datasets := make([]string, 0, len(read)+len(dropped))
 	for dataset := range read {
 		datasets = append(datasets, dataset)
 	}
+	for dataset := range dropped {
+		if _, alreadyNamed := read[dataset]; !alreadyNamed {
+			datasets = append(datasets, dataset)
+		}
+	}
 	sort.Strings(datasets)
 
-	var placed []outgoing
+	var placed, drops []outgoing
 	for _, dataset := range datasets {
+		var table string
+		var stayed bool
 		ids := read[dataset]
 		for start := 0; start < len(ids); start += idsPerRead {
 			end := min(start+idsPerRead, len(ids))
-			read, err := rows(dataset, ids[start:end])
-			var turnedDown refused
-			if errors.As(err, &turnedDown) && turnedDown.code == codeNotCarried {
-				logf("%s: %s does not travel, so it is being left behind — %s", pluginName, dataset, turnedDown.message)
+			answered, back, err := rows(dataset, ids[start:end])
+			if leftBehind(dataset, err) {
+				stayed = true
 				break
 			}
 			if err != nil {
 				return nil, err
 			}
-			carried, err := carryRows(dataset, read)
+			table = answered
+			carried, err := carryRows(table, back)
 			if err != nil {
 				return nil, err
 			}
 			placed = append(placed, carried...)
 		}
+
+		gone := dropped[dataset]
+		if stayed || len(gone) == 0 {
+			continue
+		}
+		if table == "" {
+			answered, _, err := rows(dataset, gone[:min(len(gone), idsPerRead)])
+			if leftBehind(dataset, err) {
+				continue
+			}
+			if err != nil {
+				return nil, err
+			}
+			table = answered
+		}
+		for _, id := range gone {
+			drops = append(drops, outgoing{Key: recordKey(table, id), Op: opDeleted})
+		}
 	}
-	for _, key := range dropped {
-		placed = append(placed, outgoing{Key: key, Op: opDeleted})
-	}
-	return placed, nil
+	sort.Slice(drops, func(a, b int) bool { return drops[a].Key < drops[b].Key })
+	return append(placed, drops...), nil
 }
 
 // route is a place the records are put. There are two, and they are not modes to choose between:

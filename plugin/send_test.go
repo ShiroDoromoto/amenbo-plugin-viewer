@@ -60,7 +60,7 @@ func TestCollapseKeepsOnlyTheLastWordAboutEachRecord(t *testing.T) {
 	if got := read["task_comment"]; len(got) != 1 || got[0] != 9 {
 		t.Errorf("a record written after being deleted has to be read back: %v", got)
 	}
-	if len(dropped) != 1 || dropped[0] != "task/2" {
+	if got := dropped["task"]; len(got) != 1 || got[0] != 2 {
 		t.Errorf("dropped = %v", dropped)
 	}
 }
@@ -80,8 +80,11 @@ func TestCollapseSettlesOnOneOrder(t *testing.T) {
 	if got := read["task"]; len(got) != 2 || got[0] != 1 || got[1] != 3 {
 		t.Errorf("ids came back unsorted: %v", got)
 	}
-	if len(dropped) != 2 || dropped[0] != "decision/7" || dropped[1] != "task/2" {
-		t.Errorf("drops came back unsorted: %v", dropped)
+	if got := dropped["decision"]; len(got) != 1 || got[0] != 7 {
+		t.Errorf("a drop went missing: %v", dropped)
+	}
+	if got := dropped["task"]; len(got) != 1 || got[0] != 2 {
+		t.Errorf("a drop went missing: %v", dropped)
 	}
 }
 
@@ -117,6 +120,99 @@ func TestASecretIsNeverCarried(t *testing.T) {
 	}
 }
 
+// A record is filed under the name the answer came back with, not the one the ledger asked by.
+// The two part company at least once — `dependency` is answered as `task_dependency` — and
+// filing under the question's name put the same record in the store under two keys, so the phone
+// kept a copy no later write could reach.
+func TestARecordIsFiledUnderTheNameTheAnswerCameBackWith(t *testing.T) {
+	rows := func(dataset string, ids []int64) (string, []json.RawMessage, error) {
+		if dataset != "dependency" {
+			t.Errorf("the road was asked by %q rather than the name the ledger gave", dataset)
+		}
+		return "task_dependency", []json.RawMessage{json.RawMessage(`{"id":3}`)}, nil
+	}
+
+	records, err := changedRecords([]change{{Dataset: "dependency", RecordID: 3, Op: "insert"}}, rows)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := keysOf(records); len(got) != 1 || got[0] != "task_dependency/3:put" {
+		t.Errorf("records = %v", got)
+	}
+}
+
+// A delete carries no row, so there is nothing to read back for it — but what it is filed under
+// is still the road's to say, or the phone is told to drop a key it was never given. The name is
+// asked for once per dataset, and a dataset that was read as well as dropped from asks no more
+// than a dataset that was only read.
+func TestADeleteIsFiledUnderTheSameNameAWriteWouldBe(t *testing.T) {
+	for name, changes := range map[string][]change{
+		"nothing but deletes": {
+			{Dataset: "dependency", RecordID: 3, Op: "delete"},
+			{Dataset: "dependency", RecordID: 4, Op: "delete"},
+		},
+		"a delete beside a write": {
+			{Dataset: "dependency", RecordID: 3, Op: "delete"},
+			{Dataset: "dependency", RecordID: 9, Op: "insert"},
+			{Dataset: "dependency", RecordID: 4, Op: "delete"},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			asked := 0
+			rows := func(dataset string, ids []int64) (string, []json.RawMessage, error) {
+				asked++
+				var back []json.RawMessage
+				for _, id := range ids {
+					if id == 9 {
+						back = append(back, json.RawMessage(`{"id":9}`))
+					}
+				}
+				return "task_dependency", back, nil
+			}
+
+			records, err := changedRecords(changes, rows)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if asked != 1 {
+				t.Errorf("the road was asked %d times for one dataset", asked)
+			}
+			for _, key := range keysOf(records) {
+				if !strings.HasPrefix(key, "task_dependency/") {
+					t.Errorf("a record travelled as %q, under a name the phone does not file it by", key)
+				}
+			}
+			if got := keysOf(records); got[len(got)-1] != "task_dependency/4:del" {
+				t.Errorf("the drops did not come last and sorted: %v", got)
+			}
+		})
+	}
+}
+
+// A dataset the road will not answer for cannot be dropped either: without a name from the road
+// there is no key to name, and one guessed from the ledger is the very copy this fix removes.
+func TestADeleteInADatasetThatDoesNotTravelIsLeftBehindToo(t *testing.T) {
+	rows := func(dataset string, ids []int64) (string, []json.RawMessage, error) {
+		return "", nil, refused{call: "records", code: codeNotCarried, message: "`attachment` is not a dataset this road carries"}
+	}
+
+	var records []outgoing
+	_, stderr := capture(t, func() {
+		var err error
+		records, err = changedRecords([]change{{Dataset: "attachment", RecordID: 1, Op: "delete"}}, rows)
+		if err != nil {
+			t.Error(err)
+		}
+	})
+
+	if len(records) != 0 {
+		t.Errorf("records = %v — a key was guessed from the ledger's own word", keysOf(records))
+	}
+	if !strings.Contains(stderr, "attachment") {
+		t.Errorf("what was left behind went unsaid: %q", stderr)
+	}
+}
+
 // The ledger names every dataset Amenbo holds and the read-back road carries fewer, so a stretch
 // touching one of the others must not stop the send: the phone would fall behind for good over a
 // row it was never going to receive.
@@ -125,11 +221,11 @@ func TestADatasetThatDoesNotTravelIsLeftBehindRatherThanFatal(t *testing.T) {
 		{Dataset: "attachment", RecordID: 1, Op: "insert"},
 		{Dataset: "task", RecordID: 1, Op: "insert"},
 	}
-	rows := func(dataset string, ids []int64) ([]json.RawMessage, error) {
+	rows := func(dataset string, ids []int64) (string, []json.RawMessage, error) {
 		if dataset == "attachment" {
-			return nil, refused{call: "records", code: codeNotCarried, message: "`attachment` is not a dataset this road carries"}
+			return "", nil, refused{call: "records", code: codeNotCarried, message: "`attachment` is not a dataset this road carries"}
 		}
-		return []json.RawMessage{json.RawMessage(`{"id":1}`)}, nil
+		return dataset, []json.RawMessage{json.RawMessage(`{"id":1}`)}, nil
 	}
 
 	var records []outgoing
@@ -152,8 +248,8 @@ func TestADatasetThatDoesNotTravelIsLeftBehindRatherThanFatal(t *testing.T) {
 // Anything else that goes wrong reading a record back is a failed send, not a record to skip:
 // advancing the cursor over it would lose it for good.
 func TestAReadThatFailsForAnyOtherReasonStopsTheSend(t *testing.T) {
-	rows := func(dataset string, ids []int64) ([]json.RawMessage, error) {
-		return nil, refused{call: "records", code: "store_unreadable", message: "the store cannot be opened"}
+	rows := func(dataset string, ids []int64) (string, []json.RawMessage, error) {
+		return "", nil, refused{call: "records", code: "store_unreadable", message: "the store cannot be opened"}
 	}
 
 	if _, err := changedRecords([]change{{Dataset: "task", RecordID: 1, Op: "insert"}}, rows); err == nil {
@@ -394,8 +490,8 @@ func oneChange(t *testing.T) ledger {
 		changed: func(cursor int64) ([]change, int64, error) {
 			return []change{{Dataset: "task", RecordID: 1, Op: "update"}}, cursor + 1, nil
 		},
-		rows: func(_ string, _ []int64) ([]json.RawMessage, error) {
-			return []json.RawMessage{json.RawMessage(`{"id":1}`)}, nil
+		rows: func(dataset string, _ []int64) (string, []json.RawMessage, error) {
+			return dataset, []json.RawMessage{json.RawMessage(`{"id":1}`)}, nil
 		},
 		whole: func() (window, error) {
 			picture := window{Tables: map[string][]json.RawMessage{"task": {json.RawMessage(`{"id":1}`)}}}
