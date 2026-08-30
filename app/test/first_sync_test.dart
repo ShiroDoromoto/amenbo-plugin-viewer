@@ -98,7 +98,7 @@ void main() {
 
   test('every way a round can stop has a line of its own', () {
     // A single "something went wrong" would send everybody to the same next step, and only one
-    // of the five would be at the right one.
+    // of the eight would be at the right one.
     final said = {
       for (final failure in IntakeFailure.values) whatStopped(words, failure),
     };

@@ -66,6 +66,13 @@ enum IntakeFailure {
   /// tell that fraction from a backlog that really did shrink, and would write it down and call
   /// itself level. Seconds, not a fault.
   placing,
+
+  /// The place answered that it cannot answer right now, and said to come back later than a
+  /// placement ever takes. The database behind it has run into a limit of its own — a day's
+  /// writes used up, no room left — and every one of those ends with time passing rather than
+  /// with anything anybody does. Nothing here is damaged, nothing at either end is misconfigured,
+  /// and the PC is not the end to go and look at.
+  busy,
 }
 
 /// Whether another round could end any differently.
@@ -83,8 +90,8 @@ bool worthAnotherRound(IntakeFailure failure) =>
 /// A round of the intake did not finish, and why.
 ///
 /// It carries which refusal this is and the values that go with it, and never a sentence. What
-/// the person waiting is told is the screen's to say — there are five of these and one line for
-/// each, written in whichever language the phone is set to.
+/// the person waiting is told is the screen's to say — there is one line for each of them,
+/// written in whichever language the phone is set to.
 class IntakeException implements Exception {
   const IntakeException(
     this.failure, {
@@ -257,8 +264,9 @@ class CloudflareIntake {
   ///
   /// A placement is seconds, which is why waiting it out inside the round is worth doing at all:
   /// the person who pulled gets their rows instead of a line about a state they cannot act on.
-  /// A longer wait than this is not that state wearing the same status, and sleeping on it would
-  /// be an app that hangs on whatever a header says.
+  /// A longer wait than this is not that state wearing the same status — it is a place that
+  /// cannot answer right now ([IntakeFailure.busy]) — and sleeping on it would be an app that
+  /// hangs on whatever a header says.
   static const _longestPause = Duration(seconds: 10);
 
   /// Takes everything the place has that this device has not.
@@ -522,9 +530,11 @@ class CloudflareIntake {
       throw IntakeException(IntakeFailure.rebuilt, at: from, status: status);
     }
     if (status == 503) {
-      // Two things answer 503, and only one of them is worth waiting for: a placement says when
-      // to come back, and a Worker deployed without its write token has nothing to say and
-      // nothing that waiting would fix.
+      // Three things answer 503, and the header is what tells them apart. A Worker deployed
+      // without its write token has nothing to say and nothing that waiting would fix. A
+      // placement says to come back in the seconds it takes. And a place whose database has hit
+      // a limit of its own says to come back after a wait no placement ever asks for — that one
+      // ends by itself too, but not inside this round.
       final comeBack = answered.headers['retry-after'];
       if (comeBack == null) {
         throw IntakeException(
@@ -535,7 +545,14 @@ class CloudflareIntake {
       }
       final seconds = int.tryParse(comeBack.trim());
       final wait = seconds == null ? null : Duration(seconds: seconds);
-      if (!again && wait != null && wait <= _longestPause) {
+      // A wait longer than a placement takes, or one written in a spelling this build does not
+      // read, is not the state that ends inside the round. Calling it a placement would tell the
+      // person their PC is mid-send, which is a sentence about the one end that has nothing to
+      // do with it.
+      if (wait == null || wait > _longestPause) {
+        throw IntakeException(IntakeFailure.busy, at: from, status: status);
+      }
+      if (!again) {
         await _pause(wait);
         return _get(url, from: from, again: true);
       }

@@ -7,8 +7,9 @@ import (
 	"path/filepath"
 )
 
-// What the plugin remembers between runs: how far each route was left. Two integers per route,
-// and neither of them means anything without the other.
+// What the plugin remembers between runs: how far each route was left. Four integers per route —
+// where the ledger was read to, and what the place itself was left standing at — and none of them
+// means anything without the others.
 //
 // **It is per route because routes fail apart.** There is one today and there were two, and what
 // the shape is for is the case where one of them will not take anything while the next does: a
@@ -63,7 +64,24 @@ type carried struct {
 	// Cursor is where to read changes on from. It is the ledger's, not ours: it comes from the
 	// snapshot header on a whole placement and from each changes answer after that.
 	Cursor int64 `json:"cursor"`
+	// Placed is the number this route's store was last left standing at, which is Version except
+	// where that number was already the one standing there (see `theNumberToSend`). It is what
+	// keeps the store from reading two different turns as one repeated turn.
+	Placed int64 `json:"placed"`
+	// Seq is the ordering the store answered with when this route last took a turn, which is what
+	// the next turn checks its own answer against (see `putInParts`).
+	//
+	// **Zero is "not known".** A store nothing has been written into stands at zero, so the two
+	// cannot be told apart — and they need not be: a turn sent to a store that has taken nothing
+	// has nothing behind it to have been dropped, and the answer it comes back with makes the
+	// next turn checkable.
+	Seq int64 `json:"seq"`
 }
+
+// orderingUnknown is a place whose ordering this machine has not been told — a first run, a route
+// just stood up, or a memory written before this build. What it costs is the first answer going
+// unchecked, and that answer is what makes the one after it checkable.
+const orderingUnknown = 0
 
 // stateVersion is the shape written today. A file written to an older one is not read: the shapes
 // before this one held a single cursor for every route at once, and there is no honest way to say

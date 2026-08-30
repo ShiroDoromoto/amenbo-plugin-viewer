@@ -155,93 +155,147 @@ func carryWindow(whole window) ([]outgoing, error) {
 	return placed, nil
 }
 
+// moving is one record inside a stretch of the ledger: the dataset the ledger named it by, and
+// its id. It is how a record is recognised while a stretch is being reduced — deliberately not
+// the key it will travel under, which is the read-back road's answer rather than the ledger's
+// word.
+type moving struct {
+	dataset string
+	id      int64
+}
+
 // collapse reduces a stretch of the ledger to what has to be carried.
 //
 // One record can move several times inside one stretch, and the phone needs where it ended up,
 // not how it got there — so the last word about a record is the only one kept. A record deleted
 // after being written is a delete; one written after being deleted is a write.
 //
-// What comes back is the ids to read back per dataset, and the keys to drop, both in a settled
-// order so one stretch always produces one body.
-func collapse(changes []change) (read map[string][]int64, dropped []string) {
-	last := make(map[string]string)
+// What comes back is the ids to read back and the ids to drop, both gathered by dataset and both
+// in a settled order so one stretch always produces one body. **The drops are ids and not keys**:
+// what a record is filed under is not known here, only what the ledger called it.
+func collapse(changes []change) (read, dropped map[string][]int64) {
+	last := make(map[moving]string)
 	for _, moved := range changes {
-		last[recordKey(moved.Dataset, moved.RecordID)] = moved.Op
+		last[moving{moved.Dataset, moved.RecordID}] = moved.Op
 	}
 
-	read = make(map[string][]int64)
+	read, dropped = make(map[string][]int64), make(map[string][]int64)
 	for _, moved := range changes {
 		if neverCarried[moved.Dataset] {
 			continue
 		}
-		key := recordKey(moved.Dataset, moved.RecordID)
-		op, unsettled := last[key]
+		which := moving{moved.Dataset, moved.RecordID}
+		op, unsettled := last[which]
 		if !unsettled {
 			continue
 		}
-		delete(last, key)
+		delete(last, which)
 		if op == opDelete {
-			dropped = append(dropped, key)
+			dropped[moved.Dataset] = append(dropped[moved.Dataset], moved.RecordID)
 			continue
 		}
 		read[moved.Dataset] = append(read[moved.Dataset], moved.RecordID)
 	}
-	for dataset := range read {
-		sort.Slice(read[dataset], func(a, b int) bool { return read[dataset][a] < read[dataset][b] })
+	for _, gathered := range []map[string][]int64{read, dropped} {
+		for dataset := range gathered {
+			ids := gathered[dataset]
+			sort.Slice(ids, func(a, b int) bool { return ids[a] < ids[b] })
+		}
 	}
-	sort.Strings(dropped)
 	return read, dropped
 }
 
-// readBack is how the rows behind a stretch of the ledger are fetched. It is a parameter so the
-// walk over a stretch can be exercised without a store standing behind it — what it stands for
-// in a running plugin is always rowsIn.
-type readBack func(dataset string, ids []int64) ([]json.RawMessage, error)
+// readBack is how the rows behind a stretch of the ledger are fetched, and what the answer files
+// them under. It is a parameter so the walk over a stretch can be exercised without a store
+// standing behind it — what it stands for in a running plugin is always rowsIn.
+type readBack func(dataset string, ids []int64) (string, []json.RawMessage, error)
+
+// leftBehind says whether a read was turned down because that dataset does not travel, saying so
+// on the way past.
+//
+// The ledger names every dataset Amenbo holds and the read-back road carries fewer, so a stretch
+// touching one of the others would otherwise stop every send after it — the phone would fall
+// behind for good over a row it was never going to receive.
+func leftBehind(dataset string, err error) bool {
+	var turnedDown refused
+	if errors.As(err, &turnedDown) && turnedDown.code == codeNotCarried {
+		logf("%s: %s does not travel, so it is being left behind — %s", pluginName, dataset, turnedDown.message)
+		return true
+	}
+	return false
+}
 
 // changedRecords reads back what moved, alongside the deletes that need no read.
+//
+// **A record is filed under the name the read-back road answered with, not the one the ledger
+// asked by**. The two part company at least once — the ledger says `dependency` and the answer
+// comes back as `task_dependency` — and filing under the question's name put the same record in
+// the store under two keys, so the phone kept a copy no later write could reach.
+//
+// A delete carries no row, so there is nothing to read back for it — but what it is filed under
+// is still the road's to say. A dataset holding nothing but deletes therefore costs one call,
+// whose answer names the table and carries no rows.
 //
 // An id that comes back absent is one that went away between the ledger naming it and this read
 // — it is left out rather than guessed at, because the change that says so is still ahead of the
 // cursor and will carry the delete on the next turn.
-//
-// **A dataset the road cannot answer for is left behind, not fatal.** The ledger names every
-// dataset Amenbo holds and the read-back road carries fewer, so a stretch touching one of the
-// others would otherwise stop every send after it — the phone would fall behind for good over a
-// row it was never going to receive.
 func changedRecords(changes []change, rows readBack) ([]outgoing, error) {
 	read, dropped := collapse(changes)
 
-	datasets := make([]string, 0, len(read))
+	datasets := make([]string, 0, len(read)+len(dropped))
 	for dataset := range read {
 		datasets = append(datasets, dataset)
 	}
+	for dataset := range dropped {
+		if _, alreadyNamed := read[dataset]; !alreadyNamed {
+			datasets = append(datasets, dataset)
+		}
+	}
 	sort.Strings(datasets)
 
-	var placed []outgoing
+	var placed, drops []outgoing
 	for _, dataset := range datasets {
+		var table string
+		var stayed bool
 		ids := read[dataset]
 		for start := 0; start < len(ids); start += idsPerRead {
 			end := min(start+idsPerRead, len(ids))
-			read, err := rows(dataset, ids[start:end])
-			var turnedDown refused
-			if errors.As(err, &turnedDown) && turnedDown.code == codeNotCarried {
-				logf("%s: %s does not travel, so it is being left behind — %s", pluginName, dataset, turnedDown.message)
+			answered, back, err := rows(dataset, ids[start:end])
+			if leftBehind(dataset, err) {
+				stayed = true
 				break
 			}
 			if err != nil {
 				return nil, err
 			}
-			carried, err := carryRows(dataset, read)
+			table = answered
+			carried, err := carryRows(table, back)
 			if err != nil {
 				return nil, err
 			}
 			placed = append(placed, carried...)
 		}
+
+		gone := dropped[dataset]
+		if stayed || len(gone) == 0 {
+			continue
+		}
+		if table == "" {
+			answered, _, err := rows(dataset, gone[:min(len(gone), idsPerRead)])
+			if leftBehind(dataset, err) {
+				continue
+			}
+			if err != nil {
+				return nil, err
+			}
+			table = answered
+		}
+		for _, id := range gone {
+			drops = append(drops, outgoing{Key: recordKey(table, id), Op: opDeleted})
+		}
 	}
-	for _, key := range dropped {
-		placed = append(placed, outgoing{Key: key, Op: opDeleted})
-	}
-	return placed, nil
+	sort.Slice(drops, func(a, b int) bool { return drops[a].Key < drops[b].Key })
+	return append(placed, drops...), nil
 }
 
 // route is a place the records are put. There are two, and they are not modes to choose between:
@@ -264,10 +318,11 @@ type route interface {
 	// holdsNothing says the place has never been written into, so it needs the whole window
 	// rather than what moved since the last send.
 	holdsNothing() bool
-	// place puts what moved.
-	place(placement) error
+	// place puts what moved, told where this route's ordering was last seen, and answers where it
+	// stands now — which is how the next turn finds out whether this one was written.
+	place(body placement, from int64) (int64, error)
 	// replace makes the place hold exactly what it is given, and nothing that was there before.
-	replace(placement) error
+	replace(body placement, from int64) (int64, error)
 }
 
 // store is the place the records are put: the user's own Worker, the token that opens its writing
@@ -290,10 +345,14 @@ func (s store) String() string { return "the Cloudflare Worker" }
 func (s store) holdsNothing() bool { return false }
 
 // place puts what moved into the store.
-func (s store) place(body placement) error { return s.putInParts("/records", body) }
+func (s store) place(body placement, from int64) (int64, error) {
+	return s.putInParts("/records", body, from)
+}
 
 // replace empties the store and places everything.
-func (s store) replace(body placement) error { return s.putInParts("/reset", body) }
+func (s store) replace(body placement, from int64) (int64, error) {
+	return s.putInParts("/reset", body, from)
+}
 
 // putInParts sends one turn, in as many requests as it takes.
 //
@@ -308,20 +367,69 @@ func (s store) replace(body placement) error { return s.putInParts("/reset", bod
 // **A part that fails stops the rest.** What has landed stays landed, which is why nothing is
 // remembered until the whole turn is through — the next turn sends the same records again, and a
 // replacement re-empties before it does.
-func (s store) putInParts(path string, body placement) error {
+//
+// **Every part is read back as well as sent.** The store answers each one with where its ordering
+// stands, and a store that wrote what it was handed stands exactly the record count further on —
+// so a part that was taken in and dropped is a part whose answer did not move. Saying "sent" of
+// one of those is the quiet way a backlog loses a record for good, and it is how three months of
+// edits went missing: the send believed a `200`, forgot the records, and nothing was ever written.
+//
+// `from` is where this route's ordering was last seen, and `orderingUnknown` says it was not —
+// which leaves the first answer unchecked and every one after it checked against it.
+func (s store) putInParts(path string, body placement, from int64) (int64, error) {
 	sealed, err := s.sealed(body)
 	if err != nil {
-		return err
+		return from, err
 	}
 	parts := inParts(sealed.Records, recordsPerWrite)
+	standing := from
 	for at, records := range parts {
 		part := sealed
 		part.Part, part.Parts, part.Records = at+1, len(parts), records
-		if _, err := s.put(path, part); err != nil {
-			return err
+		answered, err := s.put(path, part)
+		if err != nil {
+			return standing, err
 		}
+		if expected := standing + int64(len(records)); standing != orderingUnknown && answered != expected {
+			return standing, fmt.Errorf("%s took part %d of %d and did not write it:"+
+				" %d records should have carried the ordering to %d, and the store answered %d"+
+				" — nothing this turn carried can be taken as placed",
+				path, at+1, len(parts), len(records), expected, answered)
+		}
+		standing = answered
 	}
-	return nil
+	return standing, nil
+}
+
+// theNumberToSend is the version one turn travels under: the backlog's own, except where that is
+// already the number the store was left standing at — in which case it is one past it.
+//
+// **A store drops a turn whose version it is already standing at, and answers as though it took
+// it** (`worker/src/index.ts`). The guard is there to recognise a turn that finished and arrived
+// twice, and it recognises it by that number alone — so two different turns carrying one number
+// are one turn to it. The backlog's version is too coarse a name for a turn: a `push` asked for by
+// hand, a whole placement sent again, and every send made while the backlog itself has not moved
+// all carry the number the store is already standing at.
+//
+// **Only a turn that landed is remembered**, so a turn sent again after a refusal carries the same
+// number as it did before and is still recognised as the repeat it is — which is the whole of what
+// the guard was for. And nothing else writes that number, so a number differing from the one this
+// machine left there is a number the store cannot be standing at.
+func theNumberToSend(version int64, left carried) int64 {
+	placed := left.Placed
+	if placed == 0 {
+		// **A memory written before this build kept no number of its own, and needs none**: what
+		// that build placed was the backlog's version, which is the field it did keep. Reading it
+		// here is what keeps the first turn after an upgrade from being the one that is dropped —
+		// and it costs no migration, so nothing is placed whole for it.
+		placed = left.Version
+	}
+	// Nothing placed from here is nothing the store can be standing at on our account, and a
+	// first turn carries the backlog's own version rather than one past it.
+	if placed != 0 && version == placed {
+		return version + 1
+	}
+	return version
 }
 
 // inParts cuts a turn's records into the pieces one request each may carry. An empty turn comes
@@ -515,6 +623,11 @@ func carry(in input, force bool) (int, error) {
 // a remembered version one turn stale, which costs a turn that finds nothing. Remembering a
 // version newer than the picture would instead skip whatever landed in that gap, and the phone
 // would never learn of it.
+//
+// **What travels is not always that version** — see `theNumberToSend` — and what is remembered is
+// both: the backlog's version, which says whether there is anything to do, and the number the
+// place was actually left standing at, which is what keeps the next turn from being read as this
+// one repeated.
 func carryTurn(routes []route, version int64, force bool, remembered state, from ledger) (int, state, error) {
 	settled := state{Routes: map[string]carried{}}
 	for name, left := range remembered.Routes {
@@ -539,15 +652,22 @@ func carryTurn(routes []route, version int64, force bool, remembered state, from
 		}
 		took := false
 		for _, where := range changed[cursor] {
+			left := remembered.Routes[where.name()]
+			landed := left
 			if len(records) > 0 {
-				if err := where.place(placement{SpecV: specVersion, Version: version, Records: records}); err != nil {
+				sending := theNumberToSend(version, left)
+				answered, err := where.place(placement{SpecV: specVersion, Version: sending, Records: records}, left.Seq)
+				if err != nil {
 					refusals = append(refusals, fmt.Errorf("nothing reached %s: %w", where, err))
 					continue
 				}
+				landed.Placed, landed.Seq = sending, answered
 			}
 			// A stretch that turns out to hold nothing to carry is still a turn: the cursor
-			// moves, so the next one does not read it again.
-			settled.Routes[where.name()] = carried{Version: version, Cursor: moved}
+			// moves, so the next one does not read it again. What the place was left standing at
+			// is carried over untouched — a turn that sent no request landed nothing.
+			landed.Version, landed.Cursor = version, moved
+			settled.Routes[where.name()] = landed
 			took = true
 		}
 		if took {
@@ -568,7 +688,12 @@ func carryTurn(routes []route, version int64, force bool, remembered state, from
 	}
 	took := false
 	for _, where := range whole {
-		if err := where.replace(placement{SpecV: specVersion, Version: version, Records: records}); err != nil {
+		// A route with nothing remembered comes in at nothing placed and no ordering known, which
+		// is what a first run is and what a whole placement is for.
+		left := remembered.Routes[where.name()]
+		sending := theNumberToSend(version, left)
+		answered, err := where.replace(placement{SpecV: specVersion, Version: sending, Records: records}, left.Seq)
+		if err != nil {
 			refusals = append(refusals, fmt.Errorf("nothing reached %s: %w", where, err))
 			// **A whole placement stops part way through the store, not before it.** That route
 			// is left holding a fraction of a backlog, and any place it had points well past the
@@ -577,7 +702,7 @@ func carryTurn(routes []route, version int64, force bool, remembered state, from
 			delete(settled.Routes, where.name())
 			continue
 		}
-		settled.Routes[where.name()] = carried{Version: version, Cursor: picture.Header.Cursor}
+		settled.Routes[where.name()] = carried{Version: version, Cursor: picture.Header.Cursor, Placed: sending, Seq: answered}
 		took = true
 	}
 	if took {
