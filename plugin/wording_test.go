@@ -42,6 +42,8 @@ func TestEveryLanguageAmenboOffersHasARow(t *testing.T) {
 var everyPhrase = []phrase{
 	phCloudflareWorker, phStandTheWorkerUp,
 	phTheSetupButton, phThePairButton, phTheSeePhonesButton, phTheUnpairButton,
+	phTheRepairButton,
+	phRepairWillSend, phRepairFoundNothing, phRepairIsOnItsWay,
 	phPhonesThatMayRead, phPairedOn, phNoPhoneIsPairedYet, phTheRestAreInTheLog,
 	phWhichPhoneToUnpair, phNoPhoneByThatName, phNothingWasReadingAsThat,
 	phPhoneReadsNothingFromNowOn,
@@ -233,6 +235,7 @@ func TestEveryButtonNameFitsOnAButton(t *testing.T) {
 	for language, said := range wordings {
 		for _, button := range []phrase{
 			phTheSetupButton, phThePairButton, phTheSeePhonesButton, phTheUnpairButton,
+			phTheRepairButton,
 		} {
 			name, written := said[button]
 			if !written {

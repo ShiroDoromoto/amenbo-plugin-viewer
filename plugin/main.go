@@ -198,6 +198,8 @@ func run(in input, args []string) int {
 		return do(setup(in, args[1:]))
 	case "push":
 		return do(push(in, args[1:]))
+	case "repair":
+		return do(repair(in, args[1:]))
 	case "check":
 		return do(check(in, args[1:]))
 	case "qr":
@@ -232,6 +234,7 @@ var settingsFace = map[string]bool{
 	"qr":     true,
 	"phones": true,
 	"revoke": true,
+	"repair": true,
 }
 
 // do ends the command face on the verdict the exit code carries.
@@ -311,6 +314,10 @@ Usage (through Amenbo, from the project the plugin is enabled for):
   amenbo plugin run %s phones    the phones that may read, and when each was paired
   amenbo plugin run %s revoke <name>
                                     cut one of them off. The others carry on reading
+  amenbo plugin run %s repair    compare what the phone's server holds with what is here,
+                                      and say how much has drifted apart
+                                      --send          carry that difference, rather than only
+                                                      counting it
 
 Setting the Cloudflare route up asks you to press and to paste, and nothing else. 'token' opens a
 Cloudflare token screen with the permissions already ticked, and 'setup' takes back the token that
@@ -326,6 +333,11 @@ With no arguments the plugin is an observation hook: Amenbo fires it when the pr
 which is what tells it the phone is now behind. It carries what moved on its own, so 'push' is
 for what was left behind — a send that failed while the network was down, or a phone that has
 fallen behind for a reason nobody can see.
+
+'repair' answers the question no send can: whether the two ends ever were level. It reads back
+the keys the server holds, compares them with what is here, and carries the difference — nothing
+is emptied, and a phone reading while it runs only sees records arrive. It counts first and sends
+on the second press, because a backlog that has drifted whole is a day's writes on a free plan.
 
 Settings — **one of them is yours, and three are not.**
 
@@ -347,5 +359,6 @@ read by the camera and never goes over the network, which is what keeps the key 
 `,
 		pluginName, addressesListed(), theRouteFromHere(),
 		pluginName, pluginName, pluginName, pluginName, pluginName, pluginName, pluginName, pluginName,
+		pluginName,
 		configRoutes, configWorkerURL, configAuthToken, configEncryptionKey)
 }

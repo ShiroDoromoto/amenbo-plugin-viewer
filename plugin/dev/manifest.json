@@ -122,6 +122,10 @@
             "label": "The name of the phone to unpair"
           }
         ]
+      },
+      {
+        "cmd": "repair",
+        "label": "7. Fix the phone's copy"
       }
     ]
   },
@@ -169,6 +173,10 @@
       {
         "cmd": "qr",
         "does": "Pairs one phone: issues a read token, registers its hash, puts endpoint/token/key/name on a QR the camera reads, off the network. --label or the settings screen box names it; --terminal draws it here"
+      },
+      {
+        "cmd": "repair",
+        "does": "Compares what the phone's server holds with what this PC holds and carries the difference, without emptying anything. Counts on the first run and sends on the second — or on the first with --send"
       },
       {
         "cmd": "check",

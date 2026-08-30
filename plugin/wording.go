@@ -13,8 +13,8 @@ import "fmt"
 //
 // # Which sentences are here, and which are not
 //
-// Here: what `check` answers, and what the six buttons — `app`, `token`, `setup`, `qr`, `phones`,
-// `revoke` — write for a person to read. Those seven are the settings face: the screen draws the
+// Here: what `check` answers, and what the seven buttons — `app`, `token`, `setup`, `qr`,
+// `phones`, `revoke`, `repair` — write for a person to read. Those eight are the settings face: the screen draws the
 // check's line at the head of the form and the first line an operation wrote underneath it, and
 // for a user with no terminal they are the only way any of this is reached.
 //
@@ -90,6 +90,7 @@ const (
 	phThePairButton      phrase = "the_pair_button"
 	phTheSeePhonesButton phrase = "the_see_phones_button"
 	phTheUnpairButton    phrase = "the_unpair_button"
+	phTheRepairButton    phrase = "the_repair_button"
 
 	// `setup` — standing the Worker and its database up.
 	phBuildingInAccount       phrase = "building_in_account"
@@ -122,6 +123,13 @@ const (
 	phNoEncryptionKey       phrase = "no_encryption_key"
 	phNoCloudflareRouteYet  phrase = "no_cloudflare_route_yet"
 	phThePhoneWasNotNamed   phrase = "the_phone_was_not_named"
+
+	// `repair` — comparing what the server holds with what is here, and carrying the difference.
+	// The count is said first and the sending happens on the second press, so the two answers are
+	// two sentences rather than one with a number that means different things.
+	phRepairWillSend     phrase = "repair_will_send"
+	phRepairFoundNothing phrase = "repair_found_nothing"
+	phRepairIsOnItsWay   phrase = "repair_is_on_its_way"
 )
 
 // wording is one language's side of every sentence, keyed by the name the code says.
