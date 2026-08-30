@@ -106,6 +106,26 @@ type carried struct {
 	// row which cannot be read back must have been deleted. What it costs is the room, and the
 	// rows lying here in the open until they are sealed on their way out.
 	Pending []outgoing `json:"pending,omitempty"`
+	// QuietUntil is the moment this route asked not to be sent to before, as the store named it
+	// in a `Retry-After`.
+	//
+	// **It is remembered because the process is not.** Amenbo starts this plugin once per write
+	// and the process ends with the hook, so a wait held in memory is a wait that lasts until the
+	// run ends — which is to say, no wait at all. A store that asked to be left for a minute
+	// would be asked again by the next write, and the one after that.
+	QuietUntil string `json:"quiet_until,omitempty"`
+	// Spent is how many rows the store's database actually wrote for this route on SpentOn, as
+	// the store reported them, and SpentOn is the UTC day that count belongs to.
+	//
+	// **They are measured rather than worked out.** What an upsert costs turns on whether the key
+	// was already there, so counting from this side would mean keeping a model of the database
+	// here, to go stale the day the database changes. The store hands the number over with every
+	// write, so it is taken.
+	//
+	// A count carrying another day's date is not today's, which is the whole of the rollover —
+	// there is nothing to reset and nothing to run at midnight.
+	Spent   int64  `json:"spent,omitempty"`
+	SpentOn string `json:"spent_on,omitempty"`
 }
 
 // orderingUnknown is a place whose ordering this machine has not been told — a first run, a route

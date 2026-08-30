@@ -265,11 +265,36 @@ func push(in input, _ []string) error {
 		return err
 	}
 	if placed == 0 {
+		// **A queue that could not go is not a phone that is level.** A route waiting out a
+		// `Retry-After`, or one whose day of rows is spent, places nothing and fails at nothing —
+		// and saying "level" of that sends whoever asked looking at the phone instead of at the
+		// line above, which says what it is waiting for.
+		if waiting := whatIsStillQueued(); waiting > 0 {
+			logf("%s: %d record(s) are still queued and did not go this time — the line above says what for",
+				pluginName, waiting)
+			return nil
+		}
 		logf("%s: nothing had moved — the phone is level with the store", pluginName)
 		return nil
 	}
 	logf("%s: placed %d record(s)", pluginName, placed)
 	return nil
+}
+
+// whatIsStillQueued is how many records are waiting on the routes, over all of them.
+//
+// A memory that cannot be read answers nothing, which reads as an empty queue — the honest answer
+// when there is nothing to count from, and one that only ever costs a sentence.
+func whatIsStillQueued() int {
+	remembered, _, err := readState()
+	if err != nil {
+		return 0
+	}
+	waiting := 0
+	for _, left := range remembered.Routes {
+		waiting += len(left.Pending)
+	}
+	return waiting
 }
 
 // theRouteFromHere is the paragraph of the usage that names where the records go.

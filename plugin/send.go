@@ -324,13 +324,29 @@ type route interface {
 	// holdsNothing says the place has never been written into, so it needs the whole window
 	// rather than what moved since the last send.
 	holdsNothing() bool
-	// place puts one request's worth of a queue, and answers where this route's ordering stands
-	// afterwards — which is how the turn finds out whether what it sent was written.
+	// place puts one request's worth of a queue, and answers what the place did with it — where
+	// its ordering stands afterwards, which is how the turn finds out whether what it sent was
+	// written, and what the write cost, which is what the budget is kept in.
 	//
 	// **One request, not one turn.** Cutting a queue into requests is the send's business, since
 	// the send is what drops what landed and keeps what did not; a route that swallowed a whole
 	// turn could only say "some of it" when a part of it failed.
-	place(body placement) (int64, error)
+	place(body placement) (written, error)
+}
+
+// written is what one request answered: where the place's ordering stands afterwards, and how
+// many rows its database actually wrote.
+//
+// **The second is measured and not worked out.** An upsert onto a key already there costs a
+// different number of rows from one onto a key that is not, so a sender counting for itself would
+// hold a model of the database, to go stale the day the database changes. The store hands the
+// number over, so it is taken (see `pace.go`).
+//
+// A store older than that field answers nothing for it, which reads as zero — a budget that never
+// fills, which is exactly the behaviour before there was one.
+type written struct {
+	seq  int64
+	rows int64
 }
 
 // store is the place the records are put: the user's own Worker, the token that opens its writing
@@ -365,10 +381,10 @@ func (s store) holdsNothing() bool { return false }
 // the quiet way a backlog loses a record for good, and it is how three months of edits went
 // missing: the send believed a `200`, dropped the records, and nothing was ever written. Checking
 // that answer is the caller's, since the caller is what holds the records until it is satisfied.
-func (s store) place(body placement) (int64, error) {
+func (s store) place(body placement) (written, error) {
 	sealed, err := s.sealed(body)
 	if err != nil {
-		return 0, err
+		return written{}, err
 	}
 	return s.put("/records", sealed)
 }
@@ -461,28 +477,29 @@ func storeFor(in input) (store, error) {
 //
 // A refusal is read where every door's is (see `askTheStore`), so what reaches the user's log
 // says what happened and what to do about it, whichever door turned them down.
-func (s store) put(path string, body placement) (int64, error) {
+func (s store) put(path string, body placement) (written, error) {
 	raw, err := json.Marshal(body)
 	if err != nil {
-		return 0, err
+		return written{}, err
 	}
 	request, err := http.NewRequest(http.MethodPut, s.url+path, bytes.NewReader(raw))
 	if err != nil {
-		return 0, err
+		return written{}, err
 	}
 	request.Header.Set("Content-Type", "application/json")
 
 	answered, err := s.askTheStore(request)
 	if err != nil {
-		return 0, err
+		return written{}, err
 	}
 	var said struct {
-		Seq int64 `json:"seq"`
+		Seq         int64 `json:"seq"`
+		RowsWritten int64 `json:"rows_written"`
 	}
 	if err := json.Unmarshal(answered, &said); err != nil {
-		return 0, fmt.Errorf("%s answered with something this build cannot read: %w", path, err)
+		return written{}, fmt.Errorf("%s answered with something this build cannot read: %w", path, err)
 	}
-	return said.Seq, nil
+	return written{seq: said.Seq, rows: said.RowsWritten}, nil
 }
 
 // ledger is what a turn reads the store through. It is a set of functions rather than direct
@@ -652,7 +669,7 @@ func carryTurn(routes []route, version int64, force bool, remembered state, from
 		// just written down: copying a stretch out moves the version field, and the number turns
 		// on where the place was left standing before any of that.
 		sending := theNumberToSend(version, remembered.Routes[where.name()])
-		left, landed, err := drainTo(where, settled.Routes[where.name()], sending)
+		left, landed, err := drainTo(where, settled.Routes[where.name()], sending, rightNow())
 		settled.Routes[where.name()] = left
 		placed += landed
 		if err != nil {
@@ -694,13 +711,38 @@ func queued(left carried, records []outgoing, version, cursor int64) carried {
 // `sending` is that number, worked out before anything was read out — see `theNumberToSend`, and
 // the reason it is not worked out here: what it turns on is where the place was left standing,
 // and copying a stretch out moves the fields it would read that from.
-func drainTo(where route, left carried, sending int64) (carried, int, error) {
+func drainTo(where route, left carried, sending int64, now time.Time) (carried, int, error) {
 	if len(left.Pending) == 0 {
 		return left, 0, nil
 	}
+	// **Being asked to wait is not a failure, and neither is being out of budget.** Both leave the
+	// queue where it is and cost nothing, and both are answered by doing nothing until the moment
+	// comes — so neither is reported as a refusal, which would put a red line in the log on every
+	// write for as long as it lasted.
+	if wait, quietly := quiet(left, now); quietly {
+		logf("%s: %s asked to be left for a while — %d record(s) wait another %s",
+			pluginName, where, len(left.Pending), theWaitInWords(wait))
+		return left, 0, nil
+	}
+	if outOfBudget(left, now) {
+		logf("%s: today's %d rows for %s are spent — %d record(s) go on after midnight UTC",
+			pluginName, rowsWeMaySpendADay, where, len(left.Pending))
+		return left, 0, nil
+	}
+
 	parts := inParts(left.Pending, recordsPerWrite)
-	landed := 0
+	landed, emptied := 0, true
 	for at, records := range parts {
+		// The budget is read between requests rather than inside one: what a write costs is the
+		// store's answer, so the count only moves once the write has happened. What that buys is
+		// an overshoot of at most one request, against a ceiling that already holds a tenth of
+		// the day back.
+		if outOfBudget(left, now) {
+			logf("%s: today's %d rows for %s are spent — %d record(s) go on after midnight UTC",
+				pluginName, rowsWeMaySpendADay, where, len(left.Pending))
+			emptied = false
+			break
+		}
 		answered, err := where.place(placement{
 			SpecV:   specVersion,
 			Version: sending,
@@ -709,19 +751,32 @@ func drainTo(where route, left carried, sending int64) (carried, int, error) {
 			Records: records,
 		})
 		if err != nil {
+			// A refusal that names a moment to come back at is honoured, and remembered: the
+			// process ends with this run, so a wait held anywhere else lasts no time at all.
+			var turnedDown storeRefused
+			if errors.As(err, &turnedDown) {
+				if wait, asked := theWaitAsked(turnedDown.waitFor, now); asked {
+					left = beQuietFor(left, wait, now)
+				}
+			}
 			return left, landed, err
 		}
-		if expected := left.Seq + int64(len(records)); left.Seq != orderingUnknown && answered != expected {
+		left = spend(left, answered.rows, now)
+		if expected := left.Seq + int64(len(records)); left.Seq != orderingUnknown && answered.seq != expected {
 			return left, landed, fmt.Errorf("the store took part %d of %d and did not write it:"+
 				" %d records should have carried the ordering to %d, and the store answered %d"+
 				" — what it did not write is still queued",
-				at+1, len(parts), len(records), expected, answered)
+				at+1, len(parts), len(records), expected, answered.seq)
 		}
-		left.Seq = answered
+		left.Seq = answered.seq
 		left.Pending = left.Pending[len(records):]
 		landed += len(records)
+		// A place that took something is a place that is not asking to be left alone any more.
+		left.QuietUntil = ""
 	}
-	left.Placed = sending
+	if emptied {
+		left.Placed = sending
+	}
 	return left, landed, nil
 }
 
