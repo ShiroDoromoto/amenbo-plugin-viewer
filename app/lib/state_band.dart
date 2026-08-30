@@ -1,4 +1,4 @@
-/// One line at the top, for the nine ways things can stand.
+/// One line at the top, for the ten ways things can stand.
 ///
 /// The promise the whole app is built on is that **it never breaks quietly**. Every state below is
 /// one the person can end up in without doing anything wrong — a train tunnel, a phone that was
@@ -46,6 +46,10 @@ enum Standing {
   /// the length of it.
   placing,
 
+  /// The place cannot answer right now. Its database has run into a limit of its own, and time
+  /// passing is what ends it — nothing here, and nothing on the PC.
+  busy,
+
   /// The last round could not reach the place.
   offline,
 
@@ -64,8 +68,10 @@ enum Standing {
 /// everything, a key that does not open and records sealed under another one both stop the
 /// records, a refusal stops the fetch, having no pairing stops every round there is, and being
 /// unreachable stops nothing that is already here.
-/// A placement stops nothing either — it is the one cause that ends by itself, and it is here rather than
-/// silent because a pull that brought nothing owes the person a reason.
+/// A placement stops nothing either, and neither does a place that cannot answer right now — those
+/// two are the causes that end by themselves, and they are here rather than silent because a pull
+/// that brought nothing owes the person a reason. They are told apart because their reasons are
+/// different ends: one is the PC mid-send, the other is the place's own database at a limit.
 Standing standingOf({
   required bool anythingHere,
   IntakeFailure? failure,
@@ -82,6 +88,8 @@ Standing standingOf({
       return Standing.refused;
     case IntakeFailure.placing:
       return Standing.placing;
+    case IntakeFailure.busy:
+      return Standing.busy;
     case IntakeFailure.unreachable:
       return Standing.offline;
     // The intake empties the local copy and takes the place from the beginning by itself, so by
@@ -107,6 +115,7 @@ String standingWords(Words words, Standing standing) => switch (standing) {
   Standing.refused => words.standingRefused,
   Standing.unpaired => words.standingUnpaired,
   Standing.placing => words.standingPlacing,
+  Standing.busy => words.standingBusy,
   Standing.offline => words.standingOffline,
   Standing.waiting => words.standingWaiting,
 };
@@ -122,13 +131,14 @@ String standingDetail(Words words, Standing standing) => switch (standing) {
   Standing.refused => words.standingDetailRefused,
   Standing.unpaired => words.standingDetailUnpaired,
   Standing.placing => words.standingDetailPlacing,
+  Standing.busy => words.standingDetailBusy,
   Standing.waiting => words.standingDetailWaiting,
   _ => '',
 };
 
 /// The three the person can do something about, and the only three drawn to be noticed.
 ///
-/// Eight lines all wearing the same quiet strip is eight lines nobody reads, and the one that
+/// Nine lines all wearing the same quiet strip is nine lines nobody reads, and the one that
 /// matters — a device whose key does not open what arrives — then goes on receiving nothing for as
 /// long as it is ignored. So these are lifted: a colour of their own, a mark, and their way out as
 /// a button that looks like one.
