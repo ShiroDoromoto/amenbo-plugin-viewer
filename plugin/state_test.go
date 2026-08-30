@@ -43,7 +43,7 @@ func TestEachRouteIsReadBackWhereItWasLeft(t *testing.T) {
 
 	if err := writeState(state{Routes: map[string]carried{
 		"icloud":     {Version: 12345, Cursor: 42},
-		"cloudflare": {Version: 900, Cursor: 7},
+		"cloudflare": {Version: 900, Cursor: 7, Placed: 901, Seq: 5006},
 	}}); err != nil {
 		t.Fatal(err)
 	}
@@ -60,6 +60,12 @@ func TestEachRouteIsReadBackWhereItWasLeft(t *testing.T) {
 	}
 	if left := remembered.Routes["cloudflare"]; left.Version != 900 || left.Cursor != 7 {
 		t.Errorf("cloudflare = %+v", left)
+	}
+	// What the place itself was left standing at is remembered beside where the ledger was read
+	// to: without it the next turn cannot tell one turn from the same turn sent twice, nor tell a
+	// store that wrote from one that answered and did not.
+	if left := remembered.Routes["cloudflare"]; left.Placed != 901 || left.Seq != 5006 {
+		t.Errorf("cloudflare was read back at %+v, want the number it placed and the ordering it was left at", left)
 	}
 }
 

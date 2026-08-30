@@ -317,10 +317,11 @@ type route interface {
 	// holdsNothing says the place has never been written into, so it needs the whole window
 	// rather than what moved since the last send.
 	holdsNothing() bool
-	// place puts what moved.
-	place(placement) error
+	// place puts what moved, told where this route's ordering was last seen, and answers where it
+	// stands now — which is how the next turn finds out whether this one was written.
+	place(body placement, from int64) (int64, error)
 	// replace makes the place hold exactly what it is given, and nothing that was there before.
-	replace(placement) error
+	replace(body placement, from int64) (int64, error)
 }
 
 // store is the place the records are put: the user's own Worker, the token that opens its writing
@@ -343,10 +344,14 @@ func (s store) String() string { return "the Cloudflare Worker" }
 func (s store) holdsNothing() bool { return false }
 
 // place puts what moved into the store.
-func (s store) place(body placement) error { return s.putInParts("/records", body) }
+func (s store) place(body placement, from int64) (int64, error) {
+	return s.putInParts("/records", body, from)
+}
 
 // replace empties the store and places everything.
-func (s store) replace(body placement) error { return s.putInParts("/reset", body) }
+func (s store) replace(body placement, from int64) (int64, error) {
+	return s.putInParts("/reset", body, from)
+}
 
 // putInParts sends one turn, in as many requests as it takes.
 //
@@ -361,20 +366,69 @@ func (s store) replace(body placement) error { return s.putInParts("/reset", bod
 // **A part that fails stops the rest.** What has landed stays landed, which is why nothing is
 // remembered until the whole turn is through — the next turn sends the same records again, and a
 // replacement re-empties before it does.
-func (s store) putInParts(path string, body placement) error {
+//
+// **Every part is read back as well as sent.** The store answers each one with where its ordering
+// stands, and a store that wrote what it was handed stands exactly the record count further on —
+// so a part that was taken in and dropped is a part whose answer did not move. Saying "sent" of
+// one of those is the quiet way a backlog loses a record for good, and it is how three months of
+// edits went missing: the send believed a `200`, forgot the records, and nothing was ever written.
+//
+// `from` is where this route's ordering was last seen, and `orderingUnknown` says it was not —
+// which leaves the first answer unchecked and every one after it checked against it.
+func (s store) putInParts(path string, body placement, from int64) (int64, error) {
 	sealed, err := s.sealed(body)
 	if err != nil {
-		return err
+		return from, err
 	}
 	parts := inParts(sealed.Records, recordsPerWrite)
+	standing := from
 	for at, records := range parts {
 		part := sealed
 		part.Part, part.Parts, part.Records = at+1, len(parts), records
-		if _, err := s.put(path, part); err != nil {
-			return err
+		answered, err := s.put(path, part)
+		if err != nil {
+			return standing, err
 		}
+		if expected := standing + int64(len(records)); standing != orderingUnknown && answered != expected {
+			return standing, fmt.Errorf("%s took part %d of %d and did not write it:"+
+				" %d records should have carried the ordering to %d, and the store answered %d"+
+				" — nothing this turn carried can be taken as placed",
+				path, at+1, len(parts), len(records), expected, answered)
+		}
+		standing = answered
 	}
-	return nil
+	return standing, nil
+}
+
+// theNumberToSend is the version one turn travels under: the backlog's own, except where that is
+// already the number the store was left standing at — in which case it is one past it.
+//
+// **A store drops a turn whose version it is already standing at, and answers as though it took
+// it** (`worker/src/index.ts`). The guard is there to recognise a turn that finished and arrived
+// twice, and it recognises it by that number alone — so two different turns carrying one number
+// are one turn to it. The backlog's version is too coarse a name for a turn: a `push` asked for by
+// hand, a whole placement sent again, and every send made while the backlog itself has not moved
+// all carry the number the store is already standing at.
+//
+// **Only a turn that landed is remembered**, so a turn sent again after a refusal carries the same
+// number as it did before and is still recognised as the repeat it is — which is the whole of what
+// the guard was for. And nothing else writes that number, so a number differing from the one this
+// machine left there is a number the store cannot be standing at.
+func theNumberToSend(version int64, left carried) int64 {
+	placed := left.Placed
+	if placed == 0 {
+		// **A memory written before this build kept no number of its own, and needs none**: what
+		// that build placed was the backlog's version, which is the field it did keep. Reading it
+		// here is what keeps the first turn after an upgrade from being the one that is dropped —
+		// and it costs no migration, so nothing is placed whole for it.
+		placed = left.Version
+	}
+	// Nothing placed from here is nothing the store can be standing at on our account, and a
+	// first turn carries the backlog's own version rather than one past it.
+	if placed != 0 && version == placed {
+		return version + 1
+	}
+	return version
 }
 
 // inParts cuts a turn's records into the pieces one request each may carry. An empty turn comes
@@ -514,6 +568,11 @@ func carry(in input, force bool) (int, error) {
 // a remembered version one turn stale, which costs a turn that finds nothing. Remembering a
 // version newer than the picture would instead skip whatever landed in that gap, and the phone
 // would never learn of it.
+//
+// **What travels is not always that version** — see `theNumberToSend` — and what is remembered is
+// both: the backlog's version, which says whether there is anything to do, and the number the
+// place was actually left standing at, which is what keeps the next turn from being read as this
+// one repeated.
 func carryTurn(routes []route, version int64, force bool, remembered state, from ledger) (int, state, error) {
 	settled := state{Routes: map[string]carried{}}
 	for name, left := range remembered.Routes {
@@ -538,15 +597,22 @@ func carryTurn(routes []route, version int64, force bool, remembered state, from
 		}
 		took := false
 		for _, where := range changed[cursor] {
+			left := remembered.Routes[where.name()]
+			landed := left
 			if len(records) > 0 {
-				if err := where.place(placement{SpecV: specVersion, Version: version, Records: records}); err != nil {
+				sending := theNumberToSend(version, left)
+				answered, err := where.place(placement{SpecV: specVersion, Version: sending, Records: records}, left.Seq)
+				if err != nil {
 					refusals = append(refusals, fmt.Errorf("nothing reached %s: %w", where, err))
 					continue
 				}
+				landed.Placed, landed.Seq = sending, answered
 			}
 			// A stretch that turns out to hold nothing to carry is still a turn: the cursor
-			// moves, so the next one does not read it again.
-			settled.Routes[where.name()] = carried{Version: version, Cursor: moved}
+			// moves, so the next one does not read it again. What the place was left standing at
+			// is carried over untouched — a turn that sent no request landed nothing.
+			landed.Version, landed.Cursor = version, moved
+			settled.Routes[where.name()] = landed
 			took = true
 		}
 		if took {
@@ -567,7 +633,12 @@ func carryTurn(routes []route, version int64, force bool, remembered state, from
 	}
 	took := false
 	for _, where := range whole {
-		if err := where.replace(placement{SpecV: specVersion, Version: version, Records: records}); err != nil {
+		// A route with nothing remembered comes in at nothing placed and no ordering known, which
+		// is what a first run is and what a whole placement is for.
+		left := remembered.Routes[where.name()]
+		sending := theNumberToSend(version, left)
+		answered, err := where.replace(placement{SpecV: specVersion, Version: sending, Records: records}, left.Seq)
+		if err != nil {
 			refusals = append(refusals, fmt.Errorf("nothing reached %s: %w", where, err))
 			// **A whole placement stops part way through the store, not before it.** That route
 			// is left holding a fraction of a backlog, and any place it had points well past the
@@ -576,7 +647,7 @@ func carryTurn(routes []route, version int64, force bool, remembered state, from
 			delete(settled.Routes, where.name())
 			continue
 		}
-		settled.Routes[where.name()] = carried{Version: version, Cursor: picture.Header.Cursor}
+		settled.Routes[where.name()] = carried{Version: version, Cursor: picture.Header.Cursor, Placed: sending, Seq: answered}
 		took = true
 	}
 	if took {

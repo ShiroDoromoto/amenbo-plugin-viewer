@@ -237,7 +237,10 @@ func emptyTheStore(endpoint, writeToken, key string) error {
 		return err
 	}
 	shop := store{url: endpoint, token: writeToken, seal: seal}
-	return shop.replace(placement{SpecV: specVersion, Version: version})
+	// The route has just been stood up, so nothing here has been told where its ordering stands —
+	// and what this places is nothing, which no store can drop anything of.
+	_, err = shop.replace(placement{SpecV: specVersion, Version: version}, orderingUnknown)
+	return err
 }
 
 // endpointOn is where the Worker answers once it has been turned on: its own name under the
