@@ -352,20 +352,12 @@ func (s store) String() string { return "the Cloudflare Worker" }
 // beside the records.
 func (s store) holdsNothing() bool { return false }
 
-// place puts one request's worth of a queue into the store.
-func (s store) place(body placement) (int64, error) { return s.sealAndPut("/records", body) }
-
-// replace empties the store and places what it is handed, which is what standing a route up with
-// a new key needs and what nothing else does.
+// place puts one request's worth of a queue into the store, sealed on its way out.
 //
-// **The send does not come through here.** Emptying a store to fill it again shuts the door a
-// phone reads through for as long as the filling takes, and the filling is the slow half; the
-// send places over what is there instead, and never closes anything. What is left of this is the
-// one case where the records genuinely have to go: a key that changed makes every row in there
-// unreadable by anyone, this machine included.
-func (s store) replace(body placement) (int64, error) { return s.sealAndPut("/reset", body) }
-
-// sealAndPut puts every row in one body into an envelope and sends it to one door.
+// **It is the only door records go through.** There was a second that emptied the store before
+// taking the whole of it, and both this plugin and the Worker have let it go: emptying shuts the
+// door a phone reads through for as long as the filling takes, and a filling nobody finished shut
+// it for good. Placing over what is here closes nothing.
 //
 // **The answer is read as well as sent.** The store answers with where its ordering stands, and a
 // store that wrote what it was handed stands exactly the record count further on — so a request
@@ -373,12 +365,12 @@ func (s store) replace(body placement) (int64, error) { return s.sealAndPut("/re
 // the quiet way a backlog loses a record for good, and it is how three months of edits went
 // missing: the send believed a `200`, dropped the records, and nothing was ever written. Checking
 // that answer is the caller's, since the caller is what holds the records until it is satisfied.
-func (s store) sealAndPut(path string, body placement) (int64, error) {
+func (s store) place(body placement) (int64, error) {
 	sealed, err := s.sealed(body)
 	if err != nil {
 		return 0, err
 	}
-	return s.put(path, sealed)
+	return s.put("/records", sealed)
 }
 
 // theNumberToSend is the version one turn travels under: the backlog's own, except where that is

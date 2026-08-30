@@ -40,7 +40,7 @@ function placement(version: number, records: unknown[]): string {
 
 /** One part of a turn the PC is sending in more than one request. */
 function sendingPart(
-	path: "/records" | "/reset",
+	path: "/records",
 	version: number,
 	part: number,
 	parts: number,
@@ -55,7 +55,7 @@ const SEALED_WITH_ANOTHER = "b".repeat(64);
 
 /** A body naming the key its records were sealed with. */
 function sendingSealedWith(
-	path: "/records" | "/reset",
+	path: "/records",
 	version: number,
 	fingerprint: unknown,
 	records: unknown[] = [],
@@ -72,7 +72,7 @@ function sealed(k: string): Record<string, string> {
 }
 
 /** Sends a body the way the PC does, to either of the two doors that take one. */
-function sending(path: "/records" | "/reset", version: number, records: unknown[]): Promise<Response> {
+function sending(path: "/records", version: number, records: unknown[]): Promise<Response> {
 	return signed(path, { method: "PUT", body: placement(version, records) });
 }
 
@@ -178,7 +178,6 @@ describe("the two kinds of token", () => {
 describe("the routes", () => {
 	it.each([
 		["PUT", "/records", WRITE_TOKEN],
-		["PUT", "/reset", WRITE_TOKEN],
 		["GET", "/records", "the-phone's-own-token"],
 		["GET", "/meta", "the-phone's-own-token"],
 	])("%s %s is dispatched", async (method, path, token) => {
@@ -193,6 +192,27 @@ describe("the routes", () => {
 		const response = await signed("/tasks");
 
 		expect(response.status).toBe(404);
+	});
+
+	// **410 and not 404.** A sender told there is no such endpoint reads a Worker it does not
+	// recognise and says to press setup — which on an old plugin deploys the Worker that has this
+	// door, round and round. Gone is a thing it can read.
+	it("says PUT /reset is gone, and where the records go instead", async () => {
+		const response = await sending("/reset" as "/records", 1, [sealed("task/1")]);
+
+		expect(response.status).toBe(410);
+		expect(await response.json()).toMatchObject({ error: expect.stringContaining("PUT /records") });
+	});
+
+	// It is not emptied and it is not half-emptied: a store asked to empty is left exactly as it
+	// was, which is what makes the refusal something a sender can act on.
+	it("leaves the store alone when one is asked for", async () => {
+		await sending("/records", 1, [sealed("task/1")]);
+
+		await sending("/reset" as "/records", 2, [sealed("task/2")]);
+
+		const { results } = await env.RECORDS.prepare("SELECT k FROM records").all();
+		expect(results).toEqual([{ k: "task/1" }]);
 	});
 
 	// A method the endpoint does not take is not a missing endpoint, and the difference is what
@@ -318,7 +338,27 @@ describe("placing what moved", () => {
 		const response = await sending("/records", 12345, [sealed("task/1"), sealed("task/2")]);
 
 		expect(response.status).toBe(200);
-		expect(await response.json()).toEqual({ seq: 2 });
+		expect(await response.json()).toMatchObject({ seq: 2 });
+	});
+
+	// **What the database actually did, rather than what the sender guessed it would do.** A
+	// sender keeping a budget against a daily row limit would otherwise carry a model of what an
+	// upsert costs onto a key that is here and onto one that is not — a model living in the wrong
+	// part, going stale the day D1 changes.
+	it("answers with the rows the database wrote", async () => {
+		const response = await sending("/records", 12345, [sealed("task/1"), sealed("task/2")]);
+
+		const { rows_written } = (await response.json()) as { rows_written: number };
+		expect(rows_written).toBeGreaterThanOrEqual(2);
+	});
+
+	// **The sender holds the write token and nothing else**, so which Worker it is talking to has
+	// to come back on a write. A sender that reads no number is talking to one deployed before
+	// there was a number, which is exactly what it needs to know.
+	it("names which build of this Worker it is", async () => {
+		const response = await sending("/records", 1, []);
+
+		expect(await response.json()).toMatchObject({ build: expect.any(Number) });
 	});
 
 	// A record that moves again is the same record, so it keeps its one row and takes a later
@@ -346,17 +386,20 @@ describe("placing what moved", () => {
 		expect(results).toEqual([{ op: "del", nonce: null, ciphertext: null }]);
 	});
 
-	// A sender that did not hear the answer sends again, and the same version means the same
-	// records. Placing them a second time would move every one of them to the front of the order,
-	// and every phone would fetch the whole store back for nothing.
-	it("lets a repeat of the version it already holds through untouched", async () => {
+	// **The failure this Worker exists to stop making.** It used to drop a turn whose version it
+	// already stood at and answer `200` to it, reasoning that the same number meant the same
+	// records. The backlog's version is too coarse a name for a turn — a send made while the
+	// backlog has not moved carries that number without being a repeat of anything — so those
+	// turns were thrown away and reported as landed. Three months of edits went missing behind
+	// that `200`, and the one command for sending them again died the same way.
+	it("writes what it is handed even under the version it already holds", async () => {
 		await sending("/records", 12345, [sealed("task/1")]);
 
 		const response = await sending("/records", 12345, [sealed("task/2")]);
 
-		expect(await response.json()).toEqual({ seq: 1 });
-		const { results } = await env.RECORDS.prepare("SELECT k FROM records").all();
-		expect(results).toEqual([{ k: "task/1" }]);
+		expect(await response.json()).toMatchObject({ seq: 2 });
+		const { results } = await env.RECORDS.prepare("SELECT k FROM records ORDER BY seq").all();
+		expect(results).toEqual([{ k: "task/1" }, { k: "task/2" }]);
 	});
 
 	// The version travels so a phone can tell what it is looking at, and it only means anything if
@@ -423,7 +466,7 @@ describe("reading what moved", () => {
 	// The phone remembers where the page got to and asks from there, so what it costs to be a week
 	// behind is a few more pages rather than the whole store in one answer.
 	it("splits a long stretch into pages, and says there is more", async () => {
-		await sending("/reset", 1, Array.from({ length: 250 }, (_at, n) => sealed(`task/${n}`)));
+		await sending("/records", 1, Array.from({ length: 250 }, (_at, n) => sealed(`task/${n}`)));
 
 		const first = (await reading("/records?since=0").then((it) => it.json())) as {
 			seq: number;
@@ -490,6 +533,73 @@ describe("reading what moved", () => {
 	});
 });
 
+// **What is here that the backlog no longer has cannot be worked out from this end.** This Worker
+// does not know what a key means, so the sender is the only one that can compare — and comparing
+// means reading every key. The whole answer is twenty-seven megabytes of envelopes for a question
+// that turns on the strings alone.
+describe("reading the keys alone", () => {
+	it("hands back the keys and their last word, and no envelopes", async () => {
+		await sending("/records", 1, [sealed("task/1")]);
+		await sending("/records", 2, [{ k: "task/2", op: "del" }]);
+
+		const answered = (await reading("/records?since=0&keys=1").then((it) => it.json())) as {
+			records: Record<string, string>[];
+		};
+
+		expect(answered.records).toEqual([
+			{ k: "task/1", op: "put" },
+			{ k: "task/2", op: "del" },
+		]);
+	});
+
+	// **A key whose last word was `del` is a headstone, not something the store holds.** A sender
+	// that could not tell the two apart would send a delete for every one of them, every time,
+	// and each of those writes a headstone of its own.
+	it("says which of them are headstones rather than leaving them out", async () => {
+		await sending("/records", 1, [sealed("task/1"), { k: "task/2", op: "del" }]);
+
+		const answered = (await reading("/records?since=0&keys=1").then((it) => it.json())) as {
+			records: { k: string }[];
+		};
+
+		expect(answered.records.map((one) => one.k)).toEqual(["task/1", "task/2"]);
+	});
+
+	// A page of keys is far larger than a page of records, because a key is a fraction of one:
+	// reading a whole store's keys two hundred at a time would be a hundred and twenty requests
+	// for something a dozen can carry.
+	it("carries far more of them in one page than a page of records holds", async () => {
+		const many = Array.from({ length: 250 }, (_at, n) => sealed(`task/${n}`));
+		await sendingPart("/records", 1, 1, 1, many.slice(0, 250));
+
+		const keys = (await reading("/records?since=0&keys=1").then((it) => it.json())) as { more: boolean };
+		const rows = (await reading("/records?since=0").then((it) => it.json())) as { more: boolean };
+
+		expect(keys.more).toBe(false);
+		expect(rows.more).toBe(true);
+	});
+
+	// It is the same read, so it is refused for the same reasons: a cursor the order never
+	// reached is not one this store counted.
+	it("is refused where the whole read is refused", async () => {
+		await sending("/records", 1, [sealed("task/1")]);
+
+		expect((await reading("/records?since=99&keys=1")).status).toBe(409);
+	});
+
+	// Anything but `keys=1` is the ordinary read, so a phone that has never heard of the
+	// parameter and one that passes something else are answered the same way.
+	it("is the ordinary read for anything but keys=1", async () => {
+		await sending("/records", 1, [sealed("task/1")]);
+
+		const answered = (await reading("/records?since=0&keys=yes").then((it) => it.json())) as {
+			records: unknown[];
+		};
+
+		expect(answered.records).toEqual([sealed("task/1")]);
+	});
+});
+
 describe("where the store stands", () => {
 	// The cheap question, asked before the expensive one: a phone that is level learns so for the
 	// price of one small answer, which is what lets it ask often.
@@ -547,12 +657,12 @@ describe("the key the records were sealed with", () => {
 		expect(answered).toMatchObject({ key_fingerprint: null });
 	});
 
-	// The one placement that matters most: a key drawn afresh comes with the whole store placed
+	// The one placement that matters most: a key drawn afresh comes with the whole store sent
 	// again, and the answer has to move with it.
-	it("moves when the whole store is placed again under another key", async () => {
+	it("moves when the whole store is sent again under another key", async () => {
 		await sendingSealedWith("/records", 1, SEALED_WITH, [sealed("task/1")]);
 
-		await sendingSealedWith("/reset", 2, SEALED_WITH_ANOTHER, [sealed("task/1")]);
+		await sendingSealedWith("/records", 2, SEALED_WITH_ANOTHER, [sealed("task/1")]);
 
 		const answered = await reading("/meta").then((it) => it.json());
 		expect(answered).toMatchObject({ key_fingerprint: SEALED_WITH_ANOTHER });
@@ -561,7 +671,7 @@ describe("the key the records were sealed with", () => {
 	// Settled by the last part alone, like the version — a turn cut short leaves the store naming
 	// the key it really holds rather than one that is only half placed.
 	it("is written down only once the last part has landed", async () => {
-		await signed("/reset", {
+		await signed("/records", {
 			method: "PUT",
 			body: JSON.stringify({
 				spec_v: 1,
@@ -576,7 +686,7 @@ describe("the key the records were sealed with", () => {
 		const midway = await env.RECORDS.prepare("SELECT key_fingerprint FROM store WHERE id = 1").first();
 		expect(midway).toEqual({ key_fingerprint: null });
 
-		await signed("/reset", {
+		await signed("/records", {
 			method: "PUT",
 			body: JSON.stringify({
 				spec_v: 1,
@@ -616,60 +726,35 @@ describe("the key the records were sealed with", () => {
 	});
 });
 
-describe("placing the whole store again", () => {
-	it("empties what was there and takes the whole of it", async () => {
-		await sending("/records", 1, [sealed("task/1"), sealed("task/2")]);
+// **Nothing writes `placed_from` any more, and it is still read.** The door that emptied and
+// filled a store is gone, but the stores it left behind are on people's accounts and the number
+// it wrote there is what still keeps a phone from reading half of one. Reading it costs a column
+// on a row already being read; dropping it would cost a phone its backlog, on a Worker that
+// cannot be corrected afterwards.
+describe("a store an older Worker emptied and filled again", () => {
+	/** Marks the store the way the door that emptied it used to, above the records placed since. */
+	async function emptiedAbove(seq: number): Promise<void> {
+		await env.RECORDS.prepare("UPDATE store SET placed_from = ? WHERE id = 1").bind(seq).run();
+	}
 
-		await sending("/reset", 2, [sealed("task/3")]);
-
-		const { results } = await env.RECORDS.prepare("SELECT k FROM records").all();
-		expect(results).toEqual([{ k: "task/3" }]);
-	});
-
-	// The rows that held the high point are gone, and if the numbering started again with them
-	// then every phone still holding a cursor from before would be handed the wrong half of the
-	// store, under numbers it had no reason to doubt.
-	it("carries the order on rather than starting it again", async () => {
-		await sending("/records", 1, [sealed("task/1"), sealed("task/2")]);
-
-		const response = await sending("/reset", 2, [sealed("task/3")]);
-
-		expect(await response.json()).toEqual({ seq: 3 });
-	});
-
-	// A phone that was level before a reset is behind after one, and what it is behind by is the
-	// whole store — which is exactly what it has to be handed.
-	// A phone that was level before the reset is not read on from: everything it holds was made
-	// again under other numbers, and a record deleted before the reset is in neither the placement
-	// nor a row saying it went. Sent back to the beginning, it gets the whole placement.
-	it("sends a phone that was level back to the beginning, and has it all waiting there", async () => {
+	// The failure the whole of this exists for. Without it the phone reads on from 1, is handed
+	// only what came after the emptying, and keeps a record the backlog no longer has for good.
+	it("sends a phone that was level back to the beginning", async () => {
 		await sending("/records", 1, [sealed("task/1")]);
-
-		await sending("/reset", 2, [sealed("task/1"), sealed("task/2")]);
+		await emptiedAbove(1);
+		await sending("/records", 2, [sealed("task/2")]);
 
 		expect((await reading("/records?since=1")).status).toBe(409);
 		const answered = (await reading("/records?since=0").then((it) => it.json())) as { records: unknown[] };
 		expect(answered.records).toEqual([sealed("task/1"), sealed("task/2")]);
 	});
 
-	// The failure the whole of this exists for. Without it the phone reads on from 1, is handed
-	// only the placement, and keeps `task/1` — which the backlog no longer has — for good.
-	it("does not let a phone keep a record that went while it was away", async () => {
-		await sending("/records", 1, [sealed("task/1")]);
-		// Deleted while the phone is away, then lost with every other row when the reset empties.
-		await sending("/records", 2, [{ k: "task/1", op: "del" }]);
-		await sending("/reset", 3, [sealed("task/2")]);
-
-		expect((await reading("/records?since=1")).status).toBe(409);
-		const answered = (await reading("/records?since=0").then((it) => it.json())) as { records: unknown[] };
-		expect(answered.records).toEqual([sealed("task/2")]);
-	});
-
 	// A phone reading inside the placement is not sent back: what it holds is the front of this
 	// placement rather than of the one before it, so it is behind and not wrong.
 	it("lets a phone that is partway through the placement read on", async () => {
 		await sending("/records", 1, [sealed("task/1")]);
-		await sending("/reset", 2, [sealed("task/2"), sealed("task/3")]);
+		await emptiedAbove(1);
+		await sending("/records", 2, [sealed("task/2"), sealed("task/3")]);
 
 		const answered = (await reading("/records?since=2").then((it) => it.json())) as { records: unknown[] };
 		expect(answered.records).toEqual([sealed("task/3")]);
@@ -677,21 +762,22 @@ describe("placing the whole store again", () => {
 
 	it("says where the placement began, so a phone can tell before it asks", async () => {
 		await sending("/records", 1, [sealed("task/1")]);
-
-		await sending("/reset", 2, [sealed("task/2")]);
+		await emptiedAbove(1);
+		await sending("/records", 2, [sealed("task/2")]);
 
 		expect(await reading("/meta").then((it) => it.json())).toMatchObject({ placed_from: 1, seq: 2 });
 	});
 
-	// A reset is the repair path — a sender reaches for it when it has lost track of what the
-	// store holds, and a version that happens to match is no reason to leave it as it is.
-	it("does the work even when the version is the one already held", async () => {
-		await sending("/records", 12345, [sealed("task/1")]);
+	// **A store left half-emptied by an abandoned placement answers again.** The flag came down
+	// with the last part alone, so a placement nobody finished shut both reading doors for good —
+	// writable, permanently unreadable, and nothing in it able to put itself right. There is
+	// nothing to come down now, because nothing goes up.
+	it("answers again even with the half-placed flag left standing", async () => {
+		await sending("/records", 1, [sealed("task/1")]);
+		await env.RECORDS.prepare("UPDATE store SET replacing = 1 WHERE id = 1").run();
 
-		await sending("/reset", 12345, [sealed("task/2")]);
-
-		const { results } = await env.RECORDS.prepare("SELECT k FROM records").all();
-		expect(results).toEqual([{ k: "task/2" }]);
+		expect((await reading("/meta")).status).toBe(200);
+		expect((await reading("/records?since=0")).status).toBe(200);
 	});
 });
 
@@ -719,51 +805,20 @@ describe("sending one turn in more than one request", () => {
 		expect(await reading("/meta").then((it) => it.json())).toMatchObject({ version: 12345, seq: 2 });
 	});
 
-	// Only the first part empties. A later one emptying again would leave the store holding
-	// whichever part happened to arrive last, and nothing else.
-	it("empties on the first part of a replacement and not on the ones after it", async () => {
-		await sending("/records", 1, [sealed("task/old")]);
+	// **Nothing closes while a turn is in flight.** What has landed of one is a true prefix of
+	// what is coming — the store was not emptied first — so a phone reading it is behind rather
+	// than wrong, and being behind is the state every phone is in between writes anyway.
+	it("keeps both reading doors open while a turn is half sent", async () => {
+		await sendingPart("/records", 2, 1, 2, [sealed("task/1")]);
 
-		await sendingPart("/reset", 2, 1, 2, [sealed("task/1")]);
-		await sendingPart("/reset", 2, 2, 2, [sealed("task/2")]);
-
-		const { results } = await env.RECORDS.prepare("SELECT k FROM records ORDER BY seq").all();
-		expect(results).toEqual([{ k: "task/1" }, { k: "task/2" }]);
-	});
-
-	// Emptying first is what makes the middle of a replacement a lie: what is here is a fraction of
-	// the backlog, and a phone cannot tell that from a backlog that really did shrink to a fraction.
-	it.each([["/records?since=0"], ["/meta"]])("closes %s while a replacement is half placed", async (path) => {
-		await sendingPart("/reset", 2, 1, 2, [sealed("task/1")]);
-
-		const response = await reading(path);
-
-		expect(response.status).toBe(503);
-		expect(response.headers.get("Retry-After")).toBe("5");
-	});
-
-	it("opens the reading doors again once the last part has landed", async () => {
-		await sendingPart("/reset", 2, 1, 2, [sealed("task/1")]);
-
-		await sendingPart("/reset", 2, 2, 2, [sealed("task/2")]);
-
+		expect((await reading("/meta")).status).toBe(200);
 		const answered = (await reading("/records?since=0").then((it) => it.json())) as { records: unknown[] };
-		expect(answered.records).toEqual([sealed("task/1"), sealed("task/2")]);
-	});
-
-	// A replacement nobody finished has left a partial store behind, and only another whole
-	// placement can put that right. Records laid on top of it would make it look whole again.
-	it("keeps them closed for a placement that only adds", async () => {
-		await sendingPart("/reset", 2, 1, 2, [sealed("task/1")]);
-
-		await sending("/records", 3, [sealed("task/2")]);
-
-		expect(await reading("/meta").then((it) => it.status)).toBe(503);
+		expect(answered.records).toEqual([sealed("task/1")]);
 	});
 
 	// One request is one whole turn, which is what every send was before there were parts at all.
 	it("takes a body that says nothing about parts as the whole of a turn", async () => {
-		await sending("/reset", 2, [sealed("task/1")]);
+		await sending("/records", 2, [sealed("task/1")]);
 
 		expect(await reading("/meta").then((it) => it.json())).toMatchObject({ version: 2, seq: 1 });
 	});
@@ -781,7 +836,11 @@ describe("sending one turn in more than one request", () => {
 	});
 });
 
-describe("a store with no room left", () => {
+// **Every failure is one answer, and the answer carries what was said.** Telling a full database
+// from an unreachable one meant matching on the sentence D1 threw, and a reading that is wrong
+// sends someone to buy storage they do not need. This Worker cannot be corrected when a reading
+// turns out to be wrong, so it does not read — it hands the sentence to the part that can be.
+describe("a store that could not answer", () => {
 	/**
 	 * What the binding throws when D1 is out of room, copied off a real database filled to its
 	 * ceiling: a plain `Error`, no code and no status, and the `7500` the REST API answers with
@@ -840,23 +899,26 @@ describe("a store with no room left", () => {
 		);
 	}
 
-	it("says the store is full, and what makes room", async () => {
+	it("hands back what the database said, and how long to leave it", async () => {
 		const response = await into(whereWritesFail(NO_ROOM), "/records", {
 			method: "PUT",
 			body: placement(1, [sealed("task/1")]),
 		});
 
-		expect(response.status).toBe(507);
-		expect(await response.json()).toMatchObject({ error: expect.stringContaining("no room left") });
+		expect(response.status).toBe(503);
+		expect(await response.json()).toMatchObject({ error: expect.stringContaining("Exceeded maximum DB size") });
 	});
 
-	it("says the same when the whole store is being placed again", async () => {
-		const response = await into(whereWritesFail(NO_ROOM), "/reset", {
+	// **The phone reads the number and not the reason.** Ten seconds or under means "the PC is
+	// still sending"; anything above means the store cannot answer. A full database answered as
+	// the first would have every phone saying the PC is busy, forever.
+	it("waits longer than the number that means the PC is still sending", async () => {
+		const response = await into(whereWritesFail(NO_ROOM), "/records", {
 			method: "PUT",
 			body: placement(1, [sealed("task/1")]),
 		});
 
-		expect(response.status).toBe(507);
+		expect(Number(response.headers.get("Retry-After"))).toBeGreaterThan(10);
 	});
 
 	it("says the same when a phone is being paired", async () => {
@@ -865,18 +927,19 @@ describe("a store with no room left", () => {
 			body: JSON.stringify({ label: "iPhone", hash: await hashOf("the-phone's-own-token") }),
 		});
 
-		expect(response.status).toBe(507);
+		expect(response.status).toBe(503);
 	});
 
-	// Room is the one D1 failure anyone can act on. A database that was briefly unreachable, told
-	// as "buy more storage", sends someone to pay for something that was never the matter.
-	it("leaves every other D1 failure alone", async () => {
-		const refused = into(whereWritesFail(SOMETHING_ELSE), "/records", {
+	// **Every other failure comes back the same way**, rather than falling out of the Worker as a
+	// bare 500 the phone reads as "look at the PC". What it is is in the sentence.
+	it("answers a failure that is nothing to do with room the same way", async () => {
+		const response = await into(whereWritesFail(SOMETHING_ELSE), "/records", {
 			method: "PUT",
 			body: placement(1, [sealed("task/1")]),
 		});
 
-		await expect(refused).rejects.toThrow("UNIQUE constraint failed");
+		expect(response.status).toBe(503);
+		expect(await response.json()).toMatchObject({ error: expect.stringContaining("UNIQUE constraint failed") });
 	});
 });
 
@@ -901,13 +964,13 @@ const A_REAL_BACKLOG = 20202;
 const LONG_ENOUGH_FOR_A_REAL_BACKLOG = 60_000;
 
 describe("the whole of a real backlog", () => {
-	/** Places `total` records through the door that empties first, in the parts a write takes. */
+	/** Sends `total` records through the one door that takes them, in the parts a write takes. */
 	async function placeWhole(total: number, version: number): Promise<void> {
 		const parts = Math.ceil(total / 500);
 		for (let part = 1; part <= parts; part++) {
 			const from = (part - 1) * 500;
 			const records = Array.from({ length: Math.min(500, total - from) }, (_, at) => sealed(`task/${from + at}`));
-			const answered = await sendingPart("/reset", version, part, parts, records);
+			const answered = await sendingPart("/records", version, part, parts, records);
 			expect(answered.status, `part ${part} of ${parts}`).toBe(200);
 		}
 	}
@@ -924,11 +987,11 @@ describe("the whole of a real backlog", () => {
 	it("names the version only once the last part has landed", async () => {
 		const parts = Math.ceil(A_REAL_BACKLOG / 500);
 		for (let part = 1; part < parts; part++) {
-			await sendingPart("/reset", 7, part, parts, [sealed(`task/${part}`)]);
+			await sendingPart("/records", 7, part, parts, [sealed(`task/${part}`)]);
 			const midway = await env.RECORDS.prepare("SELECT version FROM store WHERE id = 1").first<{ version: number | null }>();
 			expect(midway?.version, `after part ${part}`).toBeNull();
 		}
-		await sendingPart("/reset", 7, parts, parts, [sealed("task/last")]);
+		await sendingPart("/records", 7, parts, parts, [sealed("task/last")]);
 
 		const settled = await env.RECORDS.prepare("SELECT version FROM store WHERE id = 1").first<{ version: number }>();
 		expect(settled?.version).toBe(7);

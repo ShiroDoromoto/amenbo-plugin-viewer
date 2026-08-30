@@ -4,8 +4,10 @@ var __name = (target, value) => __defProp(target, "name", { value, configurable:
 
 // src/index.ts
 var SPEC_V = 1;
+var BUILD = 2;
 var PER_PAGE = 200;
 var PER_WRITE = 500;
+var PER_KEY_PAGE = 2e3;
 var index_default = {
   async fetch(request, env) {
     if (!env.WRITE_TOKEN) {
@@ -29,18 +31,22 @@ var index_default = {
     if (wanted !== carrying) {
       return problem(403, `this endpoint takes the ${wanted} token, and a ${carrying} token was offered`);
     }
-    if (labelled) {
-      return revoke(env, decodeURIComponent(labelled[1]));
-    }
-    switch (pathname) {
-      case "/records":
-        return request.method === "PUT" ? place(env, request, "add") : read(env, url);
-      case "/reset":
-        return place(env, request, "replace");
-      case "/meta":
-        return meta(env);
-      default:
-        return issue(env, request);
+    try {
+      if (labelled) {
+        return await revoke(env, decodeURIComponent(labelled[1]));
+      }
+      switch (pathname) {
+        case "/records":
+          return request.method === "PUT" ? await place(env, request) : await read(env, url);
+        case "/reset":
+          return gone();
+        case "/meta":
+          return await meta(env);
+        default:
+          return await issue(env, request);
+      }
+    } catch (thrown) {
+      return unavailable(thrown);
     }
   }
 };
@@ -90,24 +96,25 @@ async function sha256(text) {
 __name(sha256, "sha256");
 async function standing(env) {
   const row = await env.RECORDS.prepare(
-    "SELECT version, seq, updated_at, replacing, placed_from, key_fingerprint FROM store WHERE id = 1"
+    "SELECT version, seq, updated_at, placed_from, key_fingerprint FROM store WHERE id = 1"
   ).first();
   return row;
 }
 __name(standing, "standing");
-function halfReplaced() {
+function gone() {
   return problem(
-    503,
-    "the whole of this store is being placed again, and what is here is part of it \u2014 this door answers once the last part has landed",
-    { "Retry-After": "5" }
+    410,
+    "this store is no longer emptied and filled again \u2014 records are placed over what is here, key by key, through `PUT /records`. Nothing has to be done to a store to make it take them"
   );
 }
-__name(halfReplaced, "halfReplaced");
+__name(gone, "gone");
+function unavailable(thrown) {
+  const said = thrown instanceof Error ? thrown.message : String(thrown);
+  return problem(503, `this store could not answer: ${said}`, { "Retry-After": "60" });
+}
+__name(unavailable, "unavailable");
 async function meta(env) {
   const now = await standing(env);
-  if (now.replacing) {
-    return halfReplaced();
-  }
   return Response.json({
     spec_v: SPEC_V,
     version: now.version,
@@ -124,10 +131,8 @@ async function read(env, url) {
     return problem(400, "since has to be a whole number \u2014 the point in the order to read on from");
   }
   const since = Number(asked);
+  const keysOnly = url.searchParams.get("keys") === "1";
   const now = await standing(env);
-  if (now.replacing) {
-    return halfReplaced();
-  }
   if (since > now.seq) {
     return problem(
       409,
@@ -140,20 +145,25 @@ async function read(env, url) {
       `the whole of this store was placed again above ${now.placed_from}, and you asked to read on from ${since} \u2014 everything you have from before that has been made again, so throw it away and read from the beginning`
     );
   }
+  const most = keysOnly ? PER_KEY_PAGE : PER_PAGE;
   const { results } = await env.RECORDS.prepare(
-    "SELECT seq, k, op, nonce, ciphertext FROM records WHERE seq > ? ORDER BY seq LIMIT ?"
-  ).bind(since, PER_PAGE + 1).all();
-  const more = results.length > PER_PAGE;
-  const page = more ? results.slice(0, PER_PAGE) : results;
+    keysOnly ? "SELECT seq, k, op FROM records WHERE seq > ? ORDER BY seq LIMIT ?" : "SELECT seq, k, op, nonce, ciphertext FROM records WHERE seq > ? ORDER BY seq LIMIT ?"
+  ).bind(since, most + 1).all();
+  const more = results.length > most;
+  const page = more ? results.slice(0, most) : results;
   return Response.json({
     spec_v: SPEC_V,
     version: now.version,
     seq: page.length ? page[page.length - 1].seq : since,
     more,
-    records: page.map(travelling)
+    records: page.map(keysOnly ? keyOnly : travelling)
   });
 }
 __name(read, "read");
+function keyOnly(row) {
+  return { k: row.k, op: row.op };
+}
+__name(keyOnly, "keyOnly");
 function travelling(row) {
   if (row.op === "del") {
     return { k: row.k, op: row.op };
@@ -161,7 +171,7 @@ function travelling(row) {
   return { k: row.k, op: row.op, n: row.nonce ?? "", c: row.ciphertext ?? "" };
 }
 __name(travelling, "travelling");
-async function place(env, request, placing) {
+async function place(env, request) {
   let asked;
   try {
     asked = await request.json();
@@ -208,59 +218,32 @@ async function place(env, request, placing) {
     }
     carrying.push(checked);
   }
-  const now = await standing(env);
-  if (placing === "add" && now.version === version) {
-    return Response.json({ seq: now.seq });
-  }
-  const first = at === 1;
   const last = at === of;
   const upsert = env.RECORDS.prepare(
     "INSERT INTO records (k, seq, op, nonce, ciphertext) VALUES (?, (SELECT seq FROM store WHERE id = 1) + ?, ?, ?, ?) ON CONFLICT (k) DO UPDATE SET seq = excluded.seq, op = excluded.op, nonce = excluded.nonce, ciphertext = excluded.ciphertext"
   );
   const statements = [
-    // Only the first part empties: the ones after it are the rest of the same store, and
-    // emptying again would leave the store holding whichever part arrived last.
-    ...placing === "replace" && first ? [
-      env.RECORDS.prepare("DELETE FROM records"),
-      // Where this placement begins, taken before the rows it places move the order
-      // on. It is written with the emptying rather than after it, so there is no
-      // moment where the records are gone and nothing says they were.
-      env.RECORDS.prepare("UPDATE store SET placed_from = seq WHERE id = 1")
-    ] : [],
-    ...placing === "replace" && first && !last ? [env.RECORDS.prepare("UPDATE store SET replacing = 1 WHERE id = 1")] : [],
     ...carrying.map((record, offset) => upsert.bind(record.k, offset + 1, record.op, record.nonce, record.ciphertext)),
     env.RECORDS.prepare("UPDATE store SET seq = seq + ? WHERE id = 1").bind(carrying.length),
     ...last ? [
       env.RECORDS.prepare(
-        placing === "replace" ? "UPDATE store SET version = ?, updated_at = ?, key_fingerprint = ?, replacing = 0 WHERE id = 1" : "UPDATE store SET version = ?, updated_at = ?, key_fingerprint = ? WHERE id = 1"
+        "UPDATE store SET version = ?, updated_at = ?, key_fingerprint = ? WHERE id = 1"
       ).bind(version, (/* @__PURE__ */ new Date()).toISOString(), sealedWith)
     ] : [],
     env.RECORDS.prepare("SELECT seq FROM store WHERE id = 1")
   ];
-  let done;
-  try {
-    done = await env.RECORDS.batch(statements);
-  } catch (thrown) {
-    if (!outOfRoom(thrown)) {
-      throw thrown;
-    }
-    return full();
-  }
-  return Response.json({ seq: done[done.length - 1].results[0].seq });
+  const done = await env.RECORDS.batch(statements);
+  return Response.json({
+    seq: done[done.length - 1].results[0].seq,
+    rows_written: rowsWritten(done),
+    build: BUILD
+  });
 }
 __name(place, "place");
-var OUT_OF_ROOM = "Exceeded maximum DB size";
-function outOfRoom(thrown) {
-  return thrown instanceof Error && thrown.message.includes(OUT_OF_ROOM);
+function rowsWritten(done) {
+  return done.reduce((all, one) => all + (one.meta?.rows_written ?? 0), 0);
 }
-__name(outOfRoom, "outOfRoom");
-function full() {
-  return problem(
-    507,
-    "there is no room left in this store \u2014 a D1 database holds 500 MB on Cloudflare's free plan and 10 GB on the paid one, so raising the account it lives in is what makes room"
-  );
-}
-__name(full, "full");
+__name(rowsWritten, "rowsWritten");
 function checkedRecord(record) {
   const { k, op, n, c } = record;
   if (typeof k !== "string" || k === "") {
@@ -295,28 +278,21 @@ async function issue(env, request) {
   }
   const named = label.trim();
   const issued_at = (/* @__PURE__ */ new Date()).toISOString();
-  try {
-    const landed = await env.RECORDS.prepare(
-      "INSERT INTO tokens (label, hash, issued_at) VALUES (?, ?, ?) ON CONFLICT (label) DO NOTHING"
-    ).bind(named, hash.toLowerCase(), issued_at).run();
-    if (!landed.meta.changes) {
-      return problem(
-        409,
-        `a phone is already paired as ${JSON.stringify(named)} \u2014 cut that one off first, and pair again under the name once it is free`
-      );
-    }
-  } catch (thrown) {
-    if (!outOfRoom(thrown)) {
-      throw thrown;
-    }
-    return full();
+  const landed = await env.RECORDS.prepare(
+    "INSERT INTO tokens (label, hash, issued_at) VALUES (?, ?, ?) ON CONFLICT (label) DO NOTHING"
+  ).bind(named, hash.toLowerCase(), issued_at).run();
+  if (!landed.meta.changes) {
+    return problem(
+      409,
+      `a phone is already paired as ${JSON.stringify(named)} \u2014 cut that one off first, and pair again under the name once it is free`
+    );
   }
   return Response.json({ label: named, issued_at });
 }
 __name(issue, "issue");
 async function revoke(env, label) {
-  const gone = await env.RECORDS.prepare("DELETE FROM tokens WHERE label = ?").bind(label).run();
-  if (!gone.meta.changes) {
+  const gone2 = await env.RECORDS.prepare("DELETE FROM tokens WHERE label = ?").bind(label).run();
+  if (!gone2.meta.changes) {
     return problem(404, `no token is labelled ${JSON.stringify(label)}`);
   }
   return Response.json({ label });
