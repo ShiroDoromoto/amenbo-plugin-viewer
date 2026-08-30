@@ -180,24 +180,49 @@ func wholeWindow() (window, error) {
 	return whole, nil
 }
 
-// rowsIn reads named records back, in the shape the whole window carries them in.
+// rowsIn reads named records back, in the shape the whole window carries them in, and hands
+// back the name the answer files them under alongside them.
+//
+// **That name is not always the one the ledger asked by.** `sync changes` names a dataset by the
+// name it is published under and the answer names it by the table it lives in, and the two part
+// company at least once (`dependency` is answered as `task_dependency`). Reading the answer back
+// under the asked name found nothing there and called it "no rows" — so the name to file a
+// record under is the answer's, never the question's.
+//
+// One question is answered by one table, whether or not it carries rows, so an answer holding
+// anything else is a road this build does not know how to read rather than a row to guess at.
 //
 // An id this window does not reach, and an id that is no longer there, both simply come back
 // absent — which of the two it was, the change that named it has already said.
-func rowsIn(dataset string, ids []int64) ([]json.RawMessage, error) {
+func rowsIn(dataset string, ids []int64) (string, []json.RawMessage, error) {
 	named := make([]string, len(ids))
 	for i, id := range ids {
 		named[i] = strconv.FormatInt(id, 10)
 	}
 	answer, err := amenboSync("records", "--dataset", dataset, "--ids", strings.Join(named, ","), "--json")
 	if err != nil {
-		return nil, err
+		return "", nil, err
 	}
+	return rowsRead(dataset, answer)
+}
+
+// rowsRead is the reading of that answer: the one table it carries, and the rows under it.
+//
+// An answer holding anything but one table is a road this build does not know how to read, and
+// it is refused rather than guessed at — picking one of two would file half a dataset under a
+// name the phone never sees again.
+func rowsRead(dataset string, answer []byte) (string, []json.RawMessage, error) {
 	var read window
 	if err := json.Unmarshal(answer, &read); err != nil {
-		return nil, fmt.Errorf("amenbo sync records answered with something this build cannot read: %w", err)
+		return "", nil, fmt.Errorf("amenbo sync records answered with something this build cannot read: %w", err)
 	}
-	return read.Tables[dataset], nil
+	if len(read.Tables) != 1 {
+		return "", nil, fmt.Errorf("amenbo sync records answered for %s with %d tables, where one question is answered by one", dataset, len(read.Tables))
+	}
+	for table, rows := range read.Tables {
+		return table, rows, nil
+	}
+	return "", nil, nil
 }
 
 // rowID reads the one field of a row this plugin needs: the id it is filed under.
