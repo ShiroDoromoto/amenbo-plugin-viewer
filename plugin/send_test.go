@@ -346,7 +346,7 @@ func TestAPlacementCarriesTheContractAndTheToken(t *testing.T) {
 	}))
 	defer answering.Close()
 
-	seq, err := store{url: answering.URL, token: "a-throwaway-token"}.put("/records", placement{
+	took, err := store{url: answering.URL, token: "a-throwaway-token"}.put("/records", placement{
 		SpecV:   specVersion,
 		Version: 12345,
 		Records: []outgoing{{Key: "task/1", Op: "del"}},
@@ -355,8 +355,8 @@ func TestAPlacementCarriesTheContractAndTheToken(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if seq != 42 {
-		t.Errorf("seq = %d", seq)
+	if took.seq != 42 {
+		t.Errorf("seq = %d", took.seq)
 	}
 	if seen.method != http.MethodPut || seen.path != "/records" {
 		t.Errorf("%s %s", seen.method, seen.path)
@@ -412,8 +412,8 @@ type refusing struct {
 func (r refusing) name() string       { return r.called }
 func (r refusing) String() string     { return r.called }
 func (r refusing) holdsNothing() bool { return false }
-func (r refusing) place(placement) (int64, error) {
-	return 0, errors.New("it did not take it")
+func (r refusing) place(placement) (written, error) {
+	return written{}, errors.New("it did not take it")
 }
 
 // A route that fails does not stop the others: they are two places holding the same records, and
@@ -453,11 +453,14 @@ type stub struct {
 func (s *stub) name() string       { return s.called }
 func (s *stub) String() string     { return s.called }
 func (s *stub) holdsNothing() bool { return s.empty }
-func (s *stub) place(body placement) (int64, error) {
+func (s *stub) place(body placement) (written, error) {
 	s.placed++
 	s.sent = append(s.sent, body)
 	s.seq += int64(len(body.Records))
-	return s.seq, nil
+	// **Three rows a record is the shape, not the number.** What a write costs is the database's
+	// to say and it varies by key; what a test needs is a cost that is not zero, so the budget
+	// this fills can be watched filling.
+	return written{seq: s.seq, rows: int64(len(body.Records)) * 3}, nil
 }
 
 // levelAt is a memory that has every named route reading on from the same place.
@@ -511,7 +514,7 @@ func TestAQueueTooBigForOneRequestIsSentInParts(t *testing.T) {
 
 	where := store{url: answering.URL, token: "a-throwaway-token", seal: sealerForTest(t)}
 
-	left, _, err := drainTo(where, carried{Pending: keysToDrop(recordsPerWrite + 1)}, 12345)
+	left, _, err := drainTo(where, carried{Pending: keysToDrop(recordsPerWrite + 1)}, 12345, rightNow())
 
 	if err != nil {
 		t.Fatal(err)
@@ -553,7 +556,7 @@ func TestATurnThatFitsIsOnePartOfOne(t *testing.T) {
 
 	where := store{url: answering.URL, token: "a-throwaway-token", seal: sealerForTest(t)}
 
-	if _, _, err := drainTo(where, carried{Pending: keysToDrop(1)}, 1); err != nil {
+	if _, _, err := drainTo(where, carried{Pending: keysToDrop(1)}, 1, rightNow()); err != nil {
 		t.Fatal(err)
 	}
 
@@ -579,7 +582,7 @@ func TestEveryRequestGoesToTheDoorThatPlacesOverWhatIsThere(t *testing.T) {
 	if _, err := where.place(placement{SpecV: specVersion, Version: 1}); err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := drainTo(where, carried{Pending: keysToDrop(1)}, 2); err != nil {
+	if _, _, err := drainTo(where, carried{Pending: keysToDrop(1)}, 2, rightNow()); err != nil {
 		t.Fatal(err)
 	}
 
@@ -632,7 +635,7 @@ func TestTheKeyIsNamedOnEveryPartOfATurn(t *testing.T) {
 	seal := sealerForTest(t)
 	where := store{url: answering.URL, token: "a-throwaway-token", seal: seal}
 
-	if _, _, err := drainTo(where, carried{Pending: keysToDrop(recordsPerWrite + 1)}, 1); err != nil {
+	if _, _, err := drainTo(where, carried{Pending: keysToDrop(recordsPerWrite + 1)}, 1, rightNow()); err != nil {
 		t.Fatal(err)
 	}
 
@@ -663,7 +666,7 @@ func TestAPartThatFailsStopsTheRestAndKeepsWhatItCouldNotSend(t *testing.T) {
 
 	where := store{url: refusing.URL, token: "a-throwaway-token", seal: sealerForTest(t)}
 
-	left, landed, err := drainTo(where, carried{Pending: keysToDrop(recordsPerWrite*2 + 1)}, 1)
+	left, landed, err := drainTo(where, carried{Pending: keysToDrop(recordsPerWrite*2 + 1)}, 1, rightNow())
 
 	if err == nil {
 		t.Fatal("a drain whose second part was refused read as a successful one")
@@ -1017,7 +1020,8 @@ func TestABacklogCutOffPartWayKeepsTheRestQueued(t *testing.T) {
 	stopAfter := 30
 	answering := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if len(answered.parts) >= stopAfter {
-			http.Error(w, `{"error":"the store is full"}`, http.StatusInsufficientStorage)
+			http.Error(w, `{"error":"this store could not answer: D1_ERROR: Exceeded maximum DB size"}`,
+				http.StatusServiceUnavailable)
 			return
 		}
 		takes(w, r)
@@ -1191,7 +1195,7 @@ func TestAPartThatWasNotWrittenIsSeenPartWayThroughATurn(t *testing.T) {
 
 	where := store{url: dropping.URL, token: "a-throwaway-token", seal: sealerForTest(t)}
 
-	left, _, err := drainTo(where, carried{Pending: keysToDrop(recordsPerWrite * 3)}, 1)
+	left, _, err := drainTo(where, carried{Pending: keysToDrop(recordsPerWrite * 3)}, 1, rightNow())
 
 	if err == nil {
 		t.Fatal("a drain whose parts were dropped read as one that landed")
@@ -1215,7 +1219,7 @@ func TestAPlaceWhoseOrderingIsNotKnownIsStillSentTo(t *testing.T) {
 	defer answering.Close()
 
 	where := store{url: answering.URL, token: "a-throwaway-token", seal: sealerForTest(t)}
-	left, _, err := drainTo(where, carried{Seq: orderingUnknown, Pending: keysToDrop(1)}, 1)
+	left, _, err := drainTo(where, carried{Seq: orderingUnknown, Pending: keysToDrop(1)}, 1, rightNow())
 
 	if err != nil {
 		t.Fatal(err)
@@ -1360,7 +1364,7 @@ func TestAQueueThatEmptiedPartWayDoesNotMoveWhereThePlaceStands(t *testing.T) {
 
 	where := store{url: refusingAfterOne.URL, token: "a-throwaway-token", seal: sealerForTest(t)}
 
-	left, _, err := drainTo(where, carried{Placed: 3, Seq: 0, Pending: keysToDrop(recordsPerWrite + 1)}, 9)
+	left, _, err := drainTo(where, carried{Placed: 3, Seq: 0, Pending: keysToDrop(recordsPerWrite + 1)}, 9, rightNow())
 
 	if err == nil {
 		t.Fatal("a drain that stopped part way read as one that landed")
@@ -1378,7 +1382,7 @@ func TestAQueueThatEmptiedPartWayDoesNotMoveWhereThePlaceStands(t *testing.T) {
 func TestARouteWithAnEmptyQueueIsNotSentTo(t *testing.T) {
 	where := &stub{called: "cloudflare"}
 
-	left, landed, err := drainTo(where, carried{Version: 1, Cursor: 7}, 1)
+	left, landed, err := drainTo(where, carried{Version: 1, Cursor: 7}, 1, rightNow())
 
 	if err != nil || landed != 0 {
 		t.Fatalf("landed %d, err %v", landed, err)

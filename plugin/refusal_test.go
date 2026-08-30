@@ -34,16 +34,20 @@ func refusalFor(t *testing.T, where store) error {
 	return err
 }
 
-// A store with no room left is the Worker's own to explain, and it does — the next move is in its
-// own sentence, which is the whole point of not showing how much room is left. Adding a second
-// next move here would talk over it.
+// A door that is gone is the Worker's own to explain, and it does — the next move is in its own
+// sentence. Adding a second next move here would talk over it.
+//
+// **A full store used to be the example here**, and it is not any more: the Worker stopped reading
+// D1's sentences, so a full store now arrives as an exception like any other and the reading of it
+// is this side's (see `whatToDoAbout`). What the case is about did not change — a refusal that
+// already carries the move is passed on as it came.
 func TestARefusalThatAlreadySaysWhatToDoIsPassedOnAsItIs(t *testing.T) {
-	where := answering(t, http.StatusInsufficientStorage,
-		`{"error":"there is no room left in this store — raising the account it lives in is what makes room"}`, nil)
+	where := answering(t, http.StatusGone,
+		`{"error":"this store is no longer emptied and filled again — records are placed over what is here"}`, nil)
 
 	err := refusalFor(t, where)
 
-	if !strings.Contains(err.Error(), "no room left") || !strings.Contains(err.Error(), "makes room") {
+	if !strings.Contains(err.Error(), "no longer emptied") || !strings.Contains(err.Error(), "placed over what is here") {
 		t.Errorf("%v does not carry the store's own sentence", err)
 	}
 	if strings.Contains(err.Error(), "setup") {

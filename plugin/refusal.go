@@ -53,7 +53,7 @@ func (r storeRefused) Error() string {
 	if said == "" && r.page != "" {
 		said = fmt.Sprintf("the Worker itself did not answer — this came from Cloudflare in front of it: %s", r.page)
 	}
-	next := whatToDoAbout(r.status, r.waitFor)
+	next := whatToDoAbout(r.status, r.waitFor, said)
 	switch {
 	case next != "" && said != "":
 		return fmt.Sprintf("%s answered %d — %s (it said: %q)", r.path, r.status, next, said)
@@ -71,11 +71,24 @@ func (r storeRefused) Error() string {
 // **The refusals worth adding to are the ones whose cause is on this side.** A store with no room
 // left is the Worker's to explain and it does; a token that no longer opens its door is not
 // something the Worker can know the fix for, because the fix is here.
-func whatToDoAbout(status int, waitFor string) string {
+func whatToDoAbout(status int, waitFor, said string) string {
+	// **A full database is read before the wait, because it wears one.** Every exception the
+	// Worker meets now comes back as a 503 with a `Retry-After` on it — the Worker stopped reading
+	// D1's sentence on purpose, since it is the one part of this that cannot be corrected when a
+	// reading turns out wrong. So the reading lives here, where a new build can fix it, and it has
+	// to come first: a store that has used its 500 MB is not going to be different in a minute,
+	// and telling someone to wait for one is telling them to wait forever.
+	if theStoreIsFull(said) {
+		return "the store's database is full — waiting will not change that, and nothing more" +
+			" will fit until the Cloudflare account it is in is raised to a larger plan"
+	}
 	// An answer that says when to come back is a wait, whatever else it says. That is HTTP's own
 	// reading of it, and it is the one case where doing nothing is the right move.
-	if waitFor != "" {
-		return fmt.Sprintf("this one clears itself — the store asked to be left for %s seconds", waitFor)
+	if wait, asked := theWaitAsked(waitFor, rightNow()); asked {
+		// **The number is read rather than repeated.** `Retry-After` is written as seconds or as
+		// a date, and a build that pasted the header into a sentence about seconds said things
+		// like "left for Wed, 30 Aug 2026 06:00:00 GMT seconds".
+		return fmt.Sprintf("this one clears itself — the store asked to be left for %s", theWaitInWords(wait))
 	}
 	switch status {
 	case http.StatusUnauthorized, http.StatusForbidden:
@@ -90,6 +103,19 @@ func whatToDoAbout(status int, waitFor string) string {
 			pluginName)
 	}
 	return ""
+}
+
+// whatD1SaysWhenItIsFull is the sentence D1 throws when the database has no room left, and the
+// only thing that says it: the binding throws a plain `Error` with no code and no status, and the
+// `7500` its REST API answers with never reaches a Worker.
+//
+// **Everything else has to fall through.** A database that was briefly unreachable, read as "buy
+// more storage", sends someone to pay for nothing.
+const whatD1SaysWhenItIsFull = "Exceeded maximum DB size"
+
+// theStoreIsFull reads that sentence out of whatever the store passed on.
+func theStoreIsFull(said string) bool {
+	return strings.Contains(said, whatD1SaysWhenItIsFull)
 }
 
 // bodyOfOneLine is as much of a non-JSON answer as is worth repeating: one line, bounded, and
