@@ -47,8 +47,8 @@ Pas de publicité. Pas de pistage. Pas de compte.
 
 ## release_notes
 
-La voie iCloud a disparu. Chaque téléphone lit désormais depuis un worker sur votre propre compte Cloudflare.
+« Votre serveur ne peut pas répondre pour le moment » est désormais un état à part.
 
-- Si votre Mac écrivait par iCloud, préparez le worker sur le PC : le module s'en charge, vous collez un jeton une fois
-- Ce qui est déjà arrivé reste lisible, et l'app dit clairement quand plus rien ne viendra
-- L'app ne demande plus rien à iCloud
+- Avant, l'app affichait « votre PC renvoie toutes les tâches » alors que l'endroit avait seulement atteint une limite à lui : une phrase sur le seul bout qui n'y est pour rien
+- Elle dit maintenant ce qui est vrai : rien n'est perdu, rien n'est abîmé, et cela se règle avec le temps
+- Dans le bandeau au-dessus de la liste comme à la première synchronisation

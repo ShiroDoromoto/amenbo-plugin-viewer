@@ -47,8 +47,8 @@ Geen advertenties. Geen tracking. Geen account.
 
 ## release_notes
 
-De weg via iCloud is verdwenen. Elke telefoon leest nu uit een worker op je eigen Cloudflare-account.
+«Je server kan nu even niet antwoorden» is nu een eigen toestand.
 
-- Schreef je Mac via iCloud, zet de worker dan op de pc klaar: de plug-in doet het, jij plakt één keer een token
-- Wat al op de telefoon staat blijft leesbaar, en de app zegt duidelijk wanneer er niets meer bij komt
-- De app vraagt helemaal niet meer om iCloud
+- Eerder stond er «je pc stuurt al je taken opnieuw», terwijl de plek alleen tegen een eigen limiet was gelopen — een zin over het enige eind dat er niets mee te maken heeft
+- Nu staat er wat klopt: er is niets weg, er is niets stuk, en het lost zich met de tijd op
+- In de balk boven de lijst en bij de eerste synchronisatie

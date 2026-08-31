@@ -47,8 +47,8 @@ Sin anuncios. Sin rastreo. Sin cuenta.
 
 ## release_notes
 
-La vía de iCloud ha desaparecido. Todos los móviles leen ahora de un worker en tu propia cuenta de Cloudflare.
+«Tu servidor no puede responder ahora mismo» ya es un estado propio.
 
-- Si tu Mac escribía por iCloud, prepara el worker en el PC: lo hace el complemento y tú solo pegas un token una vez
-- Lo que ya llegó al móvil se sigue leyendo, y la app dice con claridad cuándo no va a llegar nada más
-- La app ya no pide iCloud para nada
+- Antes salía «tu PC está enviando otra vez todas las tareas» aunque el sitio solo hubiera topado con un límite suyo: una frase sobre el único extremo que no tiene nada que ver
+- Ahora dice lo que es cierto: no se ha perdido nada, nada está roto y se arregla con el tiempo
+- Lo dice en la franja sobre la lista y en la primera sincronización

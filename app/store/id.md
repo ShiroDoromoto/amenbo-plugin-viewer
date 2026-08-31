@@ -47,8 +47,8 @@ Tanpa iklan. Tanpa pelacakan. Tanpa akun.
 
 ## release_notes
 
-Jalur iCloud sudah tidak ada. Setiap ponsel kini membaca dari worker di akun Cloudflare Anda sendiri.
+«Server-mu belum bisa menjawab sekarang» kini jadi keadaan tersendiri.
 
-- Kalau Mac Anda menulis lewat iCloud, siapkan worker di PC: plugin yang mengerjakannya, Anda cukup menempel satu token sekali
-- Yang sudah sampai di ponsel tetap bisa dibaca, dan aplikasi mengatakan dengan jelas kalau tidak ada lagi yang datang
-- Aplikasi tidak lagi meminta iCloud sama sekali
+- Dulu yang muncul «PC-mu sedang mengirim ulang seluruh tugasmu», padahal tempatnya hanya kena batasnya sendiri — kalimat tentang satu-satunya ujung yang tidak ada hubungannya
+- Sekarang yang muncul yang benar: tidak ada yang hilang, tidak ada yang rusak, dan ini pulih dengan sendirinya
+- Di pita atas daftar maupun di sinkronisasi pertama

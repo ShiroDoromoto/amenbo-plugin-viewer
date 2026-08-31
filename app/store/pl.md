@@ -47,8 +47,8 @@ Bez reklam. Bez śledzenia. Bez konta.
 
 ## release_notes
 
-Droga przez iCloud zniknęła. Każdy telefon czyta teraz z workera na twoim własnym koncie Cloudflare.
+«Twój serwer nie może teraz odpowiedzieć» to teraz osobny stan.
 
-- Jeśli twój Mac pisał przez iCloud, przygotuj workera na komputerze: robi to wtyczka, ty raz wklejasz jeden token
-- To, co już dotarło, nadal da się czytać, a aplikacja wyraźnie mówi, kiedy nic więcej nie przyjdzie
-- Aplikacja w ogóle nie prosi już o iCloud
+- Wcześniej pisało «twój komputer wysyła wszystkie zadania od nowa», choć miejsce trafiło tylko na własny limit — zdanie o jedynym końcu, który nie ma z tym nic wspólnego
+- Teraz pisze to, co jest prawdą: nic nie przepadło, nic się nie zepsuło, a z czasem samo minie
+- W pasku nad listą i przy pierwszej synchronizacji

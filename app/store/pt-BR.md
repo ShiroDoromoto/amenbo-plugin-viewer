@@ -47,8 +47,8 @@ Sem anúncios. Sem rastreamento. Sem conta.
 
 ## release_notes
 
-O caminho do iCloud acabou. Agora todo celular lê de um worker na sua própria conta da Cloudflare.
+«O seu servidor não consegue responder agora» agora é um estado próprio.
 
-- Se o seu Mac escrevia pelo iCloud, prepare o worker no PC: o plugin faz isso e você cola um token uma única vez
-- O que já chegou ao celular continua legível, e o app diz com clareza quando não vem mais nada
-- O app não pede mais nada ao iCloud
+- Antes aparecia «o seu PC está enviando todas as tarefas de novo» mesmo quando o lugar só tinha batido num limite dele: uma frase sobre a única ponta que não tem nada a ver
+- Agora aparece o que é verdade: nada se perdeu, nada quebrou, e passa com o tempo
+- Aparece na faixa acima da lista e na primeira sincronização

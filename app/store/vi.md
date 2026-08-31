@@ -47,8 +47,8 @@ Không quảng cáo. Không theo dõi. Không tài khoản.
 
 ## release_notes
 
-Đường qua iCloud đã bỏ. Giờ mọi điện thoại đều đọc từ một worker trên tài khoản Cloudflare của chính bạn.
+«Máy chủ hiện chưa thể trả lời» giờ là một trạng thái riêng.
 
-- Nếu máy Mac của bạn vẫn gửi qua iCloud, hãy dựng worker ở máy tính: phần mở rộng làm hết, bạn chỉ dán một mã một lần
-- Những gì đã tới điện thoại vẫn đọc được, và ứng dụng nói rõ khi sẽ không còn gì tới nữa
-- Ứng dụng không còn đòi iCloud nữa
+- Trước đây, dù chỗ chứa chỉ chạm giới hạn của chính nó, ứng dụng vẫn hiện «máy tính của bạn đang gửi lại toàn bộ công việc» — một câu về đúng cái đầu chẳng liên quan gì
+- Giờ nó nói điều đúng: không mất gì, không hỏng gì, và để một lúc là hết
+- Ở dải trên danh sách lẫn ở lần đồng bộ đầu tiên

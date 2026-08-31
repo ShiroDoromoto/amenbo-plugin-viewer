@@ -47,8 +47,8 @@ Nessuna pubblicità. Nessun tracciamento. Nessun account.
 
 ## release_notes
 
-La via di iCloud non c'è più. Ogni telefono ora legge da un worker sul tuo account Cloudflare.
+«Il tuo server non riesce a rispondere adesso» ora è uno stato a sé.
 
-- Se il tuo Mac scriveva via iCloud, prepara il worker sul PC: lo fa il plugin, tu incolli un token una volta sola
-- Quello che è già arrivato resta leggibile, e l'app dice chiaramente quando non arriverà altro
-- L'app non chiede più niente a iCloud
+- Prima compariva «il tuo PC sta rimandando tutte le attività» anche quando il posto aveva solo toccato un limite suo: una frase sull'unico capo che non c'entra niente
+- Ora c'è scritto quello che è vero: non si è perso niente, niente è rotto, e si risolve col tempo
+- Nella fascia sopra l'elenco e alla prima sincronizzazione
