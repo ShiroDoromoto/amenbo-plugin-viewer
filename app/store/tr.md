@@ -47,8 +47,8 @@ Reklam yok. Takip yok. Hesap yok.
 
 ## release_notes
 
-iCloud yolu kalktı. Artık her telefon, senin kendi Cloudflare hesabındaki bir worker'dan okuyor.
+«Sunucun şu anda yanıt veremiyor» artık kendi başına bir durum.
 
-- Mac'in iCloud üzerinden yazıyorduysa worker'ı bilgisayarda kur: işi eklenti yapar, sen bir kez tek bir token yapıştırırsın
-- Telefona daha önce ulaşanlar okunmaya devam eder, uygulama da başka bir şey gelmeyeceğini açıkça söyler
-- Uygulama artık iCloud'dan hiçbir şey istemiyor
+- Önceden, yer yalnızca kendi sınırına çarpmışken bile «bilgisayarın bütün görevleri yeniden gönderiyor» yazıyordu; oysa bununla ilgisi olmayan tek uç orasıydı
+- Artık doğrusu yazıyor: hiçbir şey kaybolmadı, hiçbir şey bozulmadı, zamanla düzeliyor
+- Listenin üstündeki şeritte de, ilk eşitlemede de

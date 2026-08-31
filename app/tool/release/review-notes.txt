@@ -24,7 +24,7 @@ HOW A REAL USER SETS IT UP
 
 What crosses the network is ciphertext. The key never travels over it, only optically in the QR code — that is why the camera is requested, and it is the only reason. There are no credentials to supply anywhere in this app.
 
-New in this version: nothing about the route or the permissions changed. What moved is what the app says. The pairing guide now names the viewer plugin the computer needs before it asks for a Worker, a key that does not fit is told apart from records that are damaged, and the wording was gone over in all nineteen languages.
+New in this version: nothing about the route or the permissions changed. What moved is what the app says when the Worker answers 503. A Worker whose database has hit a daily limit of its own was being read as "your PC is still sending all your tasks", which pointed the user at the one end that has nothing to do with it. Those two are now told apart by the Retry-After header, and the limit has its own line in all nineteen languages: nothing is lost, nothing is damaged, and time is what ends it.
 
 DEVICE MODELS AND OPERATING SYSTEMS TESTED
 

@@ -47,8 +47,8 @@ Keine Werbung. Kein Tracking. Kein Konto.
 
 ## release_notes
 
-Der iCloud-Weg ist weg. Jedes Telefon liest jetzt aus einem Worker in deinem eigenen Cloudflare-Konto.
+„Dein Server kann gerade nicht antworten“ ist jetzt ein eigener Zustand.
 
-- Hat dein Mac über iCloud geschrieben, richte den Worker am PC ein: Das erledigt das Plugin, du fügst einmal einen Token ein
-- Was schon angekommen ist, bleibt lesbar, und die App sagt klar, wenn nichts mehr nachkommt
-- Die App verlangt gar kein iCloud mehr
+- Bisher hieß es „Dein PC sendet alle Aufgaben erneut“, obwohl der Ort nur an ein eigenes Limit gestoßen war — ein Satz über das eine Ende, das damit nichts zu tun hat
+- Jetzt steht da, was stimmt: nichts ist verloren, nichts ist kaputt, und mit der Zeit gibt sich das
+- Im Band über der Liste wie beim ersten Abgleich

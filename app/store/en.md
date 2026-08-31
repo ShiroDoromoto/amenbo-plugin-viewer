@@ -47,8 +47,8 @@ No ads. No tracking. No account.
 
 ## release_notes
 
-The iCloud route is gone. Every phone now reads from a worker on your own Cloudflare account.
+Your server saying it cannot answer right now is a state of its own.
 
-- If your Mac was writing through iCloud, set the worker up on the PC: the plugin does it, and you paste one token once
-- What already reached the phone stays readable, and the app says plainly when nothing more is coming
-- The app no longer asks for iCloud at all
+- A place that had only run into a limit of its own used to be read as "your PC is sending all your tasks again" — a sentence about the one end that has nothing to do with it
+- What the app says now is what is true: nothing was lost, nothing is damaged, and it clears with time
+- It says it in the band over the list and on the first sync alike
