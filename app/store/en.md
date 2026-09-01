@@ -47,8 +47,10 @@ No ads. No tracking. No account.
 
 ## release_notes
 
-Your server saying it cannot answer right now is a state of its own.
+This one is for the Japanese interface.
 
-- A place that had only run into a limit of its own used to be read as "your PC is sending all your tasks again" — a sentence about the one end that has nothing to do with it
-- What the app says now is what is true: nothing was lost, nothing is damaged, and it clears with time
-- It says it in the band over the list and on the first sync alike
+- In place of phrases carried straight over from the English, it now uses the words a Japanese reader already has
+- Sentences that had put a setting or a screen where a person belongs are rewritten the way someone would say them
+- The store listing went through the same pass
+
+Nothing else moved: the other languages are as they were, and so is the way the app reads your backlog.

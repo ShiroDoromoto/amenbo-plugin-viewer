@@ -47,8 +47,10 @@ Geen advertenties. Geen tracking. Geen account.
 
 ## release_notes
 
-«Je server kan nu even niet antwoorden» is nu een eigen toestand.
+Deze ronde ging alleen over de Japanse tekst.
 
-- Eerder stond er «je pc stuurt al je taken opnieuw», terwijl de plek alleen tegen een eigen limiet was gelopen — een zin over het enige eind dat er niets mee te maken heeft
-- Nu staat er wat klopt: er is niets weg, er is niets stuk, en het lost zich met de tijd op
-- In de balk boven de lijst en bij de eerste synchronisatie
+- In plaats van letterlijk overgenomen wendingen staan er nu de woorden die een Japanse lezer toch al gebruikt
+- Zinnen waarin een instelling of een scherm op de plek van een mens stond, zijn herschreven zoals iemand het zou zeggen
+- De storetekst kreeg dezelfde ronde
+
+Verder is er niets verschoven: de andere talen blijven zoals ze waren, en ook hoe de app je taken leest.

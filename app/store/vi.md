@@ -47,8 +47,10 @@ Không quảng cáo. Không theo dõi. Không tài khoản.
 
 ## release_notes
 
-«Máy chủ hiện chưa thể trả lời» giờ là một trạng thái riêng.
+Lần này chỉ sửa phần tiếng Nhật.
 
-- Trước đây, dù chỗ chứa chỉ chạm giới hạn của chính nó, ứng dụng vẫn hiện «máy tính của bạn đang gửi lại toàn bộ công việc» — một câu về đúng cái đầu chẳng liên quan gì
-- Giờ nó nói điều đúng: không mất gì, không hỏng gì, và để một lúc là hết
-- Ở dải trên danh sách lẫn ở lần đồng bộ đầu tiên
+- Thay cho những chỗ dịch sát từng chữ từ tiếng Anh là những từ mà người đọc tiếng Nhật vốn vẫn dùng
+- Những câu đặt một thiết lập hay một màn hình vào chỗ của con người đã được viết lại như người ta vẫn nói
+- Phần mô tả trên cửa hàng cũng qua cùng một lượt
+
+Ngoài ra không có gì xê dịch: các ngôn ngữ khác vẫn như cũ, và cách ứng dụng đọc công việc của bạn cũng vậy.
