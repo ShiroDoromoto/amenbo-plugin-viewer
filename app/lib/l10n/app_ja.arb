@@ -141,9 +141,9 @@
   "appVersion": "バージョン {version}",
   "contractLine": "Amenbo のデータ形式 {version} を読みます。ほかのバージョンで書かれたサーバーには、別のバージョンのアプリが要ります。",
   "originAppStore": "App Store から入れたものです。",
-  "originTestFlight": "TestFlight から入れたものです。配って試すための版です。",
+  "originTestFlight": "TestFlight から入れたものです。配って試すためのバージョンです。",
   "originPlay": "Google Play から入れたものです。掲載されているものか、試すためのトラックのものかは、ここからは分かりません。",
-  "originHandInstalled": "手元で入れたものです。開発中の版です。",
+  "originHandInstalled": "手元で入れたものです。開発中のバージョンです。",
   "originUnknown": "どこから入れたものかは分かりません。",
 
   "firstSyncTitle": "タスクを取り込んでいます",
