@@ -47,8 +47,10 @@ Keine Werbung. Kein Tracking. Kein Konto.
 
 ## release_notes
 
-„Dein Server kann gerade nicht antworten“ ist jetzt ein eigener Zustand.
+Diese Runde galt nur dem japanischen Text.
 
-- Bisher hieß es „Dein PC sendet alle Aufgaben erneut“, obwohl der Ort nur an ein eigenes Limit gestoßen war — ein Satz über das eine Ende, das damit nichts zu tun hat
-- Jetzt steht da, was stimmt: nichts ist verloren, nichts ist kaputt, und mit der Zeit gibt sich das
-- Im Band über der Liste wie beim ersten Abgleich
+- Statt wörtlich übertragener Wendungen stehen dort jetzt die Wörter, die japanische Leser ohnehin verwenden
+- Sätze, in denen eine Einstellung oder ein Bildschirm an der Stelle eines Menschen stand, sind so umgeschrieben, wie jemand es sagen würde
+- Der Store-Text hat denselben Durchgang bekommen
+
+Sonst hat sich nichts bewegt: die anderen Sprachen bleiben, wie sie waren, und das Lesen deiner Aufgaben ebenso.

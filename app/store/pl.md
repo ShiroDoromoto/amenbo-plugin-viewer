@@ -47,8 +47,10 @@ Bez reklam. Bez śledzenia. Bez konta.
 
 ## release_notes
 
-«Twój serwer nie może teraz odpowiedzieć» to teraz osobny stan.
+Tym razem poszło tylko o japoński tekst.
 
-- Wcześniej pisało «twój komputer wysyła wszystkie zadania od nowa», choć miejsce trafiło tylko na własny limit — zdanie o jedynym końcu, który nie ma z tym nic wspólnego
-- Teraz pisze to, co jest prawdą: nic nie przepadło, nic się nie zepsuło, a z czasem samo minie
-- W pasku nad listą i przy pierwszej synchronizacji
+- Zamiast kalek z angielskiego są teraz słowa, których japoński czytelnik i tak używa
+- Zdania, w których ustawienie albo ekran stały na miejscu człowieka, napisano tak, jak powiedziałby to ktoś żywy
+- Opis w sklepie przeszedł to samo przejrzenie
+
+Poza tym nic się nie ruszyło: pozostałe języki zostają, jakie były, i sposób, w jaki aplikacja czyta twoje zadania, też.

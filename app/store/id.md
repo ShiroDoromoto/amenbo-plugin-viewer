@@ -47,8 +47,10 @@ Tanpa iklan. Tanpa pelacakan. Tanpa akun.
 
 ## release_notes
 
-«Server-mu belum bisa menjawab sekarang» kini jadi keadaan tersendiri.
+Kali ini hanya teks Jepangnya yang digarap.
 
-- Dulu yang muncul «PC-mu sedang mengirim ulang seluruh tugasmu», padahal tempatnya hanya kena batasnya sendiri — kalimat tentang satu-satunya ujung yang tidak ada hubungannya
-- Sekarang yang muncul yang benar: tidak ada yang hilang, tidak ada yang rusak, dan ini pulih dengan sendirinya
-- Di pita atas daftar maupun di sinkronisasi pertama
+- Alih-alih salinan mentah dari bahasa Inggris, sekarang dipakai kata-kata yang memang sudah dipakai pembaca Jepang
+- Kalimat yang menaruh setelan atau layar di tempat orang ditulis ulang seperti orang mengucapkannya
+- Deskripsi di toko lewat pemeriksaan yang sama
+
+Selebihnya tidak ada yang bergeser: bahasa lain tetap seperti sebelumnya, begitu pula cara aplikasi membaca backlog-mu.

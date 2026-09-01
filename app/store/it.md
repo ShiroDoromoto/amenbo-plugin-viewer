@@ -47,8 +47,10 @@ Nessuna pubblicità. Nessun tracciamento. Nessun account.
 
 ## release_notes
 
-«Il tuo server non riesce a rispondere adesso» ora è uno stato a sé.
+Questo giro riguarda solo il testo giapponese.
 
-- Prima compariva «il tuo PC sta rimandando tutte le attività» anche quando il posto aveva solo toccato un limite suo: una frase sull'unico capo che non c'entra niente
-- Ora c'è scritto quello che è vero: non si è perso niente, niente è rotto, e si risolve col tempo
-- Nella fascia sopra l'elenco e alla prima sincronizzazione
+- Al posto dei calchi dall'inglese ci sono ora le parole che un lettore giapponese già usa
+- Le frasi che mettevano un'impostazione o una schermata al posto di una persona sono riscritte come le direbbe qualcuno
+- La scheda dello store ha avuto la stessa revisione
+
+Non si è mosso altro: le altre lingue restano come erano, e anche il modo in cui l'app legge le tue attività.

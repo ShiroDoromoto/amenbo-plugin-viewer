@@ -47,8 +47,10 @@ Sem anúncios. Sem rastreamento. Sem conta.
 
 ## release_notes
 
-«O seu servidor não consegue responder agora» agora é um estado próprio.
+Desta vez foi só o texto em japonês.
 
-- Antes aparecia «o seu PC está enviando todas as tarefas de novo» mesmo quando o lugar só tinha batido num limite dele: uma frase sobre a única ponta que não tem nada a ver
-- Agora aparece o que é verdade: nada se perdeu, nada quebrou, e passa com o tempo
-- Aparece na faixa acima da lista e na primeira sincronização
+- No lugar de decalques do inglês estão agora as palavras que um leitor japonês já usa
+- As frases que punham um ajuste ou uma tela onde vai uma pessoa foram reescritas como alguém diria
+- O texto da ficha passou pela mesma revisão
+
+Nada mais mudou: os outros idiomas ficam como estavam, e o jeito como o app lê as suas tarefas também.

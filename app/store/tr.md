@@ -47,8 +47,10 @@ Reklam yok. Takip yok. Hesap yok.
 
 ## release_notes
 
-«Sunucun şu anda yanıt veremiyor» artık kendi başına bir durum.
+Bu sefer yalnızca Japonca metne dokunuldu.
 
-- Önceden, yer yalnızca kendi sınırına çarpmışken bile «bilgisayarın bütün görevleri yeniden gönderiyor» yazıyordu; oysa bununla ilgisi olmayan tek uç orasıydı
-- Artık doğrusu yazıyor: hiçbir şey kaybolmadı, hiçbir şey bozulmadı, zamanla düzeliyor
-- Listenin üstündeki şeritte de, ilk eşitlemede de
+- İngilizceden birebir aktarılmış kalıpların yerinde artık Japonca okurun zaten kullandığı sözcükler var
+- Bir ayarı ya da ekranı insanın yerine koyan cümleler, insanın söyleyeceği gibi yeniden yazıldı
+- Mağaza metni de aynı gözden geçirmeden geçti
+
+Başka bir şey kımıldamadı: diğer diller olduğu gibi kaldı, uygulamanın görevleri okuma biçimi de.

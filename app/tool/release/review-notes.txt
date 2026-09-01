@@ -24,7 +24,7 @@ HOW A REAL USER SETS IT UP
 
 What crosses the network is ciphertext. The key never travels over it, only optically in the QR code — that is why the camera is requested, and it is the only reason. There are no credentials to supply anywhere in this app.
 
-New in this version: nothing about the route or the permissions changed. What moved is what the app says when the Worker answers 503. A Worker that has hit a daily limit of its own was read as "your PC is still sending your tasks" — the one end that has nothing to do with it. Retry-After now tells the two apart, and that limit has its own line in nineteen languages.
+New in this version: nothing about the route, the permissions or the data handling changed. What moved is the Japanese wording on screen. Phrases carried straight over from the English were replaced with the words a Japanese reader already uses, and sentences that had put a setting or a screen where a person belongs were rewritten the way someone would say them. The Japanese store listing got the same pass. No other language changed.
 
 DEVICE MODELS AND OPERATING SYSTEMS TESTED
 

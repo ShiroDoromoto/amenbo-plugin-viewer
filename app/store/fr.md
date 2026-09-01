@@ -47,8 +47,10 @@ Pas de publicité. Pas de pistage. Pas de compte.
 
 ## release_notes
 
-« Votre serveur ne peut pas répondre pour le moment » est désormais un état à part.
+Ce tour-ci ne concerne que le texte japonais.
 
-- Avant, l'app affichait « votre PC renvoie toutes les tâches » alors que l'endroit avait seulement atteint une limite à lui : une phrase sur le seul bout qui n'y est pour rien
-- Elle dit maintenant ce qui est vrai : rien n'est perdu, rien n'est abîmé, et cela se règle avec le temps
-- Dans le bandeau au-dessus de la liste comme à la première synchronisation
+- À la place des calques de l'anglais, on trouve désormais les mots qu'un lecteur japonais emploie déjà
+- Les phrases qui mettaient un réglage ou un écran à la place d'une personne sont réécrites comme on les dirait
+- La fiche du store a eu la même relecture
+
+Rien d'autre n'a bougé : les autres langues restent telles quelles, et la façon dont l'app lit vos tâches aussi.
