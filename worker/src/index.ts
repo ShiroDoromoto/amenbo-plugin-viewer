@@ -20,12 +20,16 @@
  * | | where it lives | what it may do |
  * |---|---|---|
  * | the write token | a Secret on this Worker, one of them | every `PUT` and `DELETE` |
- * | a read token | one row per phone, **as a hash** | every `GET` |
+ * | the read code | one row, **as a hash** | every `GET` |
  *
- * **The point is being able to cut off one phone.** One shared token would mean a single lost
- * phone re-pairs every other one, so the phones get one each — and since this Worker only ever
- * compares, it keeps the hashes rather than the tokens, and a copy of the table is not a set of
- * credentials.
+ * **There is one read code, not one per phone.** It used to be a row per phone, keyed by a name,
+ * so that one could be cut off by naming it. But this Worker compares a hash and never learns
+ * which phone offered it: one code photographed by three phones is one row here and all three
+ * read. The name named something on the PC and nothing in the store.
+ *
+ * So the store holds a code, present or absent. Issuing replaces what was there and cuts whoever
+ * held it. And since this Worker only ever compares, it keeps the hash rather than the code — a
+ * copy of the table is not a credential.
  *
  * ## The order is the whole protocol
  *
@@ -129,8 +133,7 @@ export default {
 
 		const url = new URL(request.url);
 		const { pathname } = url;
-		const labelled = pathname.match(LABELLED_TOKEN);
-		const allowed = labelled ? TOKEN_METHODS : ROUTES[pathname];
+		const allowed = ROUTES[pathname];
 		if (!allowed) {
 			return problem(404, "no such endpoint");
 		}
@@ -150,9 +153,6 @@ export default {
 		// as "buy more storage". This Worker cannot be updated when that reading turns out to be
 		// wrong, so it does not read — it hands the sentence on to the part that can be.
 		try {
-			if (labelled) {
-				return await revoke(env, decodeURIComponent(labelled[1]));
-			}
 			switch (pathname) {
 				case "/records":
 					return request.method === "PUT" ? await place(env, request) : await read(env, url);
@@ -163,7 +163,7 @@ export default {
 				default:
 					// The routes are the four above and `/tokens`, and anything else was turned
 					// away as a missing endpoint before it got here.
-					return await issue(env, request);
+					return await tokens(env, request);
 			}
 		} catch (thrown) {
 			return unavailable(thrown);
@@ -182,26 +182,40 @@ export default {
  * | `GET /records` | hands back everything after a point in the order, a page at a time — or, with `keys=1`, the keys alone |
  * | `GET /meta`    | the version, the order, when it last moved and which key sealed the records — the cheap question |
  * | `PUT /reset`   | **gone.** It is still routed so that what a caller gets is a sentence rather than a guess — see `gone` |
- * | `PUT /tokens`  | lets one more phone read |
+ * | `PUT /tokens`    | hands out the read code, replacing whatever was there |
+ * | `DELETE /tokens` | takes it away, so nothing reads until one is issued again |
+ * | `GET /tokens`    | whether there is one, and when it was issued — the write token's question, not a phone's |
  */
 const ROUTES: Record<string, Record<string, Kind>> = {
 	"/records": { PUT: "write", GET: "read", HEAD: "read" },
 	"/reset": { PUT: "write" },
 	"/meta": { GET: "read", HEAD: "read" },
-	"/tokens": { PUT: "write" },
+	"/tokens": { PUT: "write", DELETE: "write", GET: "write", HEAD: "write" },
 };
 
-/** `DELETE /tokens/<label>` — the one endpoint whose path names what it acts on. */
-const LABELLED_TOKEN = /^\/tokens\/(.+)$/;
-const TOKEN_METHODS: Record<string, Kind> = { DELETE: "write" };
+/**
+ * `/tokens` — the three things that can be done to the one read code.
+ *
+ * The path names no code, so which of them this is comes off the method alone. Anything but these
+ * three was turned away as a method the endpoint does not take, before it got here.
+ */
+function tokens(env: Env, request: Request): Promise<Response> {
+	switch (request.method) {
+		case "PUT":
+			return issue(env, request);
+		case "DELETE":
+			return revoke(env);
+		default:
+			return pairing(env);
+	}
+}
 
 /**
  * Works out which kind of token the request is carrying, or none.
  *
- * The write token is compared without leaking how far the comparison got. The read tokens are
- * looked up by their hash instead, and that lookup is not constant time — it does not need to
- * be, because what a timing difference could give away is a hash, and a hash is not what gets
- * anyone in.
+ * The write token is compared without leaking how far the comparison got. The read code is looked
+ * up by its hash instead, and that lookup is not constant time — it does not need to be, because
+ * what a timing difference could give away is a hash, and a hash is not what gets anyone in.
  */
 async function kindOffered(request: Request, env: Env): Promise<Kind | null> {
 	const offered = bearer(request);
@@ -656,16 +670,15 @@ function checkedRecord(record: Offered): Landing | string {
 const HASH = /^[0-9a-f]{64}$/i;
 
 /**
- * `PUT /tokens` — lets one more phone read.
+ * `PUT /tokens` — hands out the read code.
  *
- * **The token itself never arrives.** The PC generates it, shows it on a QR, and sends only its
+ * **The code itself never arrives.** The PC generates it, shows it on a QR, and sends only its
  * hash, so the value exists on the PC and on the phone that photographed it and nowhere else.
  *
- * **A label that is already there is refused.** The label is what cutting a phone off names, so
- * issuing over one would stop the phone holding it — and a name mistyped for another phone's
- * would stop one nobody meant to touch, saying nothing until somebody picks it up. Re-pairing
- * the same phone is therefore two moves: cut it off, then pair it again. It ends in the same
- * place, having been asked for.
+ * **Issuing replaces what was there.** There is one row, so the code that was here stops working
+ * the moment a new one lands — which is what "issuing cuts the last one" means from a phone's
+ * side. It is not a refusal to be worked around: the old shape refused a name that was taken and
+ * made re-pairing two moves, and the name was the part that turned out not to exist.
  */
 async function issue(env: Env, request: Request): Promise<Response> {
 	let asked: unknown;
@@ -674,47 +687,50 @@ async function issue(env: Env, request: Request): Promise<Response> {
 	} catch {
 		return problem(400, "the body has to be a JSON object");
 	}
-	const { label, hash } = (asked ?? {}) as { label?: unknown; hash?: unknown };
-	if (typeof label !== "string" || label.trim() === "") {
-		return problem(400, "a token needs a label — it is what revoking one names");
-	}
+	const { hash } = (asked ?? {}) as { hash?: unknown };
 	if (typeof hash !== "string" || !HASH.test(hash)) {
 		return problem(400, "the hash has to be a SHA-256 as 64 hex characters");
 	}
 
-	const named = label.trim();
 	const issued_at = new Date().toISOString();
-	// Nothing happens on a name that is taken, and the row count is what says so — reading the
-	// table first and inserting after would leave a window for two sends to both find it free.
-	const landed = await env.RECORDS.prepare(
-		"INSERT INTO tokens (label, hash, issued_at) VALUES (?, ?, ?) ON CONFLICT (label) DO NOTHING",
+	await env.RECORDS.prepare(
+		"INSERT INTO tokens (id, hash, issued_at) VALUES (1, ?, ?)" +
+			" ON CONFLICT (id) DO UPDATE SET hash = excluded.hash, issued_at = excluded.issued_at",
 	)
-		.bind(named, hash.toLowerCase(), issued_at)
+		.bind(hash.toLowerCase(), issued_at)
 		.run();
-	if (!landed.meta.changes) {
-		return problem(
-			409,
-			`a phone is already paired as ${JSON.stringify(named)}` +
-				" — cut that one off first, and pair again under the name once it is free",
-		);
-	}
 
-	return Response.json({ label: named, issued_at });
+	return Response.json({ issued_at });
 }
 
 /**
- * `DELETE /tokens/<label>` — cuts one phone off, and nothing else.
+ * `DELETE /tokens` — takes the code away, so nothing reads until one is issued again.
  *
- * A label that is not there is answered as not found rather than shrugged off. Revoking is what
- * someone does when a phone is lost, and a typo that answered "done" would leave them believing
- * they had cut off a phone that is still reading.
+ * **A store that had none is not a mistake to report.** The old shape answered `404` to a label it
+ * did not hold, because the label was typed and a typo answered "done" would leave someone
+ * believing they had cut off a phone that is still reading. There is nothing to mistype now, and
+ * asking a store with no code to have no code is asking for the state it is in. So the answer says
+ * whether there was one to cut, and the status is the same either way.
  */
-async function revoke(env: Env, label: string): Promise<Response> {
-	const gone = await env.RECORDS.prepare("DELETE FROM tokens WHERE label = ?").bind(label).run();
-	if (!gone.meta.changes) {
-		return problem(404, `no token is labelled ${JSON.stringify(label)}`);
-	}
-	return Response.json({ label });
+async function revoke(env: Env): Promise<Response> {
+	const done = await env.RECORDS.prepare("DELETE FROM tokens WHERE id = 1").run();
+	return Response.json({ cut: Boolean(done.meta.changes) });
+}
+
+/**
+ * `GET /tokens` — whether there is a code, and when it was issued.
+ *
+ * **It takes the write token, not a read one.** The question belongs to the PC: the settings
+ * screen draws whether a phone can read at all, and it drew that from a list the PC kept beside
+ * its own state — a list of what the PC believed, which parts company with the store the first
+ * time one is stood up again underneath it. Asking here makes the screen say what is true.
+ *
+ * **The hash does not travel.** What is kept is a hash and not a code, but handing it out would
+ * put the read credential's only copy in reach of a token that has no use for it.
+ */
+async function pairing(env: Env): Promise<Response> {
+	const row = await env.RECORDS.prepare("SELECT issued_at FROM tokens WHERE id = 1").first<{ issued_at: string }>();
+	return Response.json({ paired: row !== null, issued_at: row?.issued_at ?? null });
 }
 
 /**

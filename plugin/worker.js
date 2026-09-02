@@ -19,8 +19,7 @@ var index_default = {
     }
     const url = new URL(request.url);
     const { pathname } = url;
-    const labelled = pathname.match(LABELLED_TOKEN);
-    const allowed = labelled ? TOKEN_METHODS : ROUTES[pathname];
+    const allowed = ROUTES[pathname];
     if (!allowed) {
       return problem(404, "no such endpoint");
     }
@@ -32,9 +31,6 @@ var index_default = {
       return problem(403, `this endpoint takes the ${wanted} token, and a ${carrying} token was offered`);
     }
     try {
-      if (labelled) {
-        return await revoke(env, decodeURIComponent(labelled[1]));
-      }
       switch (pathname) {
         case "/records":
           return request.method === "PUT" ? await place(env, request) : await read(env, url);
@@ -43,7 +39,7 @@ var index_default = {
         case "/meta":
           return await meta(env);
         default:
-          return await issue(env, request);
+          return await tokens(env, request);
       }
     } catch (thrown) {
       return unavailable(thrown);
@@ -54,10 +50,19 @@ var ROUTES = {
   "/records": { PUT: "write", GET: "read", HEAD: "read" },
   "/reset": { PUT: "write" },
   "/meta": { GET: "read", HEAD: "read" },
-  "/tokens": { PUT: "write" }
+  "/tokens": { PUT: "write", DELETE: "write", GET: "write", HEAD: "write" }
 };
-var LABELLED_TOKEN = /^\/tokens\/(.+)$/;
-var TOKEN_METHODS = { DELETE: "write" };
+function tokens(env, request) {
+  switch (request.method) {
+    case "PUT":
+      return issue(env, request);
+    case "DELETE":
+      return revoke(env);
+    default:
+      return pairing(env);
+  }
+}
+__name(tokens, "tokens");
 async function kindOffered(request, env) {
   const offered = bearer(request);
   if (offered === null) {
@@ -269,35 +274,27 @@ async function issue(env, request) {
   } catch {
     return problem(400, "the body has to be a JSON object");
   }
-  const { label, hash } = asked ?? {};
-  if (typeof label !== "string" || label.trim() === "") {
-    return problem(400, "a token needs a label \u2014 it is what revoking one names");
-  }
+  const { hash } = asked ?? {};
   if (typeof hash !== "string" || !HASH.test(hash)) {
     return problem(400, "the hash has to be a SHA-256 as 64 hex characters");
   }
-  const named = label.trim();
   const issued_at = (/* @__PURE__ */ new Date()).toISOString();
-  const landed = await env.RECORDS.prepare(
-    "INSERT INTO tokens (label, hash, issued_at) VALUES (?, ?, ?) ON CONFLICT (label) DO NOTHING"
-  ).bind(named, hash.toLowerCase(), issued_at).run();
-  if (!landed.meta.changes) {
-    return problem(
-      409,
-      `a phone is already paired as ${JSON.stringify(named)} \u2014 cut that one off first, and pair again under the name once it is free`
-    );
-  }
-  return Response.json({ label: named, issued_at });
+  await env.RECORDS.prepare(
+    "INSERT INTO tokens (id, hash, issued_at) VALUES (1, ?, ?) ON CONFLICT (id) DO UPDATE SET hash = excluded.hash, issued_at = excluded.issued_at"
+  ).bind(hash.toLowerCase(), issued_at).run();
+  return Response.json({ issued_at });
 }
 __name(issue, "issue");
-async function revoke(env, label) {
-  const gone2 = await env.RECORDS.prepare("DELETE FROM tokens WHERE label = ?").bind(label).run();
-  if (!gone2.meta.changes) {
-    return problem(404, `no token is labelled ${JSON.stringify(label)}`);
-  }
-  return Response.json({ label });
+async function revoke(env) {
+  const done = await env.RECORDS.prepare("DELETE FROM tokens WHERE id = 1").run();
+  return Response.json({ cut: Boolean(done.meta.changes) });
 }
 __name(revoke, "revoke");
+async function pairing(env) {
+  const row = await env.RECORDS.prepare("SELECT issued_at FROM tokens WHERE id = 1").first();
+  return Response.json({ paired: row !== null, issued_at: row?.issued_at ?? null });
+}
+__name(pairing, "pairing");
 function problem(status, detail, headers = {}) {
   return Response.json({ error: detail }, { status, headers });
 }

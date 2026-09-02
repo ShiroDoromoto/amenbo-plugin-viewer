@@ -69,28 +69,30 @@ describe("the records", () => {
 
 describe("the tokens", () => {
 	// The Worker only ever compares, so the value has no reason to be here. Keeping it would put
-	// every paired phone's credential in one place, to be taken all at once.
-	it("keep a hash, a label and a date, and nothing else", async () => {
-		await env.RECORDS.prepare("INSERT INTO tokens (label, hash, issued_at) VALUES (?, ?, ?)")
-			.bind("iPhone", "a-sha-256-of-the-token", "2026-08-09T12:00:00Z")
+	// the read credential's only copy in one place, to be taken along with everything else.
+	it("keep a hash and a date, and nothing else", async () => {
+		await env.RECORDS.prepare("INSERT INTO tokens (id, hash, issued_at) VALUES (1, ?, ?)")
+			.bind("a-sha-256-of-the-code", "2026-08-09T12:00:00Z")
 			.run();
 
 		const { results } = await env.RECORDS.prepare("SELECT * FROM tokens").all();
 
-		expect(Object.keys(results[0]).sort()).toEqual(["hash", "issued_at", "label"]);
+		expect(Object.keys(results[0]).sort()).toEqual(["hash", "id", "issued_at"]);
 	});
 
-	// Revoking is deleting the row, and the label is what names which one. A label that could
-	// repeat would revoke somebody else's phone.
-	it("are named apart", async () => {
-		const issue = (label: string) =>
-			env.RECORDS.prepare("INSERT INTO tokens (label, hash, issued_at) VALUES (?, ?, ?)")
-				.bind(label, "a-sha-256-of-the-token", "2026-08-09T12:00:00Z")
-				.run();
+	// One row, ever. A second code surviving an issue would be a phone reading that nothing on the
+	// PC's screen says is there — and the screen has no way to find out, since the store answers
+	// present or absent and not a list.
+	it("is one row that cannot become two", async () => {
+		await env.RECORDS.prepare("INSERT INTO tokens (id, hash, issued_at) VALUES (1, ?, ?)")
+			.bind("a-sha-256-of-the-code", "2026-08-09T12:00:00Z")
+			.run();
 
-		await issue("iPhone");
-
-		await expect(issue("iPhone")).rejects.toThrow();
+		await expect(
+			env.RECORDS.prepare("INSERT INTO tokens (id, hash, issued_at) VALUES (2, ?, ?)")
+				.bind("a-sha-256-of-another-code", "2026-08-09T12:00:01Z")
+				.run(),
+		).rejects.toThrow();
 	});
 });
 
