@@ -116,8 +116,6 @@
   "connectionTitle": "연결",
   "routeCloudflare": "내 Cloudflare",
   "routeNone": "페어링 안 됨",
-  "thisPhone": "이 휴대폰",
-  "thisPhoneDetail": "PC에서 이 휴대폰을 끊을 때 쓰는 이름입니다.",
   "factRoute": "서버",
   "factLastTaken": "마지막으로 가져온 때",
   "nothingArrivedYet": "아직 아무것도 도착하지 않았습니다.",

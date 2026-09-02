@@ -16,7 +16,6 @@ void main() {
     url: Uri.parse('https://amenbo.example.workers.dev'),
     readToken: 'cmVhZC10b2tlbg',
     encryptionKey: 'AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8',
-    label: 'iPhone',
   );
 
   setUp(() => FlutterSecureStorage.setMockInitialValues({}));
@@ -34,21 +33,19 @@ void main() {
     expect(stored?.url, pairing.url);
     expect(stored?.readToken, pairing.readToken);
     expect(stored?.encryptionKey, pairing.encryptionKey);
-    expect(stored?.label, pairing.label);
   });
 
-  test('a phone paired before the code carried a name stays paired', () async {
-    // The entry an older build wrote has no name in it. Reading that as a broken entry would
-    // unpair a phone that reads perfectly well, over a line the connection screen only displays.
+  test('a phone paired while the code carried a name stays paired', () async {
+    // The entry an older build wrote has a name in it. Reading that as a broken entry would
+    // unpair a phone that reads perfectly well, over a field nothing looks at any more.
     FlutterSecureStorage.setMockInitialValues({
       'pairing':
           '{"url":"https://amenbo.example.workers.dev","t":"cmVhZC10b2tlbg",'
-          '"k":"AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8"}',
+          '"k":"AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8","l":"iPhone"}',
     });
 
     final stored = await const PairingStore().read();
     expect(stored?.readToken, 'cmVhZC10b2tlbg');
-    expect(stored?.label, isNull);
   });
 
   test('the stored key opens what the PC sealed with it', () async {

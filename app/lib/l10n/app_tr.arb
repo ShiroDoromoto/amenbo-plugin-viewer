@@ -116,8 +116,6 @@
   "connectionTitle": "Bağlantı",
   "routeCloudflare": "Kendi Cloudflare'in",
   "routeNone": "Eşlenmemiş",
-  "thisPhone": "Bu telefon",
-  "thisPhoneDetail": "Bu telefonu bilgisayardan keserken kullanacağın ad.",
   "factRoute": "Sunucu",
   "factLastTaken": "En son alınma",
   "nothingArrivedYet": "Henüz hiçbir şey gelmedi.",

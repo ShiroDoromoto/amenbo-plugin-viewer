@@ -35,11 +35,7 @@ const _tablet = Size(1200, 900);
 
 final _today = DateTime(2026, 8, 9, 12);
 
-const _paired = Connection(
-  paired: true,
-  label: 'iPhone',
-  host: 'amenbo.example.workers.dev',
-);
+const _paired = Connection(paired: true, host: 'amenbo.example.workers.dev');
 
 void main() {
   late BacklogStore store;

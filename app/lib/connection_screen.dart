@@ -1,14 +1,14 @@
 /// The connection, as this one phone can describe it and act on it.
 ///
-/// Four things are worth saying here and the rest is noise: what this phone is called, where the
-/// snapshot is coming from, how old what you are reading is, and how to stop this phone holding a
-/// copy. Everything on the screen is one of the four.
+/// Three things are worth saying here and the rest is noise: where the snapshot is coming from,
+/// how old what you are reading is, and how to stop this phone holding a copy. Everything on the
+/// screen is one of the three.
 ///
-/// **What is not here is other devices.** Adding and revoking read tokens happens at the writing
-/// end, and this app holds one token — its own. A list of the person's phones would be a list
-/// nothing on this screen could change. The name is the one part of that list this phone can
-/// answer for, and it is here because cutting a phone off is done by name: without it the person
-/// is at the PC choosing between rows with no way to tell which is the phone in their hand.
+/// **What is not here is devices.** Adding and revoking read tokens happens at the writing end,
+/// and this app holds one token — its own. A list of the person's phones would be a list nothing
+/// on this screen could change. Not even this phone's own name: what the PC keeps is the hash of
+/// a token, so it does not know which phone holds it, and a name here would be the screen making
+/// a distinction the PC cannot.
 library;
 
 import 'package:flutter/material.dart';
@@ -170,12 +170,6 @@ class _Details extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.only(bottom: Space.s7),
         children: [
-          if (connection.label case final named?)
-            _Fact(
-              label: words.thisPhone,
-              value: named,
-              detail: words.thisPhoneDetail,
-            ),
           _Fact(
             label: words.factRoute,
             // A phone with no pairing has rows and no place they came from that this build can

@@ -28,7 +28,6 @@ class FakeFacts implements ConnectionFacts {
 
 final _cloudflare = Connection(
   paired: true,
-  label: 'iPhone',
   host: 'amenbo.example.workers.dev',
   lastTaken: LastTaken(
     at: DateTime.now().subtract(const Duration(minutes: 12)),
@@ -79,30 +78,6 @@ Future<ConnectionOutcome? Function()> pumpConnection(
 
 void main() {
   setUp(() => FlutterSecureStorage.setMockInitialValues({}));
-
-  testWidgets('this phone is named the way the PC would cut it off', (
-    tester,
-  ) async {
-    await pumpConnection(tester, FakeFacts(_cloudflare));
-
-    expect(find.text(words.thisPhone), findsOneWidget);
-    expect(find.text('iPhone'), findsOneWidget);
-  });
-
-  testWidgets('a phone paired before the code carried a name says nothing', (
-    tester,
-  ) async {
-    // An empty row headed "This phone" would read as the phone having no name on the PC, which
-    // is not what happened — the code it was paired from simply did not carry one.
-    await pumpConnection(
-      tester,
-      FakeFacts(
-        const Connection(paired: true, host: 'amenbo.example.workers.dev'),
-      ),
-    );
-
-    expect(find.text(words.thisPhone), findsNothing);
-  });
 
   testWidgets('the Cloudflare route names its host and can be paired again', (
     tester,

@@ -116,8 +116,6 @@
   "connectionTitle": "З'єднання",
   "routeCloudflare": "Ваш власний Cloudflare",
   "routeNone": "Не зв'язаний",
-  "thisPhone": "Цей телефон",
-  "thisPhoneDetail": "Ім'я, за яким відключити цей телефон на комп'ютері.",
   "factRoute": "Сервер",
   "factLastTaken": "Останнє завантаження",
   "nothingArrivedYet": "Поки нічого не надійшло.",

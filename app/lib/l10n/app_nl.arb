@@ -116,8 +116,6 @@
   "connectionTitle": "Verbinding",
   "routeCloudflare": "Je eigen Cloudflare",
   "routeNone": "Niet gekoppeld",
-  "thisPhone": "Deze telefoon",
-  "thisPhoneDetail": "De naam waarmee je deze telefoon op de pc afsluit.",
   "factRoute": "Server",
   "factLastTaken": "Laatst opgehaald",
   "nothingArrivedYet": "Er is nog niets aangekomen.",

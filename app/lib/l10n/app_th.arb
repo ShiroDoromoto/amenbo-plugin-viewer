@@ -116,8 +116,6 @@
   "connectionTitle": "การเชื่อมต่อ",
   "routeCloudflare": "Cloudflare ของคุณเอง",
   "routeNone": "ยังไม่ได้จับคู่",
-  "thisPhone": "เครื่องนี้",
-  "thisPhoneDetail": "ชื่อที่ใช้ตัดเครื่องนี้ออก จากฝั่งคอมพิวเตอร์",
   "factRoute": "เซิร์ฟเวอร์",
   "factLastTaken": "เอามาครั้งล่าสุด",
   "nothingArrivedYet": "ยังไม่มีอะไรมาถึง",

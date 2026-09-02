@@ -116,8 +116,6 @@
   "connectionTitle": "Conexão",
   "routeCloudflare": "Seu próprio Cloudflare",
   "routeNone": "Sem pareamento",
-  "thisPhone": "Este telefone",
-  "thisPhoneDetail": "O nome pelo qual cortar este telefone, no PC.",
   "factRoute": "Servidor",
   "factLastTaken": "Última busca",
   "nothingArrivedYet": "Ainda não chegou nada.",
