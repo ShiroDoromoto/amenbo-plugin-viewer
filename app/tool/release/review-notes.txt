@@ -24,7 +24,7 @@ HOW A REAL USER SETS IT UP
 
 What crosses the network is ciphertext. The key never travels over it, only optically in the QR code — that is why the camera is requested, and it is the only reason. There are no credentials to supply anywhere in this app.
 
-New in this version: nothing about the route, the permissions or the data handling changed. Two things moved. Re-pairing from the connection screen now runs the fetch that follows it — it used to keep the new code and stop, leaving the phone showing that the computer had turned it away. And the Japanese wording on screen was reworked: phrases carried straight over from the English were replaced with the words a Japanese reader already uses, and sentences that had put a setting or a screen where a person belongs were rewritten. The Japanese store listing got the same pass. No other language changed.
+New in this version: nothing about the route, the permissions or the data handling changed. Re-pairing from the connection screen now runs the fetch that follows it — it used to keep the new code and stop. The Japanese wording on screen was reworked, and the Japanese store listing with it. No other language changed.
 
 DEVICE MODELS AND OPERATING SYSTEMS TESTED
 
