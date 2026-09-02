@@ -147,12 +147,13 @@ describe("the two kinds of token", () => {
 		expect(await response.json()).toMatchObject({ error: expect.stringContaining("write") });
 	});
 
-	// And the other way. The PC has no business reading what it just wrote, and a write token
-	// that could read would be one credential doing both jobs again.
-	it("refuse the write token at a door that reads", async () => {
-		const response = await signed("/meta");
-
-		expect(response.status).toBe(403);
+	// The other direction is not the point, and used to be refused anyway. The PC holds the key
+	// and the backlog these records were sealed from, so reading them back tells it nothing it did
+	// not hand over — and being refused meant the comparison it runs had to issue itself a read
+	// code, which with one code in the store is the phone's.
+	it("let the write token read", async () => {
+		expect((await signed("/meta")).status).toBe(200);
+		expect((await signed("/records")).status).toBe(200);
 	});
 
 	it("let a read token read", async () => {
@@ -177,6 +178,8 @@ describe("the routes", () => {
 		["PUT", "/records", WRITE_TOKEN],
 		["GET", "/records", "the-phone's-own-token"],
 		["GET", "/meta", "the-phone's-own-token"],
+		["GET", "/records", WRITE_TOKEN],
+		["GET", "/meta", WRITE_TOKEN],
 	])("%s %s is dispatched", async (method, path, token) => {
 		await pair("the-phone's-own-token");
 

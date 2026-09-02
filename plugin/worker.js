@@ -27,8 +27,11 @@ var index_default = {
     if (!wanted) {
       return problem(405, `${request.method} is not allowed here`, { Allow: Object.keys(allowed).join(", ") });
     }
-    if (wanted !== carrying) {
-      return problem(403, `this endpoint takes the ${wanted} token, and a ${carrying} token was offered`);
+    if (!wanted.includes(carrying)) {
+      return problem(
+        403,
+        `this endpoint takes the ${wanted.join(" or the ")} token, and a ${carrying} token was offered`
+      );
     }
     try {
       switch (pathname) {
@@ -46,11 +49,12 @@ var index_default = {
     }
   }
 };
+var READING = ["read", "write"];
 var ROUTES = {
-  "/records": { PUT: "write", GET: "read", HEAD: "read" },
-  "/reset": { PUT: "write" },
-  "/meta": { GET: "read", HEAD: "read" },
-  "/tokens": { PUT: "write", DELETE: "write", GET: "write", HEAD: "write" }
+  "/records": { PUT: ["write"], GET: READING, HEAD: READING },
+  "/reset": { PUT: ["write"] },
+  "/meta": { GET: READING, HEAD: READING },
+  "/tokens": { PUT: ["write"], DELETE: ["write"], GET: ["write"], HEAD: ["write"] }
 };
 function tokens(env, request) {
   switch (request.method) {

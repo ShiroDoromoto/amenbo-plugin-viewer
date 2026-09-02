@@ -19,8 +19,15 @@
  *
  * | | where it lives | what it may do |
  * |---|---|---|
- * | the write token | a Secret on this Worker, one of them | every `PUT` and `DELETE` |
+ * | the write token | a Secret on this Worker, one of them | every door |
  * | the read code | one row, **as a hash** | every `GET` |
+ *
+ * **What the split protects is the phone's half.** A code photographed off somebody's screen puts
+ * nothing into the store, which is the whole of why there are two. The other direction was never
+ * the point: the PC holds the encryption key and the backlog the records were sealed from, so a
+ * write token that can also read learns nothing it did not hand over. It used to be refused there
+ * anyway, and the comparison `repair` runs had to issue itself a read code to get past it — which,
+ * with one code in the store, is the phone's.
  *
  * **There is one read code, not one per phone.** It used to be a row per phone, keyed by a name,
  * so that one could be cut off by naming it. But this Worker compares a hash and never learns
@@ -110,7 +117,7 @@ const PER_WRITE = 500;
  */
 const PER_KEY_PAGE = 2000;
 
-/** Which kind of token a request has to be carrying. */
+/** Which kind of token a request is carrying. */
 type Kind = "write" | "read";
 
 export default {
@@ -143,8 +150,11 @@ export default {
 		}
 		// Past this point the caller is known, so telling them their token is the wrong kind for
 		// this door gives away nothing they could not already see.
-		if (wanted !== carrying) {
-			return problem(403, `this endpoint takes the ${wanted} token, and a ${carrying} token was offered`);
+		if (!wanted.includes(carrying)) {
+			return problem(
+				403,
+				`this endpoint takes the ${wanted.join(" or the ")} token, and a ${carrying} token was offered`,
+			);
 		}
 
 		// **Anything thrown is answered the same way, and the answer carries what was said.**
@@ -172,8 +182,17 @@ export default {
 } satisfies ExportedHandler<Env>;
 
 /**
- * The endpoints, the methods each one takes, and which token each method wants. HEAD rides along
- * with GET because the runtime answers it from the GET handler, and a phone checking for
+ * Who may read: the phone, and the PC that wrote it.
+ *
+ * **The read code is named first because it is the ordinary reader.** The write token is here so
+ * that the PC can compare what is in the store with what it holds without issuing itself a read
+ * code — which, now that the store keeps one, would be the phone's.
+ */
+const READING: Kind[] = ["read", "write"];
+
+/**
+ * The endpoints, the methods each one takes, and which tokens each method lets through. HEAD rides
+ * along with GET because the runtime answers it from the GET handler, and a phone checking for
  * something new may well use it.
  *
  * | | |
@@ -186,11 +205,11 @@ export default {
  * | `DELETE /tokens` | takes it away, so nothing reads until one is issued again |
  * | `GET /tokens`    | whether there is one, and when it was issued — the write token's question, not a phone's |
  */
-const ROUTES: Record<string, Record<string, Kind>> = {
-	"/records": { PUT: "write", GET: "read", HEAD: "read" },
-	"/reset": { PUT: "write" },
-	"/meta": { GET: "read", HEAD: "read" },
-	"/tokens": { PUT: "write", DELETE: "write", GET: "write", HEAD: "write" },
+const ROUTES: Record<string, Record<string, Kind[]>> = {
+	"/records": { PUT: ["write"], GET: READING, HEAD: READING },
+	"/reset": { PUT: ["write"] },
+	"/meta": { GET: READING, HEAD: READING },
+	"/tokens": { PUT: ["write"], DELETE: ["write"], GET: ["write"], HEAD: ["write"] },
 };
 
 /**
