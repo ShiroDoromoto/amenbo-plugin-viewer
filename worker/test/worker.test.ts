@@ -25,11 +25,11 @@ async function hashOf(token: string): Promise<string> {
 	return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-/** Pairs a phone the way the PC does, and hands back the token that phone now reads with. */
-async function pair(label: string, token: string): Promise<Response> {
+/** Issues the read code the way the PC does, over whatever was there. */
+async function pair(token: string): Promise<Response> {
 	return signed("/tokens", {
 		method: "PUT",
-		body: JSON.stringify({ label, hash: await hashOf(token) }),
+		body: JSON.stringify({ hash: await hashOf(token) }),
 	});
 }
 
@@ -77,15 +77,12 @@ function sending(path: "/records", version: number, records: unknown[]): Promise
 }
 
 /**
- * Reads the way a phone does. The pairing is done here rather than in each test because every read
- * needs one and none of them are about it — and only when that phone is not paired already, since
- * issuing under a label that is there is refused.
+ * Reads the way a phone does. Issuing is done here rather than in each test because every read
+ * needs a code and none of them are about it — and issuing again over the same hash leaves the
+ * same phone reading, so it costs nothing to do it every time.
  */
 async function reading(path: string): Promise<Response> {
-	const paired = await env.RECORDS.prepare("SELECT 1 FROM tokens WHERE label = ?").bind("iPhone").first();
-	if (!paired) {
-		await pair("iPhone", "the-phone's-own-token");
-	}
+	await pair("the-phone's-own-token");
 	return carrying("the-phone's-own-token", path);
 }
 
@@ -142,7 +139,7 @@ describe("the two kinds of token", () => {
 	// The whole point of two kinds: what a phone holds cannot write, so a token photographed off
 	// somebody's screen cannot put anything into the store.
 	it("refuse a read token at a door that writes", async () => {
-		await pair("iPhone", "the-phone's-own-token");
+		await pair("the-phone's-own-token");
 
 		const response = await carrying("the-phone's-own-token", "/records", { method: "PUT", body: placement(1, []) });
 
@@ -159,7 +156,7 @@ describe("the two kinds of token", () => {
 	});
 
 	it("let a read token read", async () => {
-		await pair("iPhone", "the-phone's-own-token");
+		await pair("the-phone's-own-token");
 
 		const response = await carrying("the-phone's-own-token", "/meta");
 
@@ -181,7 +178,7 @@ describe("the routes", () => {
 		["GET", "/records", "the-phone's-own-token"],
 		["GET", "/meta", "the-phone's-own-token"],
 	])("%s %s is dispatched", async (method, path, token) => {
-		await pair("iPhone", "the-phone's-own-token");
+		await pair("the-phone's-own-token");
 
 		const response = await carrying(token, path, { method, body: method === "PUT" ? placement(1, []) : undefined });
 
@@ -222,8 +219,7 @@ describe("the routes", () => {
 		["GET", "/reset", "PUT"],
 		["PUT", "/meta", "GET, HEAD"],
 		["POST", "/meta", "GET, HEAD"],
-		["POST", "/tokens", "PUT"],
-		["GET", "/tokens/iPhone", "DELETE"],
+		["POST", "/tokens", "PUT, DELETE, GET, HEAD"],
 	])("%s %s is refused as a method, and says which are allowed", async (method, path, allow) => {
 		const response = await signed(path, { method, body: method === "PUT" || method === "POST" ? "…" : undefined });
 
@@ -245,18 +241,18 @@ describe("a Worker whose Secret was never set", () => {
 	});
 });
 
-describe("pairing a phone", () => {
-	it("takes a label and a hash, and says when it was issued", async () => {
-		const response = await pair("iPhone", "the-phone's-own-token");
+describe("issuing the read code", () => {
+	it("takes a hash and says when it was issued", async () => {
+		const response = await pair("the-phone's-own-token");
 
 		expect(response.status).toBe(200);
-		expect(await response.json()).toMatchObject({ label: "iPhone", issued_at: expect.stringContaining("T") });
+		expect(await response.json()).toMatchObject({ issued_at: expect.stringContaining("T") });
 	});
 
-	// The token itself never arrives — the PC shows it on a QR and sends only its hash, so the
+	// The code itself never arrives — the PC shows it on a QR and sends only its hash, so the
 	// value exists on the PC and on the phone that photographed it, and nowhere else.
-	it("never receives the token itself", async () => {
-		await pair("iPhone", "the-phone's-own-token");
+	it("never receives the code itself", async () => {
+		await pair("the-phone's-own-token");
 
 		const { results } = await env.RECORDS.prepare("SELECT hash FROM tokens").all();
 
@@ -264,36 +260,34 @@ describe("pairing a phone", () => {
 		expect(results[0].hash).toBe(await hashOf("the-phone's-own-token"));
 	});
 
-	// Issuing over a name that is there would cut off whatever phone holds it, silently — a
-	// mistyped name is all that takes. So the name has to be freed first, and the phone that has
-	// it goes on reading until someone says otherwise.
-	it("refuses a label that is already there, and leaves that phone reading", async () => {
-		await pair("iPhone", "the-old-token");
+	// There is one code and not one per phone: this Worker compares a hash and never learns which
+	// phone offered it, so issuing is what cuts the last one.
+	it("replaces the code that was there, and stops whoever held it", async () => {
+		await pair("the-old-token");
 
-		const response = await pair("iPhone", "the-new-token");
-
-		expect(response.status).toBe(409);
-		expect((await carrying("the-old-token", "/meta")).status).toBe(200);
-		expect((await carrying("the-new-token", "/meta")).status).toBe(401);
-	});
-
-	// Cutting one off is what frees its name, which is what makes re-pairing the same phone two
-	// moves rather than an impossibility.
-	it("takes the label again once that phone has been cut off", async () => {
-		await pair("iPhone", "the-old-token");
-		await signed("/tokens/iPhone", { method: "DELETE" });
-
-		const response = await pair("iPhone", "the-new-token");
+		const response = await pair("the-new-token");
 
 		expect(response.status).toBe(200);
 		expect((await carrying("the-new-token", "/meta")).status).toBe(200);
+		expect((await carrying("the-old-token", "/meta")).status).toBe(401);
+	});
+
+	// One row, whatever the store has been through: a second code that survived issuing would be a
+	// phone reading that nothing on the screen says is there.
+	it("leaves one row behind however many times it is issued", async () => {
+		await pair("the-first-token");
+		await pair("the-second-token");
+		await pair("the-third-token");
+
+		const { results } = await env.RECORDS.prepare("SELECT id FROM tokens").all();
+
+		expect(results).toEqual([{ id: 1 }]);
 	});
 
 	it.each([
 		["nothing at all", "{}"],
-		["a blank label", JSON.stringify({ label: "  ", hash: "a".repeat(64) })],
-		["a hash that is not one", JSON.stringify({ label: "iPhone", hash: "not-a-hash" })],
-		["a hash of the wrong length", JSON.stringify({ label: "iPhone", hash: "abc" })],
+		["a hash that is not one", JSON.stringify({ hash: "not-a-hash" })],
+		["a hash of the wrong length", JSON.stringify({ hash: "abc" })],
 		["something that is not a document", "{{{"],
 	])("refuses %s", async (_what, body) => {
 		const response = await signed("/tokens", { method: "PUT", body });
@@ -302,34 +296,63 @@ describe("pairing a phone", () => {
 	});
 });
 
-describe("cutting one phone off", () => {
-	it("stops that phone and leaves the others reading", async () => {
-		await pair("iPhone", "the-lost-phone's-token");
-		await pair("Android", "the-other-phone's-token");
+describe("taking the read code away", () => {
+	it("stops the phone that held it", async () => {
+		await pair("the-lost-phone's-token");
 
-		const response = await signed("/tokens/iPhone", { method: "DELETE" });
+		const response = await signed("/tokens", { method: "DELETE" });
 
 		expect(response.status).toBe(200);
+		expect(await response.json()).toMatchObject({ cut: true });
 		expect((await carrying("the-lost-phone's-token", "/meta")).status).toBe(401);
-		expect((await carrying("the-other-phone's-token", "/meta")).status).toBe(200);
 	});
 
-	// Revoking is what someone does when a phone is lost. A typo that answered "done" would leave
-	// them believing they had cut off a phone that is still reading.
-	it("says so when there was no such phone", async () => {
-		const response = await signed("/tokens/NeverPaired", { method: "DELETE" });
-
-		expect(response.status).toBe(404);
-	});
-
-	// A label is the user's own words, so it can hold a space or a character a URL has to escape.
-	it("takes a label that had to be escaped to fit in a path", async () => {
-		await pair("Ai's iPhone", "the-phone's-own-token");
-
-		const response = await signed(`/tokens/${encodeURIComponent("Ai's iPhone")}`, { method: "DELETE" });
+	// Asking a store with no code to have no code is asking for the state it is in. There is no
+	// name to mistype any more, so there is nothing for a refusal to catch — but whether there was
+	// one to cut is still worth saying, since the screen draws it.
+	it("says there was none, rather than refusing", async () => {
+		const response = await signed("/tokens", { method: "DELETE" });
 
 		expect(response.status).toBe(200);
-		expect((await carrying("the-phone's-own-token", "/meta")).status).toBe(401);
+		expect(await response.json()).toMatchObject({ cut: false });
+	});
+});
+
+describe("asking whether a phone can read", () => {
+	it("says so, and when the code was issued", async () => {
+		await pair("the-phone's-own-token");
+
+		const response = await signed("/tokens");
+
+		expect(response.status).toBe(200);
+		expect(await response.json()).toMatchObject({ paired: true, issued_at: expect.stringContaining("T") });
+	});
+
+	it("says there is none on a store nobody has paired with", async () => {
+		const response = await signed("/tokens");
+
+		expect(response.status).toBe(200);
+		expect(await response.json()).toEqual({ paired: false, issued_at: null });
+	});
+
+	// The hash is the only copy of the read credential this end holds. A write token has no use
+	// for it, so it does not travel.
+	it("does not hand back the hash", async () => {
+		await pair("the-phone's-own-token");
+
+		const response = await signed("/tokens");
+
+		expect(JSON.stringify(await response.json())).not.toContain(await hashOf("the-phone's-own-token"));
+	});
+
+	// It is the PC's question — the screen that draws it holds the write token, and a phone
+	// holding the code has no business enumerating the store.
+	it("is not a phone's to ask", async () => {
+		await pair("the-phone's-own-token");
+
+		const response = await carrying("the-phone's-own-token", "/tokens");
+
+		expect(response.status).toBe(403);
 	});
 });
 
@@ -924,7 +947,7 @@ describe("a store that could not answer", () => {
 	it("says the same when a phone is being paired", async () => {
 		const response = await into(whereWritesFail(NO_ROOM), "/tokens", {
 			method: "PUT",
-			body: JSON.stringify({ label: "iPhone", hash: await hashOf("the-phone's-own-token") }),
+			body: JSON.stringify({ hash: await hashOf("the-phone's-own-token") }),
 		});
 
 		expect(response.status).toBe(503);
