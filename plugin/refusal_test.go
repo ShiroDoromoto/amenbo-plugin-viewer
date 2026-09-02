@@ -138,26 +138,6 @@ func TestARefusalNeverCarriesTheToken(t *testing.T) {
 	}
 }
 
-// The doors with a reading of their own keep it: a label already taken is not a refusal to relay
-// but a move to name, and a label that was not there is not a refusal at all.
-func TestADoorWithItsOwnReadingOfAnAnswerKeepsIt(t *testing.T) {
-	taken := answering(t, http.StatusConflict, `{"error":"a phone is already paired"}`, nil)
-
-	_, err := taken.issue("iPhone", strings.Repeat("a", 64))
-
-	if err == nil || !strings.Contains(err.Error(), wordings["en"][phTheUnpairButton]) {
-		t.Errorf("issuing over a paired phone said %v, want the move that frees the name", err)
-	}
-
-	gone := answering(t, http.StatusNotFound, `{"error":"no token is labelled"}`, nil)
-
-	cut, err := gone.cutOff("iPhone")
-
-	if err != nil || cut {
-		t.Errorf("cutting off a phone that was not there = %v, %v; want it read as nothing to cut", cut, err)
-	}
-}
-
 // A refusal is a value, so a door can ask what it was before deciding whether the words here are
 // the ones the user should read.
 func TestARefusalCanBeAskedWhatItWas(t *testing.T) {

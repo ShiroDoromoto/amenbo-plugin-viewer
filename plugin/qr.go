@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
@@ -27,44 +26,26 @@ import (
 // the one path with no network on it — which is also why the code is issued rather than
 // redisplayed: what is on the screen is a token that did not exist a moment ago.
 //
-// What each phone gets is its own read token, so losing one phone is one token to cut rather than
-// every phone to pair again. The Worker is told only the hash of it, so what it holds is not a
-// set of credentials.
+// **There is one read code, not one per phone.** The Worker compares a hash and never learns
+// which phone offered it, so a code per phone was a name kept on this side and nothing in the
+// store. Issuing draws a new code and the one before it stops working — which is also what makes
+// re-pairing one press rather than two.
 
 // pairing is what the code carries, and nothing else is on it. The keys are one letter each: not
 // for the code's capacity, which is ample, but for the camera — fewer modules is a read that
 // catches sooner.
-//
-// The name rides along with the three secrets because this is the only moment the phone can be
-// told it. Cutting a phone off is done here by that name, and a phone that cannot show the name
-// it was paired under leaves the person guessing which of the rows on the PC is the one in their
-// hand.
 type pairing struct {
 	V   int    `json:"v"`
 	URL string `json:"url"`
 	T   string `json:"t"`
 	K   string `json:"k"`
-	L   string `json:"l"`
 }
 
-// codeScale is how many image pixels one module of the code becomes. The code carries about 180
+// codeScale is how many image pixels one module of the code becomes. The code carries about 160
 // characters, so it lands around version 9 — some 53 modules a side, which at this scale is an
-// image a phone reads from a comfortable distance without filling the screen. A name written in
-// something other than ASCII costs one version more, and that is the whole of how this grows:
-// what is on the code is four short fields and a name, not anything that gets longer with use.
+// image a phone reads from a comfortable distance without filling the screen. What is on the code
+// is four short fields, none of which gets longer with use.
 const codeScale = 10
-
-// The two ways the phone's name reaches this run, before the terminal is asked at all.
-//
-// askLabel is what the manifest declares the settings screen to ask for when the button that runs
-// this is pressed: Amenbo hands the answer over in envAskLabel for that one run and saves nothing.
-// **It is not declared secret.** The name is what the person will be looking for when they cut
-// this phone off, so a box that hid what was typed into it would hide the one thing they have to
-// remember.
-const (
-	askLabel    = "label"
-	envAskLabel = "AMENBO_ASK_LABEL"
-)
 
 // A part of the answer the settings screen draws. What travels is a string; the
 // drawing is Amenbo's, which is what keeps this plugin a child process rather than something
@@ -101,7 +82,6 @@ func drawnHere(forced bool) bool { return forced || thereIsATerminal() }
 func qr(in input, args []string) error {
 	options := flag.NewFlagSet("qr", flag.ContinueOnError)
 	options.SetOutput(errOut)
-	label := options.String("label", "", "what to call this phone — it is the name revoking one gives")
 	inTerminal := options.Bool("terminal", false, "draw the code in the terminal instead of opening it as an image")
 	if err := options.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -128,26 +108,16 @@ func qr(in input, args []string) error {
 		return refuse(phNoEncryptionKey, phTheSetupButton)
 	}
 
-	named := strings.TrimSpace(*label)
-	if named == "" {
-		named, err = askForALabel()
-		if err != nil {
-			return err
-		}
-	}
-
 	// The token is drawn here and sent nowhere: the Worker is told its hash, the phone reads the
 	// value off the screen, and this process forgets it when it ends.
 	token := generated()
-	issuedAt, err := where.issue(named, hashOf(token))
+	issuedAt, err := where.issue(hashOf(token))
 	if err != nil {
 		return err
 	}
-	if err := rememberThePhone(named, issuedAt); err != nil {
-		return err
-	}
+	forgetTheOldList()
 
-	carried, err := json.Marshal(pairing{V: specVersion, URL: where.url, T: token, K: key, L: named})
+	carried, err := json.Marshal(pairing{V: specVersion, URL: where.url, T: token, K: key})
 	if err != nil {
 		return err
 	}
@@ -158,28 +128,27 @@ func qr(in input, args []string) error {
 		}
 	}
 
-	logf("%s: %s", pluginName, say(phPhoneMayReadFromNowOn, named))
+	logf("%s: %s", pluginName, say(phPhoneMayReadFromNowOn))
 	return json.NewEncoder(out).Encode(struct {
 		answered
-		Label    string `json:"label"`
 		IssuedAt string `json:"issued_at"`
 	}{
 		answered: answered{V: specVersion, OK: true, Show: []shownPart{
 			{Text: say(phReadThisWithTheCamera)},
 			{QR: string(carried)},
 		}},
-		Label:    named,
 		IssuedAt: issuedAt,
 	})
 }
 
-// issue tells the store one more phone may read, by the hash of the token it will offer.
+// issue hands the store the hash of the code the phone will offer, and gets back when it was
+// issued.
 //
-// **A name that is taken is refused there**, and what comes back here is the move that frees it:
-// the store will not issue over a phone that is reading, so re-pairing one is cutting it off and
-// pairing again. Passing the store's own sentence on would say what happened and not what to do.
-func (s store) issue(label, hash string) (string, error) {
-	body, err := json.Marshal(map[string]string{"label": label, "hash": hash})
+// **It replaces whatever the store was holding.** There is one code, so pressing this a second
+// time is not refused — it draws a new one and the phone that had the old one stops reading. That
+// used to be two moves, cut then pair, because the code was named and the name had to be freed.
+func (s store) issue(hash string) (string, error) {
+	body, err := json.Marshal(map[string]string{"hash": hash})
 	if err != nil {
 		return "", err
 	}
@@ -190,13 +159,6 @@ func (s store) issue(label, hash string) (string, error) {
 	request.Header.Set("Content-Type", "application/json")
 
 	answered, err := s.askTheStore(request)
-	var turnedDown storeRefused
-	if errors.As(err, &turnedDown) && turnedDown.status == http.StatusConflict {
-		// **What to do about it is a button, not a command.** Someone who only ever opens the
-		// settings screen meets this refusal the second time they pair a phone they re-installed
-		// the app on, and a sentence pointing at a terminal leaves them with nowhere to go.
-		return "", refuse(phPhoneAlreadyPaired, label, phTheUnpairButton)
-	}
 	if err != nil {
 		return "", err
 	}
@@ -429,37 +391,4 @@ func blocksFor(code *qrcode.Code) string {
 		drawn.WriteString("\n")
 	}
 	return drawn.String()
-}
-
-// askForALabel gets the phone's name from the person running this, when they did not say it on
-// the command line.
-//
-// **A name is asked for rather than made up.** The store refuses a name that is already there, so
-// a default would pair the first phone and turn away every one after it — and the name is what
-// they will have to recognise when they cut one off.
-//
-// The settings screen asks its own box before the button runs, so an answer waiting in the
-// environment is this run's and there is nothing left to ask. A terminal is what is left when
-// nobody came in that way.
-func askForALabel() (string, error) {
-	if named := strings.TrimSpace(os.Getenv(envAskLabel)); named != "" {
-		return named, nil
-	}
-
-	terminal, err := os.OpenFile(terminalPath, os.O_RDWR, 0)
-	if err != nil {
-		return "", fmt.Errorf("there is no terminal here to ask on — name the phone with --label: %w", err)
-	}
-	defer terminal.Close()
-
-	fmt.Fprint(terminal, "\nwhat should this phone be called? (it is the name you would cut it off by) ")
-	named, err := bufio.NewReader(terminal).ReadString('\n')
-	if err != nil && strings.TrimSpace(named) == "" {
-		return "", fmt.Errorf("nothing could be read from the terminal — name the phone with --label: %w", err)
-	}
-	named = strings.TrimSpace(named)
-	if named == "" {
-		return "", refuse(phThePhoneWasNotNamed)
-	}
-	return named, nil
 }

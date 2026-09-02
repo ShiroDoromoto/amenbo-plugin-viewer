@@ -15,13 +15,11 @@ import (
 // code, so a test that watches for it has to configure one.
 var throwawayKey = base64.RawURLEncoding.EncodeToString(make([]byte, keySize))
 
-// pretendStore is the far end of the pairing call: it takes the hash of a read token and says
-// when it took it — and, like the real one, turns away a name it is already holding.
+// pretendStore is the far end of the pairing call: it takes the hash of a read code and says when
+// it took it — and, like the real one, replaces whatever it was holding.
 type pretendStore struct {
 	offered  string
-	label    string
 	hash     string
-	holds    map[string]bool
 	refuse   bool
 	issuedAt string
 }
@@ -34,25 +32,16 @@ func pairingAgainst(t *testing.T, store *pretendStore) (in input, carried *pairi
 	road := http.NewServeMux()
 	road.HandleFunc("PUT /tokens", func(w http.ResponseWriter, r *http.Request) {
 		store.offered = strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
-		var asked struct{ Label, Hash string }
+		var asked struct{ Hash string }
 		json.NewDecoder(r.Body).Decode(&asked)
-		store.label, store.hash = asked.Label, asked.Hash
+		store.hash = asked.Hash
 		if store.refuse {
 			w.WriteHeader(http.StatusInternalServerError)
 			json.NewEncoder(w).Encode(map[string]string{"error": "the database is not there"})
 			return
 		}
-		if store.holds[asked.Label] {
-			w.WriteHeader(http.StatusConflict)
-			json.NewEncoder(w).Encode(map[string]string{"error": "a phone is already paired as " + asked.Label})
-			return
-		}
-		if store.holds == nil {
-			store.holds = map[string]bool{}
-		}
-		store.holds[asked.Label] = true
 		store.issuedAt = "2026-08-09T09:00:00.000Z"
-		json.NewEncoder(w).Encode(map[string]string{"label": asked.Label, "issued_at": store.issuedAt})
+		json.NewEncoder(w).Encode(map[string]string{"issued_at": store.issuedAt})
 	})
 	server := httptest.NewServer(road)
 	t.Cleanup(server.Close)
@@ -75,15 +64,6 @@ func pairingAgainst(t *testing.T, store *pretendStore) (in input, carried *pairi
 	return input{Config: map[string]any{configWorkerURL: server.URL}}, shown
 }
 
-func pairedPhones(t *testing.T) []phone {
-	t.Helper()
-	known, err := readPhones()
-	if err != nil {
-		t.Fatal(err)
-	}
-	return known.Paired
-}
-
 // Pairing issues a token that did not exist a moment ago, tells the store only its hash, and puts
 // the value itself on the code — which is the whole of why the key never reaches the Worker.
 func TestPairingIssuesATokenAndTellsTheStoreOnlyItsHash(t *testing.T) {
@@ -91,16 +71,13 @@ func TestPairingIssuesATokenAndTellsTheStoreOnlyItsHash(t *testing.T) {
 	in, shown := pairingAgainst(t, store)
 
 	var code int
-	stdout, stderr := capture(t, func() { code = run(in, []string{"qr", "--label", "iPhone"}) })
+	stdout, stderr := capture(t, func() { code = run(in, []string{"qr"}) })
 
 	if code != 0 {
 		t.Fatalf("exit %d", code)
 	}
 	if store.offered != "the-write-token" {
 		t.Errorf("the store was opened with %q, and issuing is the write token's door", store.offered)
-	}
-	if store.label != "iPhone" {
-		t.Errorf("label = %q", store.label)
 	}
 	if shown.T == "" {
 		t.Fatal("nothing was put on the code")
@@ -117,13 +94,7 @@ func TestPairingIssuesATokenAndTellsTheStoreOnlyItsHash(t *testing.T) {
 	if shown.V != specVersion || shown.URL != in.setting(configWorkerURL) {
 		t.Errorf("%+v", shown)
 	}
-	if shown.L != "iPhone" {
-		t.Errorf("the code does not name the phone, so it cannot say which row on the PC is itself: %q", shown.L)
-	}
 
-	if paired := pairedPhones(t); len(paired) != 1 || paired[0].Label != "iPhone" || paired[0].IssuedAt != store.issuedAt {
-		t.Errorf("the phone was not written down, so nobody can cut it off: %+v", paired)
-	}
 	// **The pairing rides back on the answer, because that is what the form draws**:
 	// Amenbo is handed the string and makes the code out of it. It is not a secret reaching
 	// somewhere new — the key is Amenbo's own setting, handed to this run in the environment —
@@ -142,8 +113,8 @@ func TestPairingIssuesATokenAndTellsTheStoreOnlyItsHash(t *testing.T) {
 	if handed != *shown {
 		t.Errorf("the form would draw %+v and the terminal drew %+v", handed, *shown)
 	}
-	if !strings.Contains(stdout, `"label":"iPhone"`) {
-		t.Errorf("the return value does not name the phone: %q", stdout)
+	if !strings.Contains(stdout, `"issued_at":"`+store.issuedAt+`"`) {
+		t.Errorf("the return value does not say when the code was issued: %q", stdout)
 	}
 	if strings.Contains(stderr, shown.T) || strings.Contains(stderr, shown.K) {
 		t.Error("a secret reached the execution log, which is what stderr becomes")
@@ -156,43 +127,37 @@ func TestEachPairingDrawsItsOwnToken(t *testing.T) {
 	store := &pretendStore{}
 	in, shown := pairingAgainst(t, store)
 
-	capture(t, func() { run(in, []string{"qr", "--label", "iPhone"}) })
+	capture(t, func() { run(in, []string{"qr"}) })
 	first := shown.T
-	capture(t, func() { run(in, []string{"qr", "--label", "Android"}) })
+	capture(t, func() { run(in, []string{"qr"}) })
 
 	if first == shown.T {
-		t.Error("the same token was handed to two phones")
+		t.Error("the same token was drawn twice")
 	}
-	if paired := pairedPhones(t); len(paired) != 2 {
-		t.Errorf("both phones should be written down: %+v", paired)
+	if store.hash != hashOf(shown.T) {
+		t.Error("the store was left holding the hash of the code that was replaced")
 	}
 }
 
-// A name that is taken is refused at the store, so the phone reading under it goes on reading.
-// What the person is told has to carry the way out, since the store's own sentence says what
-// happened and not what to do about it.
-func TestPairingUnderANameThatIsTakenIsRefusedAndSaysHowToFreeIt(t *testing.T) {
+// Issuing again is not refused any more: there is one code, so pressing pair a second time draws
+// a new one and the store is left holding that one's hash alone.
+func TestPairingAgainReplacesTheCodeTheStoreHolds(t *testing.T) {
 	store := &pretendStore{}
 	in, shown := pairingAgainst(t, store)
 
-	capture(t, func() { run(in, []string{"qr", "--label", "iPhone"}) })
+	capture(t, func() { run(in, []string{"qr"}) })
 	first := shown.T
 	var code int
-	_, stderr := capture(t, func() { code = run(in, []string{"qr", "--label", "iPhone"}) })
+	capture(t, func() { code = run(in, []string{"qr"}) })
 
-	if code != 1 {
-		t.Fatalf("exit %d — the second pairing was not refused", code)
+	if code != 0 {
+		t.Fatalf("exit %d — pairing again was refused", code)
 	}
-	if shown.T != first {
-		t.Error("a code was shown for a token the store never took")
+	if shown.T == first {
+		t.Error("the second pairing drew the code the first one drew")
 	}
-	// **The move that frees the name is a button now**, so what the refusal has to carry is
-	// the button's name — someone who only opens the settings screen has no other way through.
-	if !strings.Contains(stderr, wordings["en"][phTheUnpairButton]) {
-		t.Errorf("the refusal does not say how to free the name: %q", stderr)
-	}
-	if paired := pairedPhones(t); len(paired) != 1 || paired[0].Label != "iPhone" {
-		t.Errorf("the phone that was reading did not stay written down as it was: %+v", paired)
+	if store.hash != hashOf(shown.T) {
+		t.Error("the store holds the hash of the first code, so the second phone could not read")
 	}
 }
 
@@ -203,16 +168,13 @@ func TestAPairingTheStoreRefusesLeavesNothingBehind(t *testing.T) {
 	in, shown := pairingAgainst(t, store)
 
 	var code int
-	_, stderr := capture(t, func() { code = run(in, []string{"qr", "--label", "iPhone"}) })
+	_, stderr := capture(t, func() { code = run(in, []string{"qr"}) })
 
 	if code != 1 {
 		t.Fatalf("exit %d — the pairing did not happen", code)
 	}
 	if shown.T != "" {
 		t.Error("a code was shown for a token the store never took")
-	}
-	if paired := pairedPhones(t); len(paired) != 0 {
-		t.Errorf("a phone was written down that cannot read: %+v", paired)
 	}
 	if !strings.Contains(stderr, "/tokens") {
 		t.Errorf("the refusal does not say what would not answer: %q", stderr)
@@ -227,7 +189,7 @@ func TestPairingRefusesBeforeItAsksForAnything(t *testing.T) {
 		t.Setenv(envEncryptionKey, throwawayKey)
 
 		var code int
-		_, stderr := capture(t, func() { code = run(input{}, []string{"qr", "--label", "iPhone"}) })
+		_, stderr := capture(t, func() { code = run(input{}, []string{"qr"}) })
 
 		if code != 1 || !strings.Contains(stderr, "3.") {
 			t.Errorf("exit %d: %q", code, stderr)
@@ -239,32 +201,13 @@ func TestPairingRefusesBeforeItAsksForAnything(t *testing.T) {
 
 		var code int
 		_, stderr := capture(t, func() {
-			code = run(input{Config: map[string]any{configWorkerURL: "https://viewer.example.workers.dev"}}, []string{"qr", "--label", "iPhone"})
+			code = run(input{Config: map[string]any{configWorkerURL: "https://viewer.example.workers.dev"}}, []string{"qr"})
 		})
 
 		if code != 1 || !strings.Contains(stderr, "3.") {
 			t.Errorf("exit %d: %q", code, stderr)
 		}
 	})
-}
-
-// The settings screen has its own box for the phone's name, and the answer arrives the way a
-// secret setting does. Without it read here, the button would run with no name and go looking for
-// a terminal that a settings screen does not have.
-func TestTheNameTypedAtTheButtonNamesThePhone(t *testing.T) {
-	store := &pretendStore{}
-	in, shown := pairingAgainst(t, store)
-	t.Setenv(envAskLabel, "  iPhone  ")
-
-	var code int
-	capture(t, func() { code = run(in, []string{"qr"}) })
-
-	if code != 0 {
-		t.Fatalf("exit %d", code)
-	}
-	if store.label != "iPhone" || shown.L != "iPhone" {
-		t.Errorf("the store was told %q and the code carries %q", store.label, shown.L)
-	}
 }
 
 // codeForATest is a code of the right shape to write out and open.

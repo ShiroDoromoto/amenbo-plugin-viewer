@@ -266,27 +266,27 @@ type holding struct {
 // whatItHolds reads every key the store is holding, what it last heard about each, and where its
 // ordering stands.
 //
-// **It issues itself a read token to do it.** The write token this plugin keeps is refused at the
-// reading door on purpose — the two kinds are what let one phone be cut off without touching the
-// rest — so the only way to read is to be one more reader for as long as this takes. The token is
-// registered by its hash like any other, used, and cut off again, and it is never written into
-// the paired phones: nothing is holding it, so there is nothing for a person to choose to cut.
+// **It issues itself a read code to do it.** The write token this plugin keeps is refused at the
+// reading door, so the only way to read is to hold a read code for as long as this takes. The
+// code is registered by its hash, used, and taken away again.
+//
+// **That costs the phone its pairing.** There is one code now, so issuing one here replaces the
+// phone's and taking it away leaves none — a comparison run this way ends with nobody paired.
 //
 // **The envelopes come back and are thrown away.** `?keys=1` asks the store for the keys alone;
 // a store deployed before that asks was answered ignores it and sends the ciphertext too, which
 // costs the bandwidth and reads exactly the same, so this works against either.
 func (s store) whatItHolds() (holding, error) {
-	label := "amenbo-repair-" + generated()[:16]
 	token := generated()
-	if _, err := s.issue(label, hashOf(token)); err != nil {
+	if _, err := s.issue(hashOf(token)); err != nil {
 		return holding{}, err
 	}
 	defer func() {
-		if _, err := s.cutOff(label); err != nil {
-			// A token left standing reads the store until somebody cuts it, so the name it is
-			// standing under is worth having: `revoke` takes it.
-			logf("%s: the read token this comparison issued could not be cut off — `%s revoke %s` does it: %v",
-				pluginName, pluginName, label, err)
+		if _, err := s.cutOff(); err != nil {
+			// A code left standing reads the store until somebody takes it away, and `revoke`
+			// is what does that.
+			logf("%s: the read code this comparison issued could not be taken away — `%s revoke` does it: %v",
+				pluginName, pluginName, err)
 		}
 	}()
 
