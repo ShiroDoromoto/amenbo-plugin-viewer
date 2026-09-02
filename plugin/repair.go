@@ -266,38 +266,30 @@ type holding struct {
 // whatItHolds reads every key the store is holding, what it last heard about each, and where its
 // ordering stands.
 //
-// **It issues itself a read code to do it.** The write token this plugin keeps is refused at the
-// reading door, so the only way to read is to hold a read code for as long as this takes. The
-// code is registered by its hash, used, and taken away again.
+// **It reads with the write token this plugin already holds.** It used to issue itself a read
+// code, use it, and take it away — which was harmless while the store kept a row per phone, and
+// is not now: there is one code, so issuing one here would replace the phone's and taking it away
+// would leave none. A comparison would have ended with nobody paired.
 //
-// **That costs the phone its pairing.** There is one code now, so issuing one here replaces the
-// phone's and taking it away leaves none — a comparison run this way ends with nobody paired.
+// The reading doors take either kind for exactly this. What the two kinds keep apart is the
+// phone's half — a code photographed off a screen writes nothing — and this end already holds the
+// key and the backlog these records were sealed from.
+//
+// **A store older than that answers 403.** It is the Worker in the user's own account, and it
+// changes only when they press setup, so what comes back is the refusal from `askTheStore` naming
+// the door — which is what tells them to press it.
 //
 // **The envelopes come back and are thrown away.** `?keys=1` asks the store for the keys alone;
 // a store deployed before that asks was answered ignores it and sends the ciphertext too, which
 // costs the bandwidth and reads exactly the same, so this works against either.
 func (s store) whatItHolds() (holding, error) {
-	token := generated()
-	if _, err := s.issue(hashOf(token)); err != nil {
-		return holding{}, err
-	}
-	defer func() {
-		if _, err := s.cutOff(); err != nil {
-			// A code left standing reads the store until somebody takes it away, and `revoke`
-			// is what does that.
-			logf("%s: the read code this comparison issued could not be taken away — `%s revoke` does it: %v",
-				pluginName, pluginName, err)
-		}
-	}()
-
-	reading := store{url: s.url, token: token}
-	standing, err := reading.whereItStands()
+	standing, err := s.whereItStands()
 	if err != nil {
 		return holding{}, err
 	}
 	held := map[string]string{}
 	for since := int64(0); ; {
-		page, err := reading.keysFrom(since)
+		page, err := s.keysFrom(since)
 		if err != nil {
 			return holding{}, err
 		}
