@@ -26,8 +26,8 @@ import (
 // "the Worker said nothing" would lose the one number on it worth having.
 
 // storeRefused is a door answering that it would not. It is a type rather than a sentence so a
-// caller with a reading of its own — a label already taken, a phone that was not there — can
-// take the answers it knows and leave the rest to the words here.
+// caller with a reading of its own — a send honouring the moment it was told to come back at —
+// can take the answers it knows and leave the rest to the words here.
 type storeRefused struct {
 	// path is the door, named the way the Worker's own routes are.
 	path string

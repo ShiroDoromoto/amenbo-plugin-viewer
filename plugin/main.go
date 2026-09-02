@@ -332,13 +332,11 @@ Usage (through Amenbo, from the project the plugin is enabled for):
                                       --account <id>  when your token reaches more than one
   amenbo plugin run %s check     where records are reaching right now, in one line
   amenbo plugin run %s push      carry what has not reached the phone yet, by hand
-  amenbo plugin run %s qr        pair one phone: issue its read token and put it on screen
-                                      --label <name>  what to call it, since cutting it off
-                                                      later names it
+  amenbo plugin run %s qr        pair a phone: issue the read code and put it on screen.
+                                    Issuing again replaces the one before it
                                       --terminal      draw the code here instead of opening it
-  amenbo plugin run %s phones    the phones that may read, and when each was paired
-  amenbo plugin run %s revoke <name>
-                                    cut one of them off. The others carry on reading
+  amenbo plugin run %s phones    whether a phone may read, and since when
+  amenbo plugin run %s revoke    undo the pairing: take the read code away
   amenbo plugin run %s repair    compare what the phone's server holds with what is here,
                                       and say how much has drifted apart
                                       --send          carry that difference, rather than only

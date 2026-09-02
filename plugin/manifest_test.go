@@ -202,23 +202,19 @@ func TestTheAskedTokenReachesTheCodeUnderTheNameItsKeyBecomes(t *testing.T) {
 	}
 }
 
-// The phone's name reaches the run under the name its declared key becomes, the same way the API
-// token does — and unlike it, the box is open: what is typed there is the name the person will be
-// looking for when they cut this phone off, so hiding it hides the one thing to remember.
-func TestTheAskedLabelReachesTheCodeUnderTheNameItsKeyBecomes(t *testing.T) {
-	asked := whatIsAskedFor(t, "qr")
+// **Pairing asks for nothing.** There is one read code, so there is nothing to name it — and a
+// box left on the button would ask for something the run has no use for.
+func TestPairingAsksForNothing(t *testing.T) {
+	if asked := whatIsAskedFor(t, "qr"); len(asked) != 0 {
+		t.Errorf("qr asks for %v, and there is nothing left to ask", asked)
+	}
+}
 
-	if len(asked) != 1 || asked[0].Key != askLabel {
-		t.Fatalf("qr asks for %v, and the code reads %q", asked, askLabel)
-	}
-	if asked[0].Secret {
-		t.Error("the phone's name is declared secret, so nobody could read back what they had typed")
-	}
-	if asked[0].Label == "" {
-		t.Error("the box has no label, so nobody knows what to type into it")
-	}
-	if want := "AMENBO_ASK_" + strings.ToUpper(asked[0].Key); want != envAskLabel {
-		t.Errorf("the answer reaches the plugin as %q, and it is read from %q", want, envAskLabel)
+// **Undoing the pairing asks for nothing either.** The box used to take the name of the phone to
+// cut off, which is what a store holding one row per phone made necessary.
+func TestUndoingThePairingAsksForNothing(t *testing.T) {
+	if asked := whatIsAskedFor(t, "revoke"); len(asked) != 0 {
+		t.Errorf("revoke asks for %v, and there is nothing left to ask", asked)
 	}
 }
 

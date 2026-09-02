@@ -24,8 +24,8 @@ func aStoreHolding(held []outgoing, perPage int, asked *[]string) *httptest.Serv
 			w.Write([]byte(`{"issued_at":"2026-08-30"}`))
 		case r.Method == http.MethodGet && r.URL.Path == "/meta":
 			w.Write([]byte(`{"seq":` + strconv.Itoa(len(held)) + `}`))
-		case r.Method == http.MethodDelete && strings.HasPrefix(r.URL.Path, "/tokens/"):
-			w.WriteHeader(http.StatusOK)
+		case r.Method == http.MethodDelete && r.URL.Path == "/tokens":
+			w.Write([]byte(`{"cut":true}`))
 		case r.Method == http.MethodGet && r.URL.Path == "/records":
 			since, _ := strconv.Atoi(r.URL.Query().Get("since"))
 			page := held[min(since, len(held)):min(since+perPage, len(held))]
@@ -94,7 +94,7 @@ func TestTheDifferenceDropsWhatIsNoLongerHere(t *testing.T) {
 // The reading goes out under a token this run issued and gave up again, because the token this
 // plugin writes with is refused at the reading door — that refusal is what lets one phone be cut
 // off without touching the rest, and this must not be the thing that erodes it.
-func TestTheKeysAreReadUnderATokenThatIsIssuedAndCutOffAgain(t *testing.T) {
+func TestTheKeysAreReadUnderACodeThatIsIssuedAndTakenAwayAgain(t *testing.T) {
 	var asked []string
 	shop := aStoreHolding(placedAt("task/1", "task/2", "task/3", "task/4", "task/5"), 2, &asked)
 	defer shop.Close()
@@ -113,8 +113,8 @@ func TestTheKeysAreReadUnderATokenThatIsIssuedAndCutOffAgain(t *testing.T) {
 	if !strings.HasPrefix(asked[0], "PUT /tokens?") {
 		t.Errorf("the first call was %q, and a read has to be issued a token first", asked[0])
 	}
-	if last := asked[len(asked)-1]; !strings.HasPrefix(last, "DELETE /tokens/amenbo-repair-") {
-		t.Errorf("the last call was %q, and the token this issued has to be cut off again", last)
+	if last := asked[len(asked)-1]; !strings.HasPrefix(last, "DELETE /tokens?") {
+		t.Errorf("the last call was %q, and the code this issued has to be taken away again", last)
 	}
 	for _, call := range asked {
 		if strings.HasPrefix(call, "GET ") && strings.HasSuffix(call, "as the-write-token") {

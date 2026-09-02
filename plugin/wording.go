@@ -107,22 +107,16 @@ const (
 	phWorkerHasNoWriteToken   phrase = "worker_has_no_write_token"
 	phEndpointNotAnsweringYet phrase = "endpoint_not_answering_yet"
 
-	// `phones` and `revoke` — seeing which phones may read, and cutting one off.
-	phPhonesThatMayRead          phrase = "phones_that_may_read"
+	// `phones` and `revoke` — whether a phone may read, and undoing the pairing.
 	phPairedOn                   phrase = "paired_on"
 	phNoPhoneIsPairedYet         phrase = "no_phone_is_paired_yet"
-	phTheRestAreInTheLog         phrase = "the_rest_are_in_the_log"
-	phWhichPhoneToUnpair         phrase = "which_phone_to_unpair"
-	phNoPhoneByThatName          phrase = "no_phone_by_that_name"
 	phNothingWasReadingAsThat    phrase = "nothing_was_reading_as_that"
 	phPhoneReadsNothingFromNowOn phrase = "phone_reads_nothing_from_now_on"
 
-	// `qr` — pairing one phone.
+	// `qr` — pairing a phone.
 	phPhoneMayReadFromNowOn phrase = "phone_may_read_from_now_on"
-	phPhoneAlreadyPaired    phrase = "phone_already_paired"
 	phNoEncryptionKey       phrase = "no_encryption_key"
 	phNoCloudflareRouteYet  phrase = "no_cloudflare_route_yet"
-	phThePhoneWasNotNamed   phrase = "the_phone_was_not_named"
 
 	// `repair` — comparing what the server holds with what is here, and carrying the difference.
 	// The count is said first and the sending happens on the second press, so the two answers are

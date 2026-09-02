@@ -2,63 +2,68 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
 
-// pretendTokens is the far end of a revoke: it remembers which names it holds, and what it was
-// asked to forget.
+// pretendTokens is the far end of the two buttons that ask about the read code: whether it is
+// holding one, and what it was asked to do with it.
 type pretendTokens struct {
-	holds  map[string]bool
-	asked  string
-	path   string
-	offer  string
-	refuse bool
+	holds    bool
+	issuedAt string
+	asked    string
+	path     string
+	offer    string
+	refuse   bool
 }
 
-// cuttingAgainst points the plugin at a store that holds the named phones, with the record here
-// saying the same.
-func cuttingAgainst(t *testing.T, tokens *pretendTokens, paired ...string) input {
+// askingAgainst points the plugin at a store that is holding a code, or is not.
+func askingAgainst(t *testing.T, tokens *pretendTokens) input {
 	t.Helper()
+	if tokens.issuedAt == "" {
+		tokens.issuedAt = "2026-08-09T09:00:00.000Z"
+	}
 
 	road := http.NewServeMux()
-	road.HandleFunc("DELETE /tokens/{label}", func(w http.ResponseWriter, r *http.Request) {
+	road.HandleFunc("/tokens", func(w http.ResponseWriter, r *http.Request) {
 		tokens.offer = strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
 		tokens.path = r.URL.EscapedPath()
-		tokens.asked = r.PathValue("label")
+		tokens.asked = r.Method
 		if tokens.refuse {
 			w.WriteHeader(http.StatusInternalServerError)
 			json.NewEncoder(w).Encode(map[string]string{"error": "the database is not there"})
 			return
 		}
-		if !tokens.holds[tokens.asked] {
-			w.WriteHeader(http.StatusNotFound)
-			json.NewEncoder(w).Encode(map[string]string{"error": "no token is labelled " + tokens.asked})
-			return
+		switch r.Method {
+		case http.MethodDelete:
+			cut := tokens.holds
+			tokens.holds = false
+			json.NewEncoder(w).Encode(map[string]bool{"cut": cut})
+		default:
+			answer := map[string]any{"paired": tokens.holds, "issued_at": nil}
+			if tokens.holds {
+				answer["issued_at"] = tokens.issuedAt
+			}
+			json.NewEncoder(w).Encode(answer)
 		}
-		delete(tokens.holds, tokens.asked)
-		json.NewEncoder(w).Encode(map[string]string{"label": tokens.asked})
 	})
 	server := httptest.NewServer(road)
 	t.Cleanup(server.Close)
 
 	t.Setenv(envAuthToken, "the-write-token")
 	remembering(t)
-	for _, label := range paired {
-		if err := rememberThePhone(label, "2026-08-09T09:00:00.000Z"); err != nil {
-			t.Fatal(err)
-		}
-	}
 	return input{Config: map[string]any{configWorkerURL: server.URL}}
 }
 
-// The listing is what somebody chooses from before cutting one off, so it has to name every phone
-// that was paired and say when.
-func TestThePhonesListedAreTheOnesThatWerePaired(t *testing.T) {
-	in := cuttingAgainst(t, &pretendTokens{holds: map[string]bool{}}, "iPhone", "Pixel")
+// Whether a phone may read is the store's answer, not a list kept here — so what comes back says
+// so, and says since when.
+func TestWhetherAPhoneMayReadComesFromTheStore(t *testing.T) {
+	tokens := &pretendTokens{holds: true}
+	in := askingAgainst(t, tokens)
 
 	var code int
 	stdout, stderr := capture(t, func() { code = run(in, []string{"phones"}) })
@@ -66,33 +71,34 @@ func TestThePhonesListedAreTheOnesThatWerePaired(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("exit %d", code)
 	}
+	if tokens.offer != "the-write-token" {
+		t.Errorf("asking is the write token's door, and %q was offered", tokens.offer)
+	}
+	if tokens.path != "/tokens" || tokens.asked != http.MethodGet {
+		t.Errorf("the store was asked %s %s", tokens.asked, tokens.path)
+	}
 	var answer struct {
-		Show   []shownPart `json:"show"`
-		Paired []phone     `json:"paired"`
+		Show     []shownPart `json:"show"`
+		Paired   bool        `json:"paired"`
+		IssuedAt string      `json:"issued_at"`
 	}
 	if err := json.Unmarshal([]byte(stdout), &answer); err != nil {
 		t.Fatalf("stdout is the return value and it does not parse: %q", stdout)
 	}
-	listed := answer.Paired
-	if len(listed) != 2 || listed[0].Label != "iPhone" || listed[1].Label != "Pixel" {
-		t.Errorf("%+v", listed)
+	if !answer.Paired || answer.IssuedAt != tokens.issuedAt {
+		t.Errorf("%+v", answer)
 	}
-	if listed[0].IssuedAt == "" {
-		t.Error("a phone is listed with no day, and the day is half of what tells two of them apart")
-	}
-	if !strings.Contains(stderr, "iPhone") || !strings.Contains(stderr, "Pixel") {
+	// Both faces say it: the log for whoever typed this, the form for whoever pressed it.
+	if !strings.Contains(stderr, tokens.issuedAt) {
 		t.Errorf("nothing a person can read came out: %q", stderr)
 	}
-	// The settings screen has no log to read, so the same two names have to be drawn on it —
-	// they are what the box that unpairs one takes typed.
-	drawn := drawnText(answer.Show)
-	if !strings.Contains(drawn, "iPhone") || !strings.Contains(drawn, "Pixel") {
-		t.Errorf("the settings screen was handed %q", drawn)
+	if !strings.Contains(drawnText(answer.Show), tokens.issuedAt) {
+		t.Errorf("the settings screen was handed %q", drawnText(answer.Show))
 	}
 }
 
-// drawnText flattens what a run asked the settings screen to draw, so a test can ask whether a
-// name reached the form without caring which part carried it.
+// drawnText flattens what a run asked the settings screen to draw, so a test can ask whether
+// something reached the form without caring which part carried it.
 func drawnText(shown []shownPart) string {
 	var said []string
 	for _, part := range shown {
@@ -103,9 +109,9 @@ func drawnText(shown []shownPart) string {
 }
 
 // Nothing paired is not a fault — it is what every install looks like until somebody runs qr —
-// so it answers with an empty list and says what to do about it.
+// so it is answered, and says what to press.
 func TestNoPhonePairedIsAnAnswerRatherThanAFailure(t *testing.T) {
-	in := cuttingAgainst(t, &pretendTokens{holds: map[string]bool{}})
+	in := askingAgainst(t, &pretendTokens{holds: false})
 
 	var code int
 	stdout, stderr := capture(t, func() { code = run(in, []string{"phones"}) })
@@ -115,16 +121,14 @@ func TestNoPhonePairedIsAnAnswerRatherThanAFailure(t *testing.T) {
 	}
 	var answer struct {
 		Show   []shownPart `json:"show"`
-		Paired []phone     `json:"paired"`
+		Paired bool        `json:"paired"`
 	}
 	if err := json.Unmarshal([]byte(stdout), &answer); err != nil {
 		t.Fatalf("stdout is the return value and it does not parse: %q", stdout)
 	}
-	if len(answer.Paired) != 0 {
-		t.Errorf("the return value is not an empty list: %q", stdout)
+	if answer.Paired {
+		t.Errorf("the return value says a phone is paired: %q", stdout)
 	}
-	// How to pair one is a button, and it is said on both faces — the log for whoever typed
-	// this, the form for whoever pressed it.
 	pairing := wordings["en"][phThePairButton]
 	if !strings.Contains(stderr, pairing) {
 		t.Errorf("it does not say how to pair one: %q", stderr)
@@ -134,226 +138,96 @@ func TestNoPhonePairedIsAnAnswerRatherThanAFailure(t *testing.T) {
 	}
 }
 
-// Cutting one phone off leaves the others reading, which is the whole reason they do not share a
-// token — and the store is told before the record here forgets, so a failure cannot leave a phone
-// reading under a name nobody can see.
-func TestRevokeCutsOnePhoneOffAndLeavesTheRest(t *testing.T) {
-	tokens := &pretendTokens{holds: map[string]bool{"iPhone": true, "Pixel": true}}
-	in := cuttingAgainst(t, tokens, "iPhone", "Pixel")
+// Undoing the pairing takes the code away at the store, and the phone that was holding it stops
+// reading. There is nothing to name, so there is nothing on the request but the method.
+func TestRevokeTakesTheCodeAway(t *testing.T) {
+	tokens := &pretendTokens{holds: true}
+	in := askingAgainst(t, tokens)
 
 	var code int
-	stdout, _ := capture(t, func() { code = run(in, []string{"revoke", "iPhone"}) })
+	stdout, _ := capture(t, func() { code = run(in, []string{"revoke"}) })
 
 	if code != 0 {
 		t.Fatalf("exit %d", code)
 	}
 	if tokens.offer != "the-write-token" {
-		t.Errorf("cutting one off is the write token's door, and %q was offered", tokens.offer)
+		t.Errorf("taking it away is the write token's door, and %q was offered", tokens.offer)
 	}
-	if tokens.asked != "iPhone" || tokens.holds["iPhone"] {
-		t.Error("the store was not told to forget it")
+	if tokens.path != "/tokens" || tokens.asked != http.MethodDelete {
+		t.Errorf("the store was asked %s %s", tokens.asked, tokens.path)
 	}
-	if !tokens.holds["Pixel"] {
-		t.Error("the other phone was cut off too")
-	}
-	if paired := pairedPhones(t); len(paired) != 1 || paired[0].Label != "Pixel" {
-		t.Errorf("the record here does not match what the store holds: %+v", paired)
+	if tokens.holds {
+		t.Error("the store was not told to forget the code")
 	}
 	if !strings.Contains(stdout, `"cut":true`) {
 		t.Errorf("the return value does not say it was cut: %q", stdout)
 	}
 }
 
-// A store that would not answer means a phone that is still reading. Forgetting the row here
-// would leave it reading under a name nobody can see any more — the one state with no way back
-// but re-keying everything.
-func TestARevokeTheStoreRefusesKeepsTheRow(t *testing.T) {
-	tokens := &pretendTokens{holds: map[string]bool{"iPhone": true}, refuse: true}
-	in := cuttingAgainst(t, tokens, "iPhone")
+// A store that would not answer means a phone that may still be reading, so the run fails rather
+// than reporting a cut that did not happen.
+func TestARevokeTheStoreRefusesIsAFailure(t *testing.T) {
+	in := askingAgainst(t, &pretendTokens{holds: true, refuse: true})
 
 	var code int
-	_, stderr := capture(t, func() { code = run(in, []string{"revoke", "iPhone"}) })
+	_, stderr := capture(t, func() { code = run(in, []string{"revoke"}) })
 
 	if code != 1 {
 		t.Fatalf("exit %d — the phone was reported as cut off", code)
-	}
-	if paired := pairedPhones(t); len(paired) != 1 {
-		t.Errorf("the row went while the phone is still reading: %+v", paired)
 	}
 	if !strings.Contains(stderr, "/tokens") {
 		t.Errorf("the refusal does not say what would not answer: %q", stderr)
 	}
 }
 
-// A name the store does not hold is nothing reading, so what is left is a row here that says
-// otherwise. Tidying it is the honest end — and saying so is what keeps it from reading as a
-// phone that was cut off just now.
-func TestRevokeTidiesARowTheStoreDoesNotHold(t *testing.T) {
-	tokens := &pretendTokens{holds: map[string]bool{}}
-	in := cuttingAgainst(t, tokens, "iPhone")
+// Pressing it on a store with no code asks for the state it is already in. That is answered, not
+// refused — there is no name to mistype any more, so there is nothing for a refusal to catch.
+func TestRevokeOnAStoreWithNoCodeIsAnsweredRatherThanRefused(t *testing.T) {
+	in := askingAgainst(t, &pretendTokens{holds: false})
 
 	var code int
-	stdout, stderr := capture(t, func() { code = run(in, []string{"revoke", "iPhone"}) })
+	stdout, stderr := capture(t, func() { code = run(in, []string{"revoke"}) })
 
 	if code != 0 {
-		t.Fatalf("exit %d", code)
-	}
-	if paired := pairedPhones(t); len(paired) != 0 {
-		t.Errorf("the stale row is still here: %+v", paired)
+		t.Fatalf("exit %d — having none was treated as a fault", code)
 	}
 	if !strings.Contains(stdout, `"cut":false`) {
 		t.Errorf("the return value claims something was cut: %q", stdout)
 	}
-	if !strings.Contains(stderr, "tidied") {
+	if !strings.Contains(stderr, wordings["en"][phNothingWasReadingAsThat]) {
 		t.Errorf("it does not say what actually happened: %q", stderr)
 	}
 }
 
-// A name nobody has is a typo, and answering "done" to one would leave somebody believing they
-// had cut off a phone that is still reading.
-func TestRevokeRefusesANameNobodyHas(t *testing.T) {
-	in := cuttingAgainst(t, &pretendTokens{holds: map[string]bool{}}, "iPhone")
-
-	var code int
-	_, stderr := capture(t, func() { code = run(in, []string{"revoke", "iPhon"}) })
-
-	if code != 1 {
-		t.Fatalf("exit %d — a typo was answered as done", code)
+// The list of paired phones used to be a file here, and a machine that upgraded still has one.
+// Nothing reads it, so it is taken away rather than left to puzzle whoever finds it.
+func TestTheOldListOfPhonesIsTakenAway(t *testing.T) {
+	tokens := &pretendTokens{holds: true}
+	in := askingAgainst(t, tokens)
+	dir, err := pluginDir()
+	if err != nil {
+		t.Fatal(err)
 	}
-	if paired := pairedPhones(t); len(paired) != 1 {
-		t.Errorf("the phone that is reading was forgotten: %+v", paired)
+	left := filepath.Join(dir, phonesName)
+	if err := os.WriteFile(left, []byte(`{"v":1,"paired":[{"label":"iPhone"}]}`), 0o600); err != nil {
+		t.Fatal(err)
 	}
-	if !strings.Contains(stderr, "iPhon") || !strings.Contains(stderr, "phones") {
-		t.Errorf("the refusal does not name it or say where to look: %q", stderr)
+
+	capture(t, func() { run(in, []string{"phones"}) })
+
+	if _, err := os.Stat(left); !os.IsNotExist(err) {
+		t.Errorf("the old list is still here: %v", err)
 	}
 }
 
-// A label is whatever the person typed, so it goes into the path escaped. Left raw, a name with a
-// slash in it would name another endpoint and a name with a space would not be a request at all.
-func TestALabelIsEscapedIntoThePath(t *testing.T) {
-	tokens := &pretendTokens{holds: map[string]bool{"my phone/2": true}}
-	in := cuttingAgainst(t, tokens, "my phone/2")
-
-	var code int
-	capture(t, func() { code = run(in, []string{"revoke", "my phone/2"}) })
-
-	if code != 0 {
-		t.Fatalf("exit %d", code)
-	}
-	if strings.Contains(tokens.path, " ") || strings.Contains(strings.TrimPrefix(tokens.path, "/tokens/"), "/") {
-		t.Errorf("the label went into the path raw: %q", tokens.path)
-	}
-	if tokens.asked != "my phone/2" {
-		t.Errorf("the store read the name as %q", tokens.asked)
-	}
-}
-
-// The settings screen has no command line: the name of the phone to cut off arrives in the box
-// the button declares, the way the phone's name does when one is paired.
-func TestTheNameToUnpairIsTakenFromTheSettingsScreensBox(t *testing.T) {
-	tokens := &pretendTokens{holds: map[string]bool{"iPhone": true, "Pixel": true}}
-	in := cuttingAgainst(t, tokens, "iPhone", "Pixel")
-	t.Setenv(envAskPhone, "iPhone")
-
-	var code int
-	stdout, _ := capture(t, func() { code = run(in, []string{"revoke"}) })
-
-	if code != 0 {
-		t.Fatalf("exit %d — the button was pressed with a name in its box", code)
-	}
-	if tokens.asked != "iPhone" {
-		t.Errorf("the store was asked to cut %q", tokens.asked)
-	}
-	if paired := pairedPhones(t); len(paired) != 1 || paired[0].Label != "Pixel" {
-		t.Errorf("the other phone did not stay: %+v", paired)
-	}
-	// The form draws what happened; there is no log in front of whoever pressed the button.
-	var answer struct {
-		Show []shownPart `json:"show"`
-	}
-	if err := json.Unmarshal([]byte(stdout), &answer); err != nil {
-		t.Fatalf("stdout does not parse: %q", stdout)
-	}
-	if !strings.Contains(drawnText(answer.Show), "iPhone") {
-		t.Errorf("the settings screen was handed %q", stdout)
-	}
-}
-
-// A name typed after the command wins over the box: someone at a terminal said which one out
-// loud, and an answer left in the environment from a form is not that.
-func TestANameTypedWinsOverTheBox(t *testing.T) {
-	tokens := &pretendTokens{holds: map[string]bool{"iPhone": true, "Pixel": true}}
-	in := cuttingAgainst(t, tokens, "iPhone", "Pixel")
-	t.Setenv(envAskPhone, "iPhone")
-
-	capture(t, func() { run(in, []string{"revoke", "Pixel"}) })
-
-	if tokens.asked != "Pixel" {
-		t.Errorf("the store was asked to cut %q", tokens.asked)
-	}
-}
-
-// Pressing the button with nothing in the box is the ordinary mistake, and what to do about it is
-// the other button — the one that shows the names there are to type.
-func TestUnpairingWithNoNameSaysWhereTheNamesAre(t *testing.T) {
-	in := cuttingAgainst(t, &pretendTokens{holds: map[string]bool{}}, "iPhone")
-
-	var code int
-	_, stderr := capture(t, func() { code = run(in, []string{"revoke"}) })
-
-	if code != 1 {
-		t.Fatalf("exit %d — nothing was named", code)
-	}
-	if !strings.Contains(stderr, wordings["en"][phTheSeePhonesButton]) {
-		t.Errorf("the refusal does not say where the names are: %q", stderr)
-	}
-}
-
-// **An answer too heavy for the form is dropped whole by Amenbo**, not trimmed — so a list long
-// enough to reach that weight is cut here, where there is still something to say about what was
-// cut. The log keeps every one of them.
-func TestALongListIsCutToWhatTheFormWillTakeAndSaysSo(t *testing.T) {
-	long := strings.Repeat("a-phone-with-a-very-long-name", 8)
-	paired := make([]phone, 0, 40)
-	for at := range 40 {
-		paired = append(paired, phone{Label: fmt.Sprintf("%s-%d", long, at), IssuedAt: "2026-08-09T09:00:00.000Z"})
-	}
-
-	shown := whatIsPaired(paired)
-
-	lines := 0
-	for _, part := range shown {
-		lines += len(part.List)
-	}
-	if lines == 0 || lines >= len(paired) {
-		t.Fatalf("%d of %d phones were drawn, want the list cut to fit", lines, len(paired))
-	}
-	if weighs(linesOf(shown)) > showBytes {
-		t.Errorf("what is drawn weighs %d, and Amenbo drops an answer over %d whole", weighs(linesOf(shown)), showBytes)
-	}
-	if !strings.Contains(drawnText(shown), fmt.Sprint(len(paired)-lines)) {
-		t.Errorf("nothing says how many were left out: %q", drawnText(shown))
-	}
-}
-
-func linesOf(shown []shownPart) []string {
-	var lines []string
-	for _, part := range shown {
-		lines = append(lines, part.List...)
-	}
-	return lines
-}
-
-// Revoking names exactly one phone. Nothing after `phones` means anything either, and taking a
-// word nobody meant would answer a question that was not asked.
-func TestTheTwoCommandsTakeWhatTheyTake(t *testing.T) {
-	in := cuttingAgainst(t, &pretendTokens{holds: map[string]bool{}}, "iPhone")
+// Neither takes anything after it, and a word nobody meant would answer a question that was not
+// asked.
+func TestTheTwoCommandsTakeNothing(t *testing.T) {
+	in := askingAgainst(t, &pretendTokens{holds: true})
 
 	for what, args := range map[string][]string{
-		"revoke with no name": {"revoke"},
-		"revoke with two":     {"revoke", "iPhone", "Pixel"},
-		"phones with a word":  {"phones", "iPhone"},
-		"revoke with a blank": {"revoke", "  "},
+		"revoke with a name": {"revoke", "iPhone"},
+		"phones with a word": {"phones", "iPhone"},
 	} {
 		t.Run(what, func(t *testing.T) {
 			var code int

@@ -44,8 +44,7 @@ var everyPhrase = []phrase{
 	phTheSetupButton, phThePairButton, phTheSeePhonesButton, phTheUnpairButton,
 	phTheRepairButton,
 	phRepairWillSend, phRepairFoundNothing, phRepairIsOnItsWay,
-	phPhonesThatMayRead, phPairedOn, phNoPhoneIsPairedYet, phTheRestAreInTheLog,
-	phWhichPhoneToUnpair, phNoPhoneByThatName, phNothingWasReadingAsThat,
+	phPairedOn, phNoPhoneIsPairedYet, phNothingWasReadingAsThat,
 	phPhoneReadsNothingFromNowOn,
 	phStandingWithNoKey, phStandingBadKey, phCarryingTo, phCarryingNowhere,
 	phNothingIsTicked, phWaitingOn, phNowhere, phAnd, phComma,
@@ -55,8 +54,7 @@ var everyPhrase = []phrase{
 	phNoWorkersDevName, phTheRouteIsUp, phTheKeyWasKept, phANewKeyWasGenerated,
 	phTheWorkerIsYours, phNoTokenWasPasted, phTokenReachesNoAccount,
 	phWorkerHasNoWriteToken, phEndpointNotAnsweringYet,
-	phPhoneMayReadFromNowOn, phPhoneAlreadyPaired, phNoEncryptionKey,
-	phNoCloudflareRouteYet, phThePhoneWasNotNamed,
+	phPhoneMayReadFromNowOn, phNoEncryptionKey, phNoCloudflareRouteYet,
 }
 
 // Every language carries every sentence, and carries no sentence this build has stopped saying.
