@@ -31,6 +31,7 @@ import 'package:flutter/material.dart';
 
 import 'cloudflare_intake.dart';
 import 'connection.dart';
+import 'connection_screen.dart';
 import 'decision_detail.dart';
 import 'decisions_screen.dart';
 import 'first_sync.dart';
@@ -241,6 +242,7 @@ class _ViewerHomeState extends State<ViewerHome> with WidgetsBindingObserver {
       arrivals: _arrivals,
       failure: _failure,
       onPairAgain: _pairAgain,
+      onPaired: _paired,
       onErased: _erased,
       clock: widget.clock,
     );
@@ -260,6 +262,7 @@ class HomeShell extends StatefulWidget {
     this.arrivals,
     this.failure,
     this.onPairAgain,
+    this.onPaired,
     this.onErased,
     this.clock = DateTime.now,
     this.initialTab = 0,
@@ -294,6 +297,12 @@ class HomeShell extends StatefulWidget {
 
   final IntakeFailure? failure;
   final VoidCallback? onPairAgain;
+
+  /// The first round against a code read somewhere the shell does not run rounds — the connection
+  /// screen, two pushes in. The band's own button never comes through here: it is already in the
+  /// root, where the round it ends in lives.
+  final Future<void> Function(Pairing)? onPaired;
+
   final VoidCallback? onErased;
   final DateTime Function() clock;
 
@@ -352,10 +361,11 @@ class _HomeShellState extends State<HomeShell> {
   );
 
   /// The settings, from the top of the front screen. Pushed like everything else that is opened
-  /// from a tab rather than being one — and what comes back is whether the phone's copy was erased
-  /// two screens in, which is the root's news, not this shell's.
+  /// from a tab rather than being one — and what comes back happened two screens in, on the
+  /// connection: the copy erased, or a fresh code read. Both are the root's news, not this
+  /// shell's, so both are handed straight on.
   Future<void> _openSettings() async {
-    final erased = await Navigator.of(context).push<bool>(
+    final outcome = await Navigator.of(context).push<ConnectionOutcome>(
       MaterialPageRoute(
         builder: (_) => SettingsScreen(
           settings: widget.settings,
@@ -364,7 +374,18 @@ class _HomeShellState extends State<HomeShell> {
         ),
       ),
     );
-    if (erased == true) widget.onErased?.call();
+    if (!mounted) return;
+    switch (outcome) {
+      case null:
+        break;
+      case CopyErased():
+        widget.onErased?.call();
+      // A code read on the connection screen has fetched nothing yet, and the round that does is
+      // the root's. Without this the person reads a fresh code and the band still says the PC
+      // turned them away, with nothing on the screen saying what is left to do.
+      case PairedAgain(:final pairing):
+        await widget.onPaired?.call(pairing);
+    }
   }
 
   /// A decision, from a task that links one or from the other tab of the search face.

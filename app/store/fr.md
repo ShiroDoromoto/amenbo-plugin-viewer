@@ -47,10 +47,9 @@ Pas de publicité. Pas de pistage. Pas de compte.
 
 ## release_notes
 
-Ce tour-ci ne concerne que le texte japonais.
+Un correctif pour toutes les langues, et une relecture du japonais.
 
-- À la place des calques de l'anglais, on trouve désormais les mots qu'un lecteur japonais emploie déjà
-- Les phrases qui mettaient un réglage ou un écran à la place d'une personne sont réécrites comme on les dirait
-- La fiche du store a eu la même relecture
-
-Rien d'autre n'a bougé : les autres langues restent telles quelles, et la façon dont l'app lit vos tâches aussi.
+- Refaire l'appairage depuis l'écran de connexion va maintenant chercher. Avant, l'app gardait le code et s'arrêtait là, le bandeau affichant toujours que le PC avait mis ce téléphone dehors
+- Le japonais emploie les mots qu'un lecteur japonais utilise déjà
+- Les phrases qui mettaient un réglage à la place d'une personne ont été réécrites
+- La fiche japonaise a eu la même relecture

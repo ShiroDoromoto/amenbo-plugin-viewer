@@ -47,10 +47,9 @@ Sin anuncios. Sin rastreo. Sin cuenta.
 
 ## release_notes
 
-Esta vez le tocó solo al texto en japonés.
+Una corrección para todos los idiomas, y una revisión del japonés.
 
-- En lugar de calcos del inglés, ahora están las palabras que un lector japonés ya usa
-- Las frases que ponían un ajuste o una pantalla donde va una persona se reescribieron como lo diría alguien
-- La ficha de la tienda pasó por la misma revisión
-
-No se movió nada más: los demás idiomas quedan igual, y también la forma en que la app lee tus tareas.
+- Volver a emparejar desde la pantalla de conexión ahora va a buscar. Antes solo guardaba el código nuevo, con la franja diciendo aún que el PC había dejado fuera a este teléfono
+- El japonés usa las palabras que un lector japonés ya emplea
+- Se reescribieron las frases que ponían un ajuste donde va una persona
+- La ficha japonesa pasó por la misma revisión

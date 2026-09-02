@@ -47,10 +47,9 @@ Geen advertenties. Geen tracking. Geen account.
 
 ## release_notes
 
-Deze ronde ging alleen over de Japanse tekst.
+Een herstel voor alle talen, en een ronde door het Japans.
 
-- In plaats van letterlijk overgenomen wendingen staan er nu de woorden die een Japanse lezer toch al gebruikt
-- Zinnen waarin een instelling of een scherm op de plek van een mens stond, zijn herschreven zoals iemand het zou zeggen
-- De storetekst kreeg dezelfde ronde
-
-Verder is er niets verschoven: de andere talen blijven zoals ze waren, en ook hoe de app je taken leest.
+- Opnieuw koppelen vanuit het verbindingsscherm haalt nu ook op. Eerder bleef het bij het onthouden van de code, terwijl in de balk nog stond dat de pc deze telefoon had buitengesloten
+- Het Japans gebruikt de woorden die een Japanse lezer toch al gebruikt
+- Zinnen waarin een instelling op de plek van een mens stond, zijn herschreven
+- De Japanse storetekst kreeg dezelfde ronde

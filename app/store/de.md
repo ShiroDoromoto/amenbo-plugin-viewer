@@ -47,10 +47,9 @@ Keine Werbung. Kein Tracking. Kein Konto.
 
 ## release_notes
 
-Diese Runde galt nur dem japanischen Text.
+Eine Korrektur für alle Sprachen, dazu ein Durchgang durchs Japanische.
 
-- Statt wörtlich übertragener Wendungen stehen dort jetzt die Wörter, die japanische Leser ohnehin verwenden
-- Sätze, in denen eine Einstellung oder ein Bildschirm an der Stelle eines Menschen stand, sind so umgeschrieben, wie jemand es sagen würde
-- Der Store-Text hat denselben Durchgang bekommen
-
-Sonst hat sich nichts bewegt: die anderen Sprachen bleiben, wie sie waren, und das Lesen deiner Aufgaben ebenso.
+- Wer im Verbindungsbildschirm neu koppelt, holt jetzt auch ab. Bisher blieb es beim Merken des Codes, und im Band stand weiter, der PC habe dieses Gerät ausgesperrt
+- Im Japanischen stehen jetzt die Wörter, die japanische Leser ohnehin verwenden
+- Sätze, in denen eine Einstellung an der Stelle eines Menschen stand, sind umgeschrieben
+- Der japanische Store-Text hat denselben Durchgang bekommen

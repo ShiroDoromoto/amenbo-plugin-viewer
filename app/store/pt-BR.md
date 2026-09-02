@@ -47,10 +47,9 @@ Sem anúncios. Sem rastreamento. Sem conta.
 
 ## release_notes
 
-Desta vez foi só o texto em japonês.
+Uma correção que vale para todos os idiomas, e uma revisão do japonês.
 
-- No lugar de decalques do inglês estão agora as palavras que um leitor japonês já usa
-- As frases que punham um ajuste ou uma tela onde vai uma pessoa foram reescritas como alguém diria
-- O texto da ficha passou pela mesma revisão
-
-Nada mais mudou: os outros idiomas ficam como estavam, e o jeito como o app lê as suas tarefas também.
+- Refazer o pareamento pela tela de conexão agora vai buscar. Antes ele só guardava o código novo e parava ali, com a faixa ainda dizendo que o PC tinha deixado este telefone de fora
+- O japonês usa as palavras que um leitor japonês já emprega, no lugar de decalques do inglês
+- As frases que punham um ajuste ou uma tela onde vai uma pessoa foram reescritas
+- A ficha japonesa passou pela mesma revisão

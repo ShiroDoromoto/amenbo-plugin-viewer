@@ -47,10 +47,9 @@ Reklam yok. Takip yok. Hesap yok.
 
 ## release_notes
 
-Bu sefer yalnızca Japonca metne dokunuldu.
+Her dile dokunan bir düzeltme, bir de Japonca metnin elden geçirilmesi.
 
-- İngilizceden birebir aktarılmış kalıpların yerinde artık Japonca okurun zaten kullandığı sözcükler var
-- Bir ayarı ya da ekranı insanın yerine koyan cümleler, insanın söyleyeceği gibi yeniden yazıldı
-- Mağaza metni de aynı gözden geçirmeden geçti
-
-Başka bir şey kımıldamadı: diğer diller olduğu gibi kaldı, uygulamanın görevleri okuma biçimi de.
+- Bağlantı ekranından yeniden eşleştirmek artık getirmeyi de yapıyor. Önceden yeni kodu tutup orada kalıyordu, şerit ise hâlâ bilgisayarın bu telefonu dışarıda bıraktığını yazıyordu
+- Japonca artık Japonca okurun zaten kullandığı sözcüklerle yazılı; İngilizceden birebir aktarılmış kalıplar kalktı
+- Bir ayarı ya da ekranı insanın yerine koyan cümleler yeniden yazıldı
+- Japonca mağaza metni de aynı elden geçirmeden geçti

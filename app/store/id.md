@@ -47,10 +47,9 @@ Tanpa iklan. Tanpa pelacakan. Tanpa akun.
 
 ## release_notes
 
-Kali ini hanya teks Jepangnya yang digarap.
+Satu perbaikan untuk semua bahasa, plus satu putaran untuk teks Jepang.
 
-- Alih-alih salinan mentah dari bahasa Inggris, sekarang dipakai kata-kata yang memang sudah dipakai pembaca Jepang
-- Kalimat yang menaruh setelan atau layar di tempat orang ditulis ulang seperti orang mengucapkannya
-- Deskripsi di toko lewat pemeriksaan yang sama
-
-Selebihnya tidak ada yang bergeser: bahasa lain tetap seperti sebelumnya, begitu pula cara aplikasi membaca backlog-mu.
+- Memasangkan ulang dari layar koneksi sekarang sekalian mengambil. Dulu kode baru hanya disimpan, sementara pita masih bilang PC menutup pintu untuk ponsel ini
+- Teks Jepang memakai kata-kata yang memang sudah dipakai pembaca Jepang
+- Kalimat yang menaruh setelan di tempat orang ditulis ulang
+- Deskripsi toko berbahasa Jepang lewat putaran yang sama

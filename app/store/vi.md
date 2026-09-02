@@ -47,10 +47,9 @@ Không quảng cáo. Không theo dõi. Không tài khoản.
 
 ## release_notes
 
-Lần này chỉ sửa phần tiếng Nhật.
+Một sửa lỗi đến với mọi ngôn ngữ, cùng một lượt soát lại tiếng Nhật.
 
-- Thay cho những chỗ dịch sát từng chữ từ tiếng Anh là những từ mà người đọc tiếng Nhật vốn vẫn dùng
-- Những câu đặt một thiết lập hay một màn hình vào chỗ của con người đã được viết lại như người ta vẫn nói
-- Phần mô tả trên cửa hàng cũng qua cùng một lượt
-
-Ngoài ra không có gì xê dịch: các ngôn ngữ khác vẫn như cũ, và cách ứng dụng đọc công việc của bạn cũng vậy.
+- Ghép nối lại từ màn hình kết nối nay đi lấy luôn. Trước đây nó chỉ giữ mã mới rồi dừng, còn dải trên danh sách vẫn nói máy tính đã chặn chiếc máy này
+- Tiếng Nhật dùng những từ mà người đọc tiếng Nhật vốn vẫn dùng, thay cho chỗ dịch sát từng chữ từ tiếng Anh
+- Những câu đặt một thiết lập hay một màn hình vào chỗ của con người đã được viết lại
+- Phần mô tả tiếng Nhật trên cửa hàng cũng qua cùng một lượt

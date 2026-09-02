@@ -21,12 +21,43 @@ import 'ui/measure.dart';
 import 'ui/time.dart';
 import 'ui/tokens.dart';
 
-/// The connection screen. Pops `true` when the person erased this phone's copy, so whoever pushed
-/// it can go back to the guide — there is nothing left to show a backlog from.
+/// The connection screen. Pops a [ConnectionOutcome] when the person did one of the two things
+/// on it that the root has to act on, and nothing at all when they only looked.
+/// What was done on the connection screen, for whoever pushed it.
+///
+/// Both close the screen, and what has to happen next is opposite. An erased phone has nothing
+/// left to read from, so the root goes back to the guide. A phone that has just read a fresh code
+/// has a whole backlog waiting at the other end, and fetching it is the root's round to run.
+/// Saying which of the two happened is what keeps the root from guessing.
+sealed class ConnectionOutcome {
+  const ConnectionOutcome();
+}
+
+/// The copy on this phone is gone, and the way in with it.
+final class CopyErased extends ConnectionOutcome {
+  const CopyErased();
+}
+
+/// A fresh code was read and kept. **Nothing has been fetched with it yet** — the token in hand
+/// answers nobody until somebody asks, which is the round the root runs on the way back.
+final class PairedAgain extends ConnectionOutcome {
+  const PairedAgain(this.pairing);
+
+  final Pairing pairing;
+}
+
 class ConnectionScreen extends StatefulWidget {
-  const ConnectionScreen({super.key, required this.facts});
+  const ConnectionScreen({
+    super.key,
+    required this.facts,
+    this.camera = const LiveCamera(),
+  });
 
   final ConnectionFacts facts;
+
+  /// Handed on to the scanning screen, and here for the reason it is there: nothing can point a
+  /// real camera at a code, so what happens after one is read is only reachable with a stand-in.
+  final Camera camera;
 
   @override
   State<ConnectionScreen> createState() => _ConnectionScreenState();
@@ -35,9 +66,9 @@ class ConnectionScreen extends StatefulWidget {
 class _ConnectionScreenState extends State<ConnectionScreen> {
   Connection? _connection;
 
-  /// Read once when the screen opens and again after pairing, rather than watched. Nothing here
-  /// changes while the person is looking at it except by their own hand.
-  late Future<void> _reading = _read();
+  /// Read once, when the screen opens, rather than watched. Nothing here changes while the
+  /// person is looking at it: the two things they can do from here both close the screen.
+  late final Future<void> _reading = _read();
 
   /// When the screen was drawn. Held still so the times on it agree with each other.
   DateTime _now = DateTime.now();
@@ -51,12 +82,20 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
     });
   }
 
+  /// A fresh code, from the screen this phone's name is on.
+  ///
+  /// Reading it is half of re-pairing: the new token fetches nothing until a round asks with it.
+  /// So the screen closes on what it read and the root runs that round, the same way the band's
+  /// own button ends. Staying open would leave the person looking at a "last taken" from before
+  /// the code they just read — the screen saying the re-pairing had not worked.
   Future<void> _pairAgain() async {
     final paired = await Navigator.of(context).push<Pairing>(
-      MaterialPageRoute(builder: (_) => const PairingScanScreen()),
+      MaterialPageRoute(
+        builder: (_) => PairingScanScreen(camera: widget.camera),
+      ),
     );
     if (paired == null || !mounted) return;
-    setState(() => _reading = _read());
+    Navigator.of(context).pop(PairedAgain(paired));
   }
 
   Future<void> _erase() async {
@@ -82,7 +121,7 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
 
     await widget.facts.erase();
     if (!mounted) return;
-    Navigator.of(context).pop(true);
+    Navigator.of(context).pop(const CopyErased());
   }
 
   @override

@@ -3,6 +3,7 @@
 
 import 'package:amenbo_viewer/about_screen.dart';
 import 'package:amenbo_viewer/connection.dart';
+import 'package:amenbo_viewer/connection_screen.dart';
 import 'package:amenbo_viewer/main.dart';
 import 'package:amenbo_viewer/settings.dart';
 import 'package:amenbo_viewer/settings_screen.dart';
@@ -132,7 +133,7 @@ void main() {
   ) async {
     // Both screens are standing on a backlog that has just stopped existing, so neither is a
     // place to be left.
-    bool? popped;
+    ConnectionOutcome? popped;
     final settings = SettingsController(UnkeptSettings());
     await tester.pumpWidget(
       MaterialApp(
@@ -142,7 +143,7 @@ void main() {
           builder: (context) => Scaffold(
             body: TextButton(
               onPressed: () async {
-                popped = await Navigator.of(context).push<bool>(
+                popped = await Navigator.of(context).push<ConnectionOutcome>(
                   MaterialPageRoute(
                     builder: (_) => SettingsScreen(
                       settings: settings,
@@ -165,7 +166,7 @@ void main() {
     await tester.tap(find.text('Erase'));
     await tester.pumpAndSettle();
 
-    expect(popped, isTrue);
+    expect(popped, isA<CopyErased>());
     expect(find.text(words.settingsTitle), findsNothing);
   });
 
