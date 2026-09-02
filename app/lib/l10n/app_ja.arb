@@ -116,8 +116,6 @@
   "connectionTitle": "接続",
   "routeCloudflare": "自分の Cloudflare",
   "routeNone": "ペアリングしていません",
-  "thisPhone": "この端末",
-  "thisPhoneDetail": "PC からこの端末を切るときの名前です。",
   "factRoute": "サーバー",
   "factLastTaken": "最後に取得",
   "nothingArrivedYet": "まだ何も届いていません。",

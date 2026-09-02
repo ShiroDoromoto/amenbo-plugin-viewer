@@ -46,7 +46,6 @@ class LastTaken {
 /// Everything the connection screen draws, as it stood when the screen opened.
 class Connection {
   const Connection({
-    this.label,
     this.host,
     this.paired = false,
     this.lastTaken = const LastTaken(),
@@ -56,11 +55,6 @@ class Connection {
   /// one whose copy came in over a route this build no longer has — rows on the device are not a
   /// connection, and a screen that named a place anyway would be answering with half the product.
   final bool paired;
-
-  /// What the PC calls this phone. It is the name a read token is cut off by, so showing it is
-  /// what lets the person match the phone in their hand against the rows on the PC. Null on an
-  /// unpaired phone, and on a pairing made before the code carried a name.
-  final String? label;
 
   /// The Worker's host. The host alone: the token and the key on the same URL are the pairing
   /// itself, and a screen is a thing people photograph.
@@ -97,7 +91,6 @@ class PhoneConnection implements ConnectionFacts {
     final pairing = await pairings.read();
     return Connection(
       paired: pairing != null,
-      label: pairing?.label,
       host: pairing?.url.host,
       lastTaken: LastTaken.fromStore(store),
     );

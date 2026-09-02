@@ -76,7 +76,6 @@ final _today = DateTime(2026, 8, 9, 12);
 /// has to say filled in.
 final _paired = Connection(
   paired: true,
-  label: 'iPhone',
   host: 'amenbo.example.workers.dev',
   lastTaken: LastTaken(
     at: _today.subtract(const Duration(minutes: 12)),

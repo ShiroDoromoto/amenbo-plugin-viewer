@@ -11,7 +11,6 @@ final pairing = Pairing(
   url: Uri.parse('https://amenbo.example.workers.dev/read'),
   readToken: 'cmVhZC10b2tlbg',
   encryptionKey: 'AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8',
-  label: 'iPhone',
 );
 
 void main() {
@@ -36,8 +35,6 @@ void main() {
     // The host says which place this is. The path, the token and the key say who may read it,
     // and a screen is a thing people photograph and hand over to be looked at.
     expect(connection.host, 'amenbo.example.workers.dev');
-    // The name the PC issued this phone's token under, which is what revoking it takes.
-    expect(connection.label, 'iPhone');
   });
 
   test('a phone with no pairing names no place at all', () async {
@@ -47,8 +44,6 @@ void main() {
 
     expect(connection.paired, isFalse);
     expect(connection.host, isNull);
-    // Nothing was named, and there is no token on it to cut off by a name.
-    expect(connection.label, isNull);
   });
 
   test('what was last taken comes off the store', () async {

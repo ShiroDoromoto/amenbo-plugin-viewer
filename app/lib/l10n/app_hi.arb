@@ -116,8 +116,6 @@
   "connectionTitle": "जुड़ाव",
   "routeCloudflare": "आपका अपना Cloudflare",
   "routeNone": "किसी से नहीं जुड़ा",
-  "thisPhone": "यह फ़ोन",
-  "thisPhoneDetail": "पीसी पर इस फ़ोन को हटाने के लिए यही नाम काम आएगा।",
   "factRoute": "सर्वर",
   "factLastTaken": "पिछली बार लाया गया",
   "nothingArrivedYet": "अभी तक कुछ नहीं आया।",

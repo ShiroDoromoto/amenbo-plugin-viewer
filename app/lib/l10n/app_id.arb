@@ -116,8 +116,6 @@
   "connectionTitle": "Sambungan",
   "routeCloudflare": "Cloudflare milikmu sendiri",
   "routeNone": "Belum dipasangkan",
-  "thisPhone": "Ponsel ini",
-  "thisPhoneDetail": "Nama untuk memutus ponsel ini, dari PC.",
   "factRoute": "Server",
   "factLastTaken": "Terakhir diambil",
   "nothingArrivedYet": "Belum ada yang datang.",

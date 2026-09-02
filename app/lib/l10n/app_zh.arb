@@ -116,8 +116,6 @@
   "connectionTitle": "连接",
   "routeCloudflare": "你自己的 Cloudflare",
   "routeNone": "未配对",
-  "thisPhone": "这台手机",
-  "thisPhoneDetail": "在电脑上断开这台手机时用的名字。",
   "factRoute": "服务器",
   "factLastTaken": "上次取得",
   "nothingArrivedYet": "还没有收到任何内容。",

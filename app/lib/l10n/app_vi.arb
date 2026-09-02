@@ -116,8 +116,6 @@
   "connectionTitle": "Kết nối",
   "routeCloudflare": "Cloudflare của riêng bạn",
   "routeNone": "Chưa ghép nối",
-  "thisPhone": "Máy này",
-  "thisPhoneDetail": "Tên để ngắt máy này, ở phía máy tính.",
   "factRoute": "Máy chủ",
   "factLastTaken": "Lần lấy gần nhất",
   "nothingArrivedYet": "Chưa có gì tới cả.",
