@@ -12,20 +12,16 @@ import (
 	"time"
 )
 
-// aStoreHolding is a door that answers the reading side: it hands out a read token, pages back
-// the keys it is holding, and takes that token away again. What it was asked with is written into
-// `asked`, so a test can see that the reading did not go out under the writing token.
+// aStoreHolding is a door that answers the reading side: it pages back the keys it is holding, and
+// says where its ordering stands. What it was asked with is written into `asked`, so a test can
+// see which token the reading went out under — and that it never touched the pairing.
 func aStoreHolding(held []outgoing, perPage int, asked *[]string) *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		*asked = append(*asked, r.Method+" "+r.URL.Path+"?"+r.URL.RawQuery+
 			" as "+strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer "))
 		switch {
-		case r.Method == http.MethodPut && r.URL.Path == "/tokens":
-			w.Write([]byte(`{"issued_at":"2026-08-30"}`))
 		case r.Method == http.MethodGet && r.URL.Path == "/meta":
 			w.Write([]byte(`{"seq":` + strconv.Itoa(len(held)) + `}`))
-		case r.Method == http.MethodDelete && r.URL.Path == "/tokens":
-			w.Write([]byte(`{"cut":true}`))
 		case r.Method == http.MethodGet && r.URL.Path == "/records":
 			since, _ := strconv.Atoi(r.URL.Query().Get("since"))
 			page := held[min(since, len(held)):min(since+perPage, len(held))]
@@ -91,10 +87,10 @@ func TestTheDifferenceDropsWhatIsNoLongerHere(t *testing.T) {
 	}
 }
 
-// The reading goes out under a token this run issued and gave up again, because the token this
-// plugin writes with is refused at the reading door — that refusal is what lets one phone be cut
-// off without touching the rest, and this must not be the thing that erodes it.
-func TestTheKeysAreReadUnderACodeThatIsIssuedAndTakenAwayAgain(t *testing.T) {
+// The reading goes out under the write token this plugin already holds. Issuing a read code here
+// would replace the phone's — there is one — and taking it away again would leave none, so a
+// comparison would end with nobody paired.
+func TestTheKeysAreReadUnderTheWriteTokenAndPairNobody(t *testing.T) {
 	var asked []string
 	shop := aStoreHolding(placedAt("task/1", "task/2", "task/3", "task/4", "task/5"), 2, &asked)
 	defer shop.Close()
@@ -110,15 +106,12 @@ func TestTheKeysAreReadUnderACodeThatIsIssuedAndTakenAwayAgain(t *testing.T) {
 	if holds.seq != 5 {
 		t.Errorf("the store stands at %d, and it answered 5", holds.seq)
 	}
-	if !strings.HasPrefix(asked[0], "PUT /tokens?") {
-		t.Errorf("the first call was %q, and a read has to be issued a token first", asked[0])
-	}
-	if last := asked[len(asked)-1]; !strings.HasPrefix(last, "DELETE /tokens?") {
-		t.Errorf("the last call was %q, and the code this issued has to be taken away again", last)
-	}
 	for _, call := range asked {
-		if strings.HasPrefix(call, "GET ") && strings.HasSuffix(call, "as the-write-token") {
-			t.Errorf("%q read under the writing token", call)
+		if strings.Contains(call, "/tokens") {
+			t.Errorf("%q touched the pairing, and a comparison must leave it where it was", call)
+		}
+		if !strings.HasSuffix(call, "as the-write-token") {
+			t.Errorf("%q went out under something other than the token this plugin holds", call)
 		}
 		if strings.HasPrefix(call, "GET /records") && !strings.Contains(call, "keys=1") {
 			t.Errorf("%q asked for the envelopes as well as the keys", call)
