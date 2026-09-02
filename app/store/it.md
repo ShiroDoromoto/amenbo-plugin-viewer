@@ -47,10 +47,9 @@ Nessuna pubblicità. Nessun tracciamento. Nessun account.
 
 ## release_notes
 
-Questo giro riguarda solo il testo giapponese.
+Una correzione per tutte le lingue, e una rilettura del giapponese.
 
-- Al posto dei calchi dall'inglese ci sono ora le parole che un lettore giapponese già usa
-- Le frasi che mettevano un'impostazione o una schermata al posto di una persona sono riscritte come le direbbe qualcuno
-- La scheda dello store ha avuto la stessa revisione
-
-Non si è mosso altro: le altre lingue restano come erano, e anche il modo in cui l'app legge le tue attività.
+- Rifare l'abbinamento dalla schermata della connessione ora va a prendere. Prima teneva il codice e si fermava lì, con la fascia che diceva ancora che il PC aveva escluso questo telefono
+- Il giapponese usa le parole che un lettore giapponese già impiega
+- Le frasi che mettevano un'impostazione al posto di una persona sono riscritte
+- La scheda giapponese ha avuto la stessa rilettura

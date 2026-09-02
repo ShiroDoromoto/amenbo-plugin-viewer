@@ -35,12 +35,14 @@ class SettingsScreen extends StatelessWidget {
 
   final String appName;
 
+  /// The connection, one screen in. What comes back is passed straight up: both answers are
+  /// the root's to act on, and settings is only the hallway they were reached through.
   Future<void> _openConnection(BuildContext context) async {
-    final erased = await Navigator.of(context).push<bool>(
+    final outcome = await Navigator.of(context).push<ConnectionOutcome>(
       MaterialPageRoute(builder: (_) => ConnectionScreen(facts: connection)),
     );
-    if (erased != true || !context.mounted) return;
-    Navigator.of(context).pop(true);
+    if (outcome == null || !context.mounted) return;
+    Navigator.of(context).pop(outcome);
   }
 
   @override

@@ -47,10 +47,9 @@ Bez reklam. Bez śledzenia. Bez konta.
 
 ## release_notes
 
-Tym razem poszło tylko o japoński tekst.
+Poprawka, która dotyczy każdego języka, i przejrzenie japońskiego.
 
-- Zamiast kalek z angielskiego są teraz słowa, których japoński czytelnik i tak używa
-- Zdania, w których ustawienie albo ekran stały na miejscu człowieka, napisano tak, jak powiedziałby to ktoś żywy
-- Opis w sklepie przeszedł to samo przejrzenie
-
-Poza tym nic się nie ruszyło: pozostałe języki zostają, jakie były, i sposób, w jaki aplikacja czyta twoje zadania, też.
+- Ponowne parowanie z ekranu połączenia teraz też pobiera. Wcześniej zapamiętywało nowy kod i na tym się kończyło, a pasek dalej pisał, że komputer odciął ten telefon
+- Japoński używa słów, których japoński czytelnik i tak używa, zamiast kalek z angielskiego
+- Zdania, w których ustawienie albo ekran stały na miejscu człowieka, napisano na nowo
+- Japoński opis w sklepie przeszedł to samo przejrzenie

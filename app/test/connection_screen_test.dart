@@ -5,9 +5,12 @@
 import 'package:amenbo_viewer/connection.dart';
 import 'package:amenbo_viewer/connection_screen.dart';
 import 'package:amenbo_viewer/l10n/words.dart';
+import 'package:amenbo_viewer/pairing_scan.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'camera_fixture.dart';
 import 'words_fixture.dart';
 
 class FakeFacts implements ConnectionFacts {
@@ -38,8 +41,14 @@ final _cloudflare = Connection(
 /// A phone holding rows that came in over a route this build no longer has.
 const _unpaired = Connection();
 
-Future<bool?> pumpConnection(WidgetTester tester, ConnectionFacts facts) async {
-  bool? popped;
+/// Pushes the screen the way the settings do, and hands back a way to read what it popped —
+/// read after the fact, because what the screen answers with lands when it closes.
+Future<ConnectionOutcome? Function()> pumpConnection(
+  WidgetTester tester,
+  ConnectionFacts facts, {
+  Camera? camera,
+}) async {
+  ConnectionOutcome? popped;
   await tester.pumpWidget(
     MaterialApp(
       localizationsDelegates: Words.localizationsDelegates,
@@ -48,9 +57,12 @@ Future<bool?> pumpConnection(WidgetTester tester, ConnectionFacts facts) async {
         builder: (context) => Scaffold(
           body: TextButton(
             onPressed: () async {
-              popped = await Navigator.of(context).push<bool>(
+              popped = await Navigator.of(context).push<ConnectionOutcome>(
                 MaterialPageRoute(
-                  builder: (_) => ConnectionScreen(facts: facts),
+                  builder: (_) => ConnectionScreen(
+                    facts: facts,
+                    camera: camera ?? const LiveCamera(),
+                  ),
                 ),
               );
             },
@@ -62,10 +74,12 @@ Future<bool?> pumpConnection(WidgetTester tester, ConnectionFacts facts) async {
   );
   await tester.tap(find.text('open'));
   await tester.pumpAndSettle();
-  return popped;
+  return () => popped;
 }
 
 void main() {
+  setUp(() => FlutterSecureStorage.setMockInitialValues({}));
+
   testWidgets('this phone is named the way the PC would cut it off', (
     tester,
   ) async {
@@ -149,7 +163,7 @@ void main() {
     ) async {
       final facts = FakeFacts(_cloudflare);
       final popped = await pumpConnection(tester, facts);
-      expect(popped, isNull);
+      expect(popped(), isNull);
 
       await tester.tap(find.text(words.erase));
       await tester.pumpAndSettle();
@@ -159,6 +173,7 @@ void main() {
       expect(facts.erased, 1);
       // The screen behind is holding a backlog that no longer exists, so it has to be told.
       expect(find.text(words.connectionTitle), findsNothing);
+      expect(popped(), isA<CopyErased>());
     });
   });
 
@@ -170,5 +185,32 @@ void main() {
 
     // The reason for the camera, before the camera — the scanning screen's own rule.
     expect(find.text(words.pairHeading), findsOneWidget);
+  });
+
+  testWidgets('a code read here is handed out to be fetched with', (
+    tester,
+  ) async {
+    // The half that keeping the code does not cover. A new token answers nobody until a round
+    // asks with it, and no round is run from this screen — so what it read has to leave with it.
+    // Held here rather than in the root, because this is where re-pairing was done from and where
+    // it therefore has to end: the band still saying the PC turned this phone away, after a fresh
+    // code was read, is the failure with nothing on screen to act on.
+    final camera = FakeCamera();
+    final popped = await pumpConnection(
+      tester,
+      FakeFacts(_cloudflare),
+      camera: camera,
+    );
+
+    await tester.tap(find.text(words.pairAgainTitle));
+    await tester.pumpAndSettle();
+    await goOnToTheCamera(tester);
+    camera.watching!(good);
+    await tester.pumpAndSettle();
+
+    expect(popped(), isA<PairedAgain>());
+    expect((popped()! as PairedAgain).pairing.readToken, 'tok');
+    // Both screens are behind now — the one that read the code, and the scanning screen itself.
+    expect(find.text(words.connectionTitle), findsNothing);
   });
 }
