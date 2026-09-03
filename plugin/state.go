@@ -126,6 +126,16 @@ type carried struct {
 	// there is nothing to reset and nothing to run at midnight.
 	Spent   int64  `json:"spent,omitempty"`
 	SpentOn string `json:"spent_on,omitempty"`
+	// Build is which build of the Worker this route last answered a write as being.
+	//
+	// **It is remembered because the settings screen cannot ask.** The check reads nothing over
+	// the network, and the number travels on the answer to a write and nowhere else — so the only
+	// place it can be had is a write that already happened, which is this.
+	//
+	// **Zero is "nothing has been written yet"**, not "an old Worker": a build that names no
+	// number is read as 1 where the answer is read (see `theBuildThatAnswered`), so what is
+	// written here is always a build somebody answered with.
+	Build int64 `json:"build,omitempty"`
 }
 
 // orderingUnknown is a place whose ordering this machine has not been told — a first run, a route

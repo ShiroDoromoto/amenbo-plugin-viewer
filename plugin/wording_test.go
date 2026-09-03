@@ -40,7 +40,7 @@ func TestEveryLanguageAmenboOffersHasARow(t *testing.T) {
 // measured against. It is written out rather than derived, so a phrase added to the code and
 // forgotten in the languages shows up here as a line nobody added.
 var everyPhrase = []phrase{
-	phCloudflareWorker, phStandTheWorkerUp,
+	phCloudflareWorker, phStandTheWorkerUp, phWorkerIsOutOfDate,
 	phTheSetupButton, phThePairButton, phTheSeePhonesButton, phTheUnpairButton,
 	phTheRepairButton,
 	phRepairWillSend, phRepairFoundNothing, phRepairIsOnItsWay,
@@ -243,6 +243,21 @@ func TestEveryButtonNameFitsOnAButton(t *testing.T) {
 				t.Errorf("%s calls %s %q, which weighs %d bytes (max %d)",
 					language, button, name, len(name), mostBytesALabelMayWeigh)
 			}
+		}
+	}
+}
+
+// **The other line the form may read has the same 200 bytes**, and it spends them on a sentence
+// and the button's name. Cut, what goes is the button — which is the whole of what this line is
+// for, since pressing it is the only thing that puts an old Worker right.
+func TestEveryLanguageFitsTheLineAnOldWorkerReads(t *testing.T) {
+	for language := range wordings {
+		said := trimmedToTheLine(wordsIn(language).say(phWorkerIsOutOfDate, phTheSetupButton))
+		if strings.HasSuffix(said, "…") {
+			t.Errorf("%s is cut at %d bytes: %q", language, checkAnswerBytes, said)
+		}
+		if !strings.Contains(said, "3.") {
+			t.Errorf("%s has lost the button to press: %q", language, said)
 		}
 	}
 }

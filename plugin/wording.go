@@ -50,6 +50,7 @@ const (
 	// are set into.
 	phCloudflareWorker  phrase = "cloudflare_worker"
 	phStandTheWorkerUp  phrase = "stand_the_worker_up"
+	phWorkerIsOutOfDate phrase = "worker_is_out_of_date"
 	phStandingWithNoKey phrase = "standing_with_no_key"
 	phStandingBadKey    phrase = "standing_bad_key"
 	phCarryingTo        phrase = "carrying_to"

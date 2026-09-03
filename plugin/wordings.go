@@ -17,6 +17,7 @@ var wordings = map[string]wording{
 	"de": {
 		phCloudflareWorker:           "dein Server bei Cloudflare",
 		phStandTheWorkerUp:           "drücke „%s“",
+		phWorkerIsOutOfDate:          "Dein Server bei Cloudflare ist veraltet — drücke „%s“.",
 		phTheSetupButton:             "3. Server bei Cloudflare einrichten",
 		phThePairButton:              "4. Telefon koppeln",
 		phTheSeePhonesButton:         "5. Kopplung ansehen",
@@ -64,6 +65,7 @@ var wordings = map[string]wording{
 	"en": {
 		phCloudflareWorker:   "your server on Cloudflare",
 		phStandTheWorkerUp:   "press “%s”",
+		phWorkerIsOutOfDate:  "Your server on Cloudflare is out of date — press “%s”.",
 		phTheSetupButton:     "3. Set up the server on Cloudflare",
 		phThePairButton:      "4. Pair a phone",
 		phTheSeePhonesButton: "5. See whether a phone is paired",
@@ -115,6 +117,7 @@ var wordings = map[string]wording{
 	"es": {
 		phCloudflareWorker:           "tu servidor en Cloudflare",
 		phStandTheWorkerUp:           "pulsa «%s»",
+		phWorkerIsOutOfDate:          "Tu servidor en Cloudflare está desactualizado — pulsa «%s».",
 		phTheSetupButton:             "3. Crear el servidor en Cloudflare",
 		phThePairButton:              "4. Vincular un teléfono",
 		phTheSeePhonesButton:         "5. Ver si hay un teléfono",
@@ -162,6 +165,7 @@ var wordings = map[string]wording{
 	"fr": {
 		phCloudflareWorker:           "votre serveur sur Cloudflare",
 		phStandTheWorkerUp:           "appuyez sur « %s »",
+		phWorkerIsOutOfDate:          "Votre serveur sur Cloudflare est obsolète — appuyez sur « %s ».",
 		phTheSetupButton:             "3. Créer le serveur sur Cloudflare",
 		phThePairButton:              "4. Associer un téléphone",
 		phTheSeePhonesButton:         "5. Voir si un téléphone est lié",
@@ -209,6 +213,7 @@ var wordings = map[string]wording{
 	"hi": {
 		phCloudflareWorker:           "Cloudflare पर आपका सर्वर",
 		phStandTheWorkerUp:           "“%s” दबाएँ",
+		phWorkerIsOutOfDate:          "Cloudflare पर आपका सर्वर पुराना है — “%s” दबाएँ।",
 		phTheSetupButton:             "3. सर्वर बनाएँ",
 		phThePairButton:              "4. फ़ोन जोड़ें",
 		phTheSeePhonesButton:         "5. जोड़ देखें",
@@ -256,6 +261,7 @@ var wordings = map[string]wording{
 	"id": {
 		phCloudflareWorker:           "server Anda di Cloudflare",
 		phStandTheWorkerUp:           "tekan “%s”",
+		phWorkerIsOutOfDate:          "Server Anda di Cloudflare sudah usang — tekan “%s”.",
 		phTheSetupButton:             "3. Buat server di Cloudflare",
 		phThePairButton:              "4. Pasangkan ponsel",
 		phTheSeePhonesButton:         "5. Lihat apakah ada ponsel",
@@ -303,6 +309,7 @@ var wordings = map[string]wording{
 	"it": {
 		phCloudflareWorker:           "il tuo server su Cloudflare",
 		phStandTheWorkerUp:           "premi «%s»",
+		phWorkerIsOutOfDate:          "Il tuo server su Cloudflare è obsoleto — premi «%s».",
 		phTheSetupButton:             "3. Crea il server su Cloudflare",
 		phThePairButton:              "4. Abbina un telefono",
 		phTheSeePhonesButton:         "5. Vedi se c'è un telefono",
@@ -350,6 +357,7 @@ var wordings = map[string]wording{
 	"ja": {
 		phCloudflareWorker:           "Cloudflare のサーバー",
 		phStandTheWorkerUp:           "「%s」を押してください",
+		phWorkerIsOutOfDate:          "Cloudflare のサーバーが古いままです。「%s」を押してください。",
 		phTheSetupButton:             "3. Cloudflare にサーバーを作る",
 		phThePairButton:              "4. 端末をペアリング",
 		phTheSeePhonesButton:         "5. ペアリングを確かめる",
@@ -397,6 +405,7 @@ var wordings = map[string]wording{
 	"ko": {
 		phCloudflareWorker:           "내 Cloudflare 서버",
 		phStandTheWorkerUp:           "“%s”을 누르세요",
+		phWorkerIsOutOfDate:          "내 Cloudflare 서버가 오래되었습니다 — “%s”을 누르세요.",
 		phTheSetupButton:             "3. Cloudflare에 서버 만들기",
 		phThePairButton:              "4. 휴대폰 연결",
 		phTheSeePhonesButton:         "5. 연결 상태 보기",
@@ -444,6 +453,7 @@ var wordings = map[string]wording{
 	"nl": {
 		phCloudflareWorker:           "je eigen server op Cloudflare",
 		phStandTheWorkerUp:           "druk op “%s”",
+		phWorkerIsOutOfDate:          "Je server op Cloudflare is verouderd — druk op “%s”.",
 		phTheSetupButton:             "3. Server op Cloudflare aanmaken",
 		phThePairButton:              "4. Telefoon koppelen",
 		phTheSeePhonesButton:         "5. Kijken of er een telefoon is",
@@ -491,6 +501,7 @@ var wordings = map[string]wording{
 	"pl": {
 		phCloudflareWorker:           "twój własny serwer w Cloudflare",
 		phStandTheWorkerUp:           "naciśnij „%s”",
+		phWorkerIsOutOfDate:          "Twój serwer w Cloudflare jest nieaktualny — naciśnij „%s”.",
 		phTheSetupButton:             "3. Utwórz serwer w Cloudflare",
 		phThePairButton:              "4. Sparuj telefon",
 		phTheSeePhonesButton:         "5. Sprawdź parowanie",
@@ -538,6 +549,7 @@ var wordings = map[string]wording{
 	"pt-BR": {
 		phCloudflareWorker:           "o seu servidor no Cloudflare",
 		phStandTheWorkerUp:           "pressione “%s”",
+		phWorkerIsOutOfDate:          "O seu servidor no Cloudflare está desatualizado — pressione “%s”.",
 		phTheSetupButton:             "3. Criar o servidor no Cloudflare",
 		phThePairButton:              "4. Parear um telefone",
 		phTheSeePhonesButton:         "5. Ver se há um celular pareado",
@@ -585,6 +597,7 @@ var wordings = map[string]wording{
 	"ru": {
 		phCloudflareWorker:           "ваш сервер в Cloudflare",
 		phStandTheWorkerUp:           "нажмите «%s»",
+		phWorkerIsOutOfDate:          "Ваш сервер в Cloudflare устарел — нажмите «%s».",
 		phTheSetupButton:             "3. Создать сервер",
 		phThePairButton:              "4. Подключить телефон",
 		phTheSeePhonesButton:         "5. Есть ли подключение",
@@ -632,6 +645,7 @@ var wordings = map[string]wording{
 	"th": {
 		phCloudflareWorker:           "เซิร์ฟเวอร์บน Cloudflare",
 		phStandTheWorkerUp:           "กด “%s”",
+		phWorkerIsOutOfDate:          "เซิร์ฟเวอร์บน Cloudflare ล้าสมัยแล้ว — กด “%s”",
 		phTheSetupButton:             "3. เซิร์ฟเวอร์",
 		phThePairButton:              "4. จับคู่มือถือ",
 		phTheSeePhonesButton:         "5. ดูการจับคู่",
@@ -679,6 +693,7 @@ var wordings = map[string]wording{
 	"tr": {
 		phCloudflareWorker:           "Cloudflare'deki kendi sunucun",
 		phStandTheWorkerUp:           "“%s” düğmesine bas",
+		phWorkerIsOutOfDate:          "Cloudflare'deki sunucun eski kalmış — “%s” düğmesine bas.",
 		phTheSetupButton:             "3. Cloudflare'de sunucu oluştur",
 		phThePairButton:              "4. Telefon eşle",
 		phTheSeePhonesButton:         "5. Eşleşme var mı gör",
@@ -726,6 +741,7 @@ var wordings = map[string]wording{
 	"uk": {
 		phCloudflareWorker:           "ваш сервер у Cloudflare",
 		phStandTheWorkerUp:           "натисніть «%s»",
+		phWorkerIsOutOfDate:          "Ваш сервер у Cloudflare застарів — натисніть «%s».",
 		phTheSetupButton:             "3. Створити сервер",
 		phThePairButton:              "4. Підключити телефон",
 		phTheSeePhonesButton:         "5. Чи є підключення",
@@ -773,6 +789,7 @@ var wordings = map[string]wording{
 	"vi": {
 		phCloudflareWorker:           "máy chủ của bạn trên Cloudflare",
 		phStandTheWorkerUp:           "bấm “%s”",
+		phWorkerIsOutOfDate:          "Máy chủ của bạn trên Cloudflare đã cũ — hãy bấm “%s”.",
 		phTheSetupButton:             "3. Tạo máy chủ trên Cloudflare",
 		phThePairButton:              "4. Ghép nối điện thoại",
 		phTheSeePhonesButton:         "5. Xem đã ghép nối chưa",
@@ -820,6 +837,7 @@ var wordings = map[string]wording{
 	"zh-Hans": {
 		phCloudflareWorker:           "你自己在 Cloudflare 上的服务器",
 		phStandTheWorkerUp:           "按“%s”",
+		phWorkerIsOutOfDate:          "你在 Cloudflare 上的服务器已过时 — 按“%s”。",
 		phTheSetupButton:             "3. 在 Cloudflare 上创建服务器",
 		phThePairButton:              "4. 配对手机",
 		phTheSeePhonesButton:         "5. 查看配对状态",
@@ -867,6 +885,7 @@ var wordings = map[string]wording{
 	"zh-Hant": {
 		phCloudflareWorker:           "你自己在 Cloudflare 上的伺服器",
 		phStandTheWorkerUp:           "按「%s」",
+		phWorkerIsOutOfDate:          "你在 Cloudflare 上的伺服器已過時 — 按「%s」。",
 		phTheSetupButton:             "3. 在 Cloudflare 上建立伺服器",
 		phThePairButton:              "4. 配對手機",
 		phTheSeePhonesButton:         "5. 檢視配對狀態",

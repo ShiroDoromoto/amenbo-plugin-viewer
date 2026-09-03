@@ -171,8 +171,52 @@ func check(in input, _ []string) error {
 	return json.NewEncoder(out).Encode(map[string]any{
 		"v":       contractVersion,
 		"ok":      usable,
-		"message": whatIsReaching(screen, where),
+		"message": theLineTheFormReads(screen, where),
 	})
+}
+
+// theLineTheFormReads is the one line, chosen: the Worker being behind when it is, and where
+// records are reaching otherwise.
+//
+// **The older Worker wins the line.** Both sentences are true at once — records are reaching a
+// server, and that server is not the one this plugin carries — and there are 200 bytes for one of
+// them. Reaching an old Worker is the half a reader can do something about, and the half they
+// would otherwise never find out: everything looks well, and `repair` compares against a door
+// that will not open. Where records are reaching is still asked for on the next press, once the
+// button this line names has been pressed.
+//
+// **`ok` does not move with it.** Nothing here is a wrong setting — the settings are the ones
+// that stood the Worker up — and a check that said no would refuse to enable the plugin whose
+// button is the way out.
+func theLineTheFormReads(words wording, where []routeStanding) string {
+	if theWorkerIsBehind(where) {
+		return trimmedToTheLine(words.say(phWorkerIsOutOfDate, phTheSetupButton))
+	}
+	return whatIsReaching(words, where)
+}
+
+// theWorkerIsBehind says records are reaching a Worker older than the one this plugin carries.
+//
+// **It is asked of the route that is carrying, and not of the settings.** A Worker nothing is
+// being sent to is not something to send anybody to a button over — a place ticked off is a pause
+// somebody asked for, and a place that is not there yet has its own sentence already.
+//
+// **A memory that says nothing says nothing.** A first run, a route just stood up, and a build
+// too old to have written the number all read as no answer, and no answer is not an old Worker.
+func theWorkerIsBehind(where []routeStanding) bool {
+	reaching := false
+	for _, one := range where {
+		reaching = reaching || (one.carrying() && one.open.name() == routeCloudflare)
+	}
+	if !reaching {
+		return false
+	}
+	remembered, found, err := readState()
+	if err != nil || !found {
+		return false
+	}
+	left := remembered.Routes[routeCloudflare]
+	return left.Build != 0 && left.Build < workerBuild
 }
 
 // whatIsReaching is that line: where records are reaching, and — for a place that is ticked and

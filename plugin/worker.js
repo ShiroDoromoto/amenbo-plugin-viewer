@@ -4,7 +4,7 @@ var __name = (target, value) => __defProp(target, "name", { value, configurable:
 
 // src/index.ts
 var SPEC_V = 1;
-var BUILD = 2;
+var BUILD = 3;
 var PER_PAGE = 200;
 var PER_WRITE = 500;
 var PER_KEY_PAGE = 2e3;

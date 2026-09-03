@@ -52,6 +52,19 @@ const (
 //go:embed worker.js
 var workerScript []byte
 
+// workerBuild is which build the script above is, and it is spelled here because the number lives
+// in the JavaScript as a literal nothing on this side can import.
+//
+// **It is what a Worker already standing is compared against.** The one in the user's account
+// changes only when they press setup, so the number it answers a write with (see `written`) says
+// whether they are talking to the Worker this plugin carries or to an older one — and the answer
+// is what the settings screen says out loud, since pressing that button is the user's to do and
+// nobody else's.
+//
+// `TestTheBakedWorkerIsTheBuildThisPluginSaysItIs` keeps the two level: a `make -C worker baked`
+// that was never run is a plugin claiming a Worker it does not carry.
+const workerBuild = 3
+
 // The three ways the Cloudflare API token reaches this run, and not one of them keeps it.
 //
 // askAPIToken is what the manifest declares the settings screen to ask for when the user presses

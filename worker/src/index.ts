@@ -83,8 +83,14 @@ const SPEC_V = 1;
  *
  * **`1` is every Worker deployed before this field existed.** A sender that reads no number at
  * all is talking to one of those, which is exactly what it needs to know.
+ *
+ * **It moves when a Worker already standing has to be replaced for something to work.** `3` is
+ * the reading door opening to the write token, and the single pairing code that came with it
+ * (migration `0006`): against a `2` the PC can write and cannot read back what it wrote, so
+ * `repair` compares against nothing. The plugin carries this same number for the Worker it
+ * deploys, and compares the two — which is how a settings screen can say the server is behind.
  */
-const BUILD = 2;
+const BUILD = 3;
 
 /**
  * How many records one read hands back before saying there are more.
