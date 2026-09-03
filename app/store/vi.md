@@ -47,9 +47,7 @@ Không quảng cáo. Không theo dõi. Không tài khoản.
 
 ## release_notes
 
-Một sửa lỗi đến với mọi ngôn ngữ, cùng một lượt soát lại tiếng Nhật.
+Màn hình kết nối không còn đặt tên cho điện thoại này.
 
-- Ghép nối lại từ màn hình kết nối nay đi lấy luôn. Trước đây nó chỉ giữ mã mới rồi dừng, còn dải trên danh sách vẫn nói máy tính đã chặn chiếc máy này
-- Tiếng Nhật dùng những từ mà người đọc tiếng Nhật vốn vẫn dùng, thay cho chỗ dịch sát từng chữ từ tiếng Anh
-- Những câu đặt một thiết lập hay một màn hình vào chỗ của con người đã được viết lại
-- Phần mô tả tiếng Nhật trên cửa hàng cũng qua cùng một lượt
+- Ghép nối không còn hỏi tên. Máy tính chỉ giữ một chuỗi băm của mã, nên chưa bao giờ biết điện thoại nào đang giữ mã — cái tên chỉ tồn tại ở phía này
+- Mã QR từ máy tính bản cũ vẫn ghép nối được, và điện thoại đã ghép nối thì vẫn giữ nguyên

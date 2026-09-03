@@ -47,9 +47,7 @@ Nessuna pubblicità. Nessun tracciamento. Nessun account.
 
 ## release_notes
 
-Una correzione per tutte le lingue, e una rilettura del giapponese.
+La schermata di connessione non dà più un nome a questo telefono.
 
-- Rifare l'abbinamento dalla schermata della connessione ora va a prendere. Prima teneva il codice e si fermava lì, con la fascia che diceva ancora che il PC aveva escluso questo telefono
-- Il giapponese usa le parole che un lettore giapponese già impiega
-- Le frasi che mettevano un'impostazione al posto di una persona sono riscritte
-- La scheda giapponese ha avuto la stessa rilettura
+- L'associazione non chiede più un nome. Il PC conserva solo un hash del codice, quindi non ha mai saputo quale telefono lo avesse: il nome esisteva solo da questa parte
+- Un codice QR di un PC più vecchio si associa ancora, e un telefono già associato resta tale

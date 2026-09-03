@@ -47,9 +47,7 @@ Bez reklam. Bez śledzenia. Bez konta.
 
 ## release_notes
 
-Poprawka, która dotyczy każdego języka, i przejrzenie japońskiego.
+Ekran połączenia nie nazywa już tego telefonu.
 
-- Ponowne parowanie z ekranu połączenia teraz też pobiera. Wcześniej zapamiętywało nowy kod i na tym się kończyło, a pasek dalej pisał, że komputer odciął ten telefon
-- Japoński używa słów, których japoński czytelnik i tak używa, zamiast kalek z angielskiego
-- Zdania, w których ustawienie albo ekran stały na miejscu człowieka, napisano na nowo
-- Japoński opis w sklepie przeszedł to samo przejrzenie
+- Parowanie nie pyta o nazwę. Komputer przechowuje tylko skrót kodu, więc nigdy nie wiedział, który telefon go ma — nazwa istniała wyłącznie po tej stronie
+- Kod QR ze starszego komputera nadal paruje, a już sparowany telefon pozostaje sparowany

@@ -47,9 +47,7 @@ Pas de publicité. Pas de pistage. Pas de compte.
 
 ## release_notes
 
-Un correctif pour toutes les langues, et une relecture du japonais.
+L'écran de connexion ne nomme plus ce téléphone.
 
-- Refaire l'appairage depuis l'écran de connexion va maintenant chercher. Avant, l'app gardait le code et s'arrêtait là, le bandeau affichant toujours que le PC avait mis ce téléphone dehors
-- Le japonais emploie les mots qu'un lecteur japonais utilise déjà
-- Les phrases qui mettaient un réglage à la place d'une personne ont été réécrites
-- La fiche japonaise a eu la même relecture
+- L'appairage ne demande plus de nom. Le PC ne conserve qu'une empreinte du code : il n'a jamais su quel téléphone le détenait, et le nom n'existait que de ce côté
+- Un QR code venu d'un PC plus ancien appaire toujours, et un téléphone déjà appairé le reste

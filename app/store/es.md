@@ -47,9 +47,7 @@ Sin anuncios. Sin rastreo. Sin cuenta.
 
 ## release_notes
 
-Una corrección para todos los idiomas, y una revisión del japonés.
+La pantalla de conexión ya no nombra este teléfono.
 
-- Volver a emparejar desde la pantalla de conexión ahora va a buscar. Antes solo guardaba el código nuevo, con la franja diciendo aún que el PC había dejado fuera a este teléfono
-- El japonés usa las palabras que un lector japonés ya emplea
-- Se reescribieron las frases que ponían un ajuste donde va una persona
-- La ficha japonesa pasó por la misma revisión
+- El emparejamiento ya no pide un nombre. El PC solo guarda un hash del código, así que nunca supo qué teléfono lo tenía: el nombre existía solo de este lado
+- Un código QR de un PC anterior sigue emparejando, y un teléfono ya emparejado sigue estándolo

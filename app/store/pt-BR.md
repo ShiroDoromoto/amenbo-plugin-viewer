@@ -47,9 +47,7 @@ Sem anúncios. Sem rastreamento. Sem conta.
 
 ## release_notes
 
-Uma correção que vale para todos os idiomas, e uma revisão do japonês.
+A tela de conexão não dá mais nome a este telefone.
 
-- Refazer o pareamento pela tela de conexão agora vai buscar. Antes ele só guardava o código novo e parava ali, com a faixa ainda dizendo que o PC tinha deixado este telefone de fora
-- O japonês usa as palavras que um leitor japonês já emprega, no lugar de decalques do inglês
-- As frases que punham um ajuste ou uma tela onde vai uma pessoa foram reescritas
-- A ficha japonesa passou pela mesma revisão
+- O pareamento não pede mais um nome. O PC guarda só um hash do código, então nunca soube qual telefone o tinha: o nome existia apenas deste lado
+- Um QR code de um PC mais antigo ainda pareia, e um telefone já pareado continua pareado

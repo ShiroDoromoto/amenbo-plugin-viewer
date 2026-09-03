@@ -47,9 +47,7 @@ Geen advertenties. Geen tracking. Geen account.
 
 ## release_notes
 
-Een herstel voor alle talen, en een ronde door het Japans.
+Het verbindingsscherm geeft deze telefoon geen naam meer.
 
-- Opnieuw koppelen vanuit het verbindingsscherm haalt nu ook op. Eerder bleef het bij het onthouden van de code, terwijl in de balk nog stond dat de pc deze telefoon had buitengesloten
-- Het Japans gebruikt de woorden die een Japanse lezer toch al gebruikt
-- Zinnen waarin een instelling op de plek van een mens stond, zijn herschreven
-- De Japanse storetekst kreeg dezelfde ronde
+- Koppelen vraagt niet langer om een naam. De pc bewaart alleen een hash van de code en wist dus nooit welke telefoon hem had — de naam bestond alleen aan deze kant
+- Een QR-code van een oudere pc koppelt nog steeds, en een al gekoppelde telefoon blijft gekoppeld

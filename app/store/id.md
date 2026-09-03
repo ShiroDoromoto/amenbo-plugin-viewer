@@ -47,9 +47,7 @@ Tanpa iklan. Tanpa pelacakan. Tanpa akun.
 
 ## release_notes
 
-Satu perbaikan untuk semua bahasa, plus satu putaran untuk teks Jepang.
+Layar koneksi tidak lagi menyebut nama ponsel ini.
 
-- Memasangkan ulang dari layar koneksi sekarang sekalian mengambil. Dulu kode baru hanya disimpan, sementara pita masih bilang PC menutup pintu untuk ponsel ini
-- Teks Jepang memakai kata-kata yang memang sudah dipakai pembaca Jepang
-- Kalimat yang menaruh setelan di tempat orang ditulis ulang
-- Deskripsi toko berbahasa Jepang lewat putaran yang sama
+- Pemasangan tidak lagi meminta nama. PC hanya menyimpan hash dari kode, jadi ia tidak pernah tahu ponsel mana yang memegangnya — nama itu hanya ada di sisi ini
+- Kode QR dari PC versi lama tetap bisa dipasangkan, dan ponsel yang sudah terpasang tetap terpasang
