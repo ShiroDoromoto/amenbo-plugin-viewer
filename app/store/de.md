@@ -47,9 +47,7 @@ Keine Werbung. Kein Tracking. Kein Konto.
 
 ## release_notes
 
-Eine Korrektur für alle Sprachen, dazu ein Durchgang durchs Japanische.
+Der Verbindungsbildschirm benennt dieses Gerät nicht mehr.
 
-- Wer im Verbindungsbildschirm neu koppelt, holt jetzt auch ab. Bisher blieb es beim Merken des Codes, und im Band stand weiter, der PC habe dieses Gerät ausgesperrt
-- Im Japanischen stehen jetzt die Wörter, die japanische Leser ohnehin verwenden
-- Sätze, in denen eine Einstellung an der Stelle eines Menschen stand, sind umgeschrieben
-- Der japanische Store-Text hat denselben Durchgang bekommen
+- Beim Koppeln wird kein Name mehr gefragt. Der PC speichert nur einen Hash des Codes und wusste nie, welches Gerät ihn hat — den Namen gab es nur auf dieser Seite
+- Ein QR-Code von einem älteren PC koppelt weiterhin, und ein bereits gekoppeltes Gerät bleibt gekoppelt

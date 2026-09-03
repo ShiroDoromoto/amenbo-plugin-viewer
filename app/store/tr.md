@@ -47,9 +47,7 @@ Reklam yok. Takip yok. Hesap yok.
 
 ## release_notes
 
-Her dile dokunan bir düzeltme, bir de Japonca metnin elden geçirilmesi.
+Bağlantı ekranı artık bu telefona ad vermiyor.
 
-- Bağlantı ekranından yeniden eşleştirmek artık getirmeyi de yapıyor. Önceden yeni kodu tutup orada kalıyordu, şerit ise hâlâ bilgisayarın bu telefonu dışarıda bıraktığını yazıyordu
-- Japonca artık Japonca okurun zaten kullandığı sözcüklerle yazılı; İngilizceden birebir aktarılmış kalıplar kalktı
-- Bir ayarı ya da ekranı insanın yerine koyan cümleler yeniden yazıldı
-- Japonca mağaza metni de aynı elden geçirmeden geçti
+- Eşleştirme artık ad sormuyor. Bilgisayar yalnızca kodun özetini tutuyor, yani onu hangi telefonun taşıdığını hiç bilmedi; ad yalnızca bu tarafta vardı
+- Eski bir bilgisayarın verdiği QR kod hâlâ eşleşiyor, zaten eşleşmiş bir telefon da eşleşmiş kalıyor

@@ -47,9 +47,7 @@ No ads. No tracking. No account.
 
 ## release_notes
 
-A fix that reaches every language, and a pass over the Japanese.
+The connection screen no longer names this phone.
 
-- Re-pairing from the connection screen now goes and fetches. It used to keep the new code and stop there, leaving the band still saying the PC had turned this phone away
-- The Japanese uses the words a Japanese reader already has, in place of phrases carried straight over from the English
-- Sentences that had put a setting or a screen where a person belongs were rewritten
-- The Japanese store listing got the same pass
+- Pairing no longer asks for a name. The PC keeps only a hash of the code, so it never knew which phone was holding one — the name existed on this side alone
+- A QR code from an older PC still pairs, and a phone that is already paired stays paired
