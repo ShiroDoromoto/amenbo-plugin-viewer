@@ -298,3 +298,63 @@ func TestTheLineAFreshInstallReadsFitsWhole(t *testing.T) {
 		t.Errorf("%q has lost what to do next", said)
 	}
 }
+
+// theWorkerThatTookTheRecords is a memory saying the Cloudflare route last wrote to a Worker of
+// that build — the only place the settings screen can learn it from.
+func theWorkerThatTookTheRecords(t *testing.T, build int64) {
+	t.Helper()
+	remembering(t)
+	if err := writeState(state{Routes: map[string]carried{
+		routeCloudflare: {Version: 1, Cursor: 1, Build: build},
+	}}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// **A Worker older than the one this plugin carries is what the line says**, because it is the
+// fault a person can neither see nor be told about anywhere else: everything reads as working,
+// and only they can put it right — by pressing the button this names.
+func TestTheCheckSaysTheWorkerIsBehindAndNamesTheButton(t *testing.T) {
+	theWorkerThatTookTheRecords(t, workerBuild-1)
+
+	ok, said := answeredCheck(t, thePlaceStanding(t, ticked("cloudflare")))
+
+	if !strings.Contains(said, "out of date") {
+		t.Errorf("%q does not say the server is behind", said)
+	}
+	if !strings.Contains(said, "3.") {
+		t.Errorf("%q does not name the button to press", said)
+	}
+	// The settings are the ones that stood that Worker up, so nothing here is wrong to fix — and
+	// a check that said no would refuse to enable the plugin whose button is the way out.
+	if !ok {
+		t.Errorf("an old Worker was refused as a wrong setting: %q", said)
+	}
+}
+
+// The line goes back to where records are reaching once the Worker is the one this plugin
+// carries — the sentence is a fault to clear, not a badge the form keeps wearing.
+func TestTheCheckSaysNothingAboutAWorkerItIsLevelWith(t *testing.T) {
+	theWorkerThatTookTheRecords(t, workerBuild)
+
+	_, said := answeredCheck(t, thePlaceStanding(t, ticked("cloudflare")))
+
+	if strings.Contains(said, "out of date") {
+		t.Errorf("%q calls the Worker this plugin carries an old one", said)
+	}
+	if !strings.Contains(said, "Cloudflare") {
+		t.Errorf("%q does not name the place it is reaching", said)
+	}
+}
+
+// A place ticked off is a pause somebody asked for, and nothing is being sent to that Worker to
+// be behind. Sending them to `setup` over it would have them undo the pause looking for a fault.
+func TestAPausedRouteIsNotToldItsWorkerIsBehind(t *testing.T) {
+	theWorkerThatTookTheRecords(t, workerBuild-1)
+
+	_, said := answeredCheck(t, thePlaceStanding(t, ticked("")))
+
+	if strings.Contains(said, "out of date") {
+		t.Errorf("%q reports the Worker behind a place the user ticked off", said)
+	}
+}

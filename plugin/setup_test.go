@@ -7,7 +7,9 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -868,5 +870,25 @@ func TestWhatIsBakedInIsTheWorkerAndItsMigrations(t *testing.T) {
 		if !slices.ContainsFunc(migrations, func(one migration) bool { return one.name == name }) {
 			t.Errorf("%s is on the before-the-ledger list and is not a migration this build carries", name)
 		}
+	}
+}
+
+// **The build this plugin says it carries has to be the build in the script it carries.** The
+// script is generated from the Worker's own source by `make -C worker baked`, so a change to the
+// TypeScript that was never baked would deploy one Worker while the settings screen was told
+// about another — and the screen would say the user's server is behind moments after they pressed
+// the button that stood it up.
+func TestTheBakedWorkerIsTheBuildThisPluginSaysItIs(t *testing.T) {
+	named := regexp.MustCompile(`BUILD = (\d+)`).FindSubmatch(workerScript)
+	if named == nil {
+		t.Fatal("the baked Worker names no build")
+	}
+	baked, err := strconv.Atoi(string(named[1]))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if baked != workerBuild {
+		t.Errorf("the baked Worker is build %d and this plugin says it carries build %d"+
+			" — run `make -C worker baked`", baked, workerBuild)
 	}
 }

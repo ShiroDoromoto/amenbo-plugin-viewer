@@ -334,8 +334,8 @@ type route interface {
 	place(body placement) (written, error)
 }
 
-// written is what one request answered: where the place's ordering stands afterwards, and how
-// many rows its database actually wrote.
+// written is what one request answered: where the place's ordering stands afterwards, how many
+// rows its database actually wrote, and which build of the Worker answered.
 //
 // **The second is measured and not worked out.** An upsert onto a key already there costs a
 // different number of rows from one onto a key that is not, so a sender counting for itself would
@@ -344,9 +344,15 @@ type route interface {
 //
 // A store older than that field answers nothing for it, which reads as zero — a budget that never
 // fills, which is exactly the behaviour before there was one.
+//
+// **The third is here because a write is the only place it can be read.** The Worker names its
+// build on the answer to a write and nowhere else, the write token being all a sender holds, so
+// this is where a plugin finds out whether the Worker in the user's account is the one it
+// carries (see `workerBuild`).
 type written struct {
-	seq  int64
-	rows int64
+	seq   int64
+	rows  int64
+	build int64
 }
 
 // store is the place the records are put: the user's own Worker, the token that opens its writing
@@ -495,11 +501,25 @@ func (s store) put(path string, body placement) (written, error) {
 	var said struct {
 		Seq         int64 `json:"seq"`
 		RowsWritten int64 `json:"rows_written"`
+		Build       int64 `json:"build"`
 	}
 	if err := json.Unmarshal(answered, &said); err != nil {
 		return written{}, fmt.Errorf("%s answered with something this build cannot read: %w", path, err)
 	}
-	return written{seq: said.Seq, rows: said.RowsWritten}, nil
+	return written{seq: said.Seq, rows: said.RowsWritten, build: theBuildThatAnswered(said.Build)}, nil
+}
+
+// theBuildThatAnswered reads the build off an answer.
+//
+// **A Worker that names none is build 1**, which is the promise the field was added under: every
+// Worker deployed before it existed answers nothing here, and one of those is precisely what a
+// sender needs to recognise. Reading the silence as "unknown" instead would let the oldest Worker
+// of all be the one nobody is ever told about.
+func theBuildThatAnswered(named int64) int64 {
+	if named == 0 {
+		return 1
+	}
+	return named
 }
 
 // ledger is what a turn reads the store through. It is a set of functions rather than direct
@@ -762,6 +782,9 @@ func drainTo(where route, left carried, sending int64, now time.Time) (carried, 
 			return left, landed, err
 		}
 		left = spend(left, answered.rows, now)
+		// Which Worker took it, remembered because the settings screen has no other way to ask:
+		// it reads nothing over the network, and this is a write that already happened.
+		left.Build = answered.build
 		if expected := left.Seq + int64(len(records)); left.Seq != orderingUnknown && answered.seq != expected {
 			return left, landed, fmt.Errorf("the store took part %d of %d and did not write it:"+
 				" %d records should have carried the ordering to %d, and the store answered %d"+

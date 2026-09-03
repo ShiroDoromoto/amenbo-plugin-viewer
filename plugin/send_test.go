@@ -1394,3 +1394,43 @@ func TestARouteWithAnEmptyQueueIsNotSentTo(t *testing.T) {
 		t.Errorf("an empty queue moved where the place stands to %d", left.Placed)
 	}
 }
+
+// **Which Worker took the records is remembered**, because there is nowhere else to ask: the
+// settings screen reads nothing over the network, and the number travels on the answer to a write
+// and on no other answer.
+func TestTheBuildThatTookTheRecordsIsRemembered(t *testing.T) {
+	answering := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Write([]byte(`{"seq":1,"build":2}`))
+	}))
+	defer answering.Close()
+	where := store{url: answering.URL, token: "a-throwaway-token", seal: sealerForTest(t)}
+
+	left, landed, err := drainTo(where, carried{Pending: keysToDrop(1)}, 1, rightNow())
+
+	if err != nil || landed != 1 {
+		t.Fatalf("landed %d (%v)", landed, err)
+	}
+	if left.Build != 2 {
+		t.Errorf("the Worker that took the records is remembered as build %d, and it answered 2", left.Build)
+	}
+}
+
+// **A Worker that names no build is the oldest one there is.** Every Worker deployed before the
+// field existed answers nothing for it, and reading that silence as "not known" would leave the
+// one build nobody can be told about being the one nobody is told about.
+func TestAWorkerThatNamesNoBuildIsTheOldestOne(t *testing.T) {
+	answering := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Write([]byte(`{"seq":1}`))
+	}))
+	defer answering.Close()
+	where := store{url: answering.URL, token: "a-throwaway-token", seal: sealerForTest(t)}
+
+	left, _, err := drainTo(where, carried{Pending: keysToDrop(1)}, 1, rightNow())
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	if left.Build != 1 {
+		t.Errorf("a Worker that named no build is remembered as %d, and the promise is 1", left.Build)
+	}
+}
